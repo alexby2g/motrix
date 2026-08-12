@@ -34,8 +34,8 @@ services:
         value: database
       - key: FILESYSTEM_DISK
         value: public
-      - key: CORS_ALLOWED_ORIGIN_PATTERNS
-        value: '#^https://.*\\.vercel\\.app$#'
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://motrix-nu.vercel.app
       - key: BROADCAST_CONNECTION
         value: reverb
       - key: REVERB_APP_ID
