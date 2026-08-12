@@ -6,8 +6,16 @@ body,
   min-height: 100%;
 }
 
-body {
+html {
   background: #f1f8e9;
+}
+
+body {
+  margin: 0;
+  background: #f1f8e9;
+  color: #263326;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 .q-card {
@@ -27,67 +35,270 @@ body {
   overflow: hidden;
 }
 
-/*
- * Menú lateral MOTRIX
- * Mantiene todos los iconos dentro del item y evita que el estado activo
- * modifique el ancho o la posición de la sección de avatar.
- */
-.q-drawer.motrix-drawer .q-list .menu-item {
-  position: relative !important;
-  box-sizing: border-box !important;
-  overflow: visible !important;
+/* =========================================================
+   NAVEGACIÓN LATERAL MOTRIX
+   Una sola geometría para todos los items. El icono queda
+   fijado dentro del botón y el estado activo nunca lo empuja.
+========================================================= */
+html body #q-app .q-drawer.motrix-drawer {
+  overflow: hidden !important;
 }
 
-.q-drawer.motrix-drawer .q-list .menu-item .q-item__section--avatar {
+html body #q-app .q-drawer.motrix-drawer .q-drawer__content {
+  overflow: hidden !important;
+  background: #0a2e0a !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .drawer-content {
+  min-width: 0 !important;
+}
+
+/* Identidad superior más compacta y equilibrada */
+html body #q-app .q-drawer.motrix-drawer .drawer-brand {
+  padding: 20px 16px 18px !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .drawer-logo {
+  font-size: 42px !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .drawer-brand-caption {
+  max-width: 210px;
+  margin: 4px auto 0 !important;
+  line-height: 1.35;
+}
+
+/* Tarjeta de usuario: ya no corta ADMINISTRACIÓN GENERAL */
+html body #q-app .q-drawer.motrix-drawer .drawer-user {
+  min-height: 72px;
+  margin: 12px 12px 6px !important;
+  padding: 11px 12px !important;
+  gap: 2px;
+}
+
+html body #q-app .q-drawer.motrix-drawer .drawer-user > .col {
+  min-width: 0 !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .drawer-user .text-body2 {
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  white-space: normal !important;
+  text-overflow: clip !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-height: 2.55em;
+  font-size: 12.5px !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0.01em;
+}
+
+html body #q-app .q-drawer.motrix-drawer .drawer-user-name {
+  margin-top: 3px;
+  font-size: 12px !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .drawer-separator {
+  margin: 7px 14px 0 !important;
+}
+
+/* Área de menú */
+html body #q-app .q-drawer.motrix-drawer .q-scrollarea__content,
+html body #q-app .q-drawer.motrix-drawer .q-scrollarea__container {
+  min-width: 100% !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list {
+  padding: 10px 8px 16px !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .drawer-section-title {
+  min-height: auto !important;
+  padding: 13px 10px 6px !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0.055em !important;
+}
+
+/* Cada opción usa la misma caja y el mismo eje */
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item {
+  position: relative !important;
   display: flex !important;
-  flex: 0 0 52px !important;
-  width: 52px !important;
-  min-width: 52px !important;
-  padding: 0 12px 0 0 !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+  width: calc(100% - 8px) !important;
+  min-height: 48px !important;
+  margin: 0 4px 5px !important;
+  padding: 0 13px !important;
+  overflow: hidden !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: transparent;
+  transition:
+    background-color 0.16s ease,
+    box-shadow 0.16s ease !important;
+}
+
+/*
+ * Quasar reserva una sección avatar. La sacamos del flujo normal y la
+ * fijamos a 14 px del borde. Así no puede escaparse aunque cambie el
+ * estado router-active.
+ */
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item > .q-item__section--avatar {
+  position: absolute !important;
+  z-index: 2 !important;
+  top: 50% !important;
+  left: 14px !important;
+  right: auto !important;
+  display: flex !important;
+  flex: none !important;
+  width: 28px !important;
+  min-width: 28px !important;
+  max-width: 28px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 !important;
   align-items: center !important;
   justify-content: center !important;
+  transform: translateY(-50%) !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item > .q-item__section--avatar > .q-icon {
   position: static !important;
   inset: auto !important;
+  width: 24px !important;
+  height: 24px !important;
   margin: 0 !important;
+  padding: 0 !important;
+  font-size: 21px !important;
+  line-height: 24px !important;
   transform: none !important;
+  color: #66bb6a !important;
 }
 
-.q-drawer.motrix-drawer .q-list .menu-item .q-item__section--avatar .q-icon {
-  position: static !important;
-  inset: auto !important;
-  display: inline-flex !important;
-  margin: 0 auto !important;
-  transform: none !important;
+/* El texto siempre arranca después de la columna del icono */
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item > .q-item__section--main {
+  min-width: 0 !important;
+  margin: 0 0 0 42px !important;
+  padding: 0 !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  line-height: 1.25 !important;
 }
 
-/* El borde rojo se dibuja por dentro y ya no empuja ni recorta el icono. */
-.q-drawer.motrix-drawer .q-list .menu-item.menu-item-active {
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item > .q-item__section--main,
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item .q-item__label {
+  opacity: 1 !important;
+}
+
+/* Hover sin desplazamientos laterales */
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item:hover {
+  transform: none !important;
+  background: rgba(46, 125, 50, 0.28) !important;
+  box-shadow: inset 0 0 0 1px rgba(129, 199, 132, 0.08) !important;
+}
+
+/* Estado activo: franja dibujada DENTRO del botón */
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item.menu-item-active,
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item.q-router-link--active {
+  padding: 0 13px !important;
+  border: 0 !important;
   border-left: 0 !important;
-  padding-left: 16px !important;
-  box-shadow: 0 0 15px rgba(198, 40, 40, 0.25) !important;
+  color: #ffffff !important;
+  background: rgba(46, 125, 50, 0.52) !important;
+  box-shadow:
+    inset 4px 0 0 #ef3b3b,
+    inset 0 0 0 1px rgba(165, 214, 167, 0.08),
+    0 5px 14px rgba(0, 0, 0, 0.13) !important;
 }
 
-.q-drawer.motrix-drawer .q-list .menu-item.menu-item-active::before {
-  content: '';
-  position: absolute;
-  z-index: 1;
-  top: 5px;
-  bottom: 5px;
-  left: 0;
-  width: 4px;
-  border-radius: 0 4px 4px 0;
-  background: #c62828;
-  pointer-events: none;
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item.menu-item-active::before,
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item.q-router-link--active::before {
+  content: none !important;
+  display: none !important;
 }
 
-.q-drawer.motrix-drawer .q-list .menu-item.menu-item-active .q-item__section--avatar,
-.q-drawer.motrix-drawer .q-list .menu-item.menu-item-active .q-item__section--avatar .q-icon {
-  left: auto !important;
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item.menu-item-active > .q-item__section--avatar,
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item.q-router-link--active > .q-item__section--avatar {
+  top: 50% !important;
+  left: 14px !important;
   right: auto !important;
-  margin-left: 0 !important;
+  margin: 0 !important;
+  transform: translateY(-50%) !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item.menu-item-active > .q-item__section--avatar > .q-icon,
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item.q-router-link--active > .q-item__section--avatar > .q-icon {
+  color: #c8e6c9 !important;
   transform: none !important;
 }
 
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item.menu-item-active > .q-item__section--main,
+html body #q-app .q-drawer.motrix-drawer .q-list .menu-item.q-router-link--active > .q-item__section--main {
+  margin-left: 42px !important;
+  color: #ffffff !important;
+  font-weight: 750 !important;
+}
+
+/* Footer más limpio y compacto */
+html body #q-app .q-drawer.motrix-drawer .drawer-footer {
+  padding: 11px 11px 13px !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .logout-button {
+  min-height: 40px;
+  border-radius: 9px !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .drawer-footer-text {
+  margin-top: 10px !important;
+  font-size: 11.5px !important;
+  line-height: 1.35 !important;
+}
+
+/* Scrollbar discreta dentro del menú */
+html body #q-app .q-drawer.motrix-drawer .q-scrollarea__thumb {
+  width: 4px !important;
+  opacity: 0.38 !important;
+  background: #81c784 !important;
+}
+
+/* =========================================================
+   RESPONSIVE GENERAL
+========================================================= */
+@media (max-width: 1023px) {
+  html body #q-app .q-drawer.motrix-drawer .drawer-brand {
+    padding-top: 18px !important;
+  }
+
+  html body #q-app .q-drawer.motrix-drawer .q-list .menu-item {
+    min-height: 50px !important;
+  }
+}
+
+@media (max-width: 599px) {
+  .q-card {
+    border-radius: 12px;
+  }
+
+  html body #q-app .q-drawer.motrix-drawer .drawer-brand {
+    padding: 16px 14px !important;
+  }
+
+  html body #q-app .q-drawer.motrix-drawer .drawer-user {
+    margin-top: 8px !important;
+  }
+
+  html body #q-app .q-drawer.motrix-drawer .q-list {
+    padding-top: 8px !important;
+  }
+}
+
+/* =========================================================
+   MODO OSCURO
+========================================================= */
 body.body--dark {
   background: #121812;
 
