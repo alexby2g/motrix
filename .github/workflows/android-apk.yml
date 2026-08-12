@@ -1,0 +1,136 @@
+name: Build MOTRIX Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: motrix-android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    name: Compilar APK Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar Android API 36
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
+      - name: Instalar dependencias Quasar
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Instalar dependencias Capacitor
+        working-directory: frontend/src-capacitor
+        run: npm install --no-audit --no-fund
+
+      - name: Crear plataforma Android
+        working-directory: frontend/src-capacitor
+        shell: bash
+        run: |
+          mkdir -p www
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+
+      - name: Compilar interfaz MOTRIX y sincronizar Capacitor
+        working-directory: frontend
+        run: npx quasar build -m capacitor -T android --skip-pkg
+
+      - name: Configurar permisos y SDK Android
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path('frontend/src-capacitor/android')
+          variables = root / 'variables.gradle'
+          manifest = root / 'app/src/main/AndroidManifest.xml'
+
+          text = variables.read_text(encoding='utf-8')
+          text = re.sub(
+              r'minSdkVersion\s*=\s*\d+',
+              'minSdkVersion = 26',
+              text
+          )
+          variables.write_text(text, encoding='utf-8')
+
+          xml = manifest.read_text(encoding='utf-8')
+          permisos = [
+              '<uses-permission android:name="android.permission.INTERNET" />',
+              '<uses-permission android:name="android.permission.CAMERA" />',
+              '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />',
+              '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />',
+              '<uses-permission android:name="android.permission.VIBRATE" />',
+              '<uses-feature android:name="android.hardware.location.gps" android:required="false" />'
+          ]
+
+          faltantes = [linea for linea in permisos if linea not in xml]
+
+          if faltantes:
+              cierre = xml.find('>') + 1
+              xml = (
+                  xml[:cierre]
+                  + '\n    '
+                  + '\n    '.join(faltantes)
+                  + xml[cierre:]
+              )
+              manifest.write_text(xml, encoding='utf-8')
+          PY
+
+      - name: Compilar APK debug instalable
+        working-directory: frontend/src-capacitor/android
+        shell: bash
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Preparar APK final
+        shell: bash
+        run: |
+          mkdir -p dist-apk
+          cp \
+            frontend/src-capacitor/android/app/build/outputs/apk/debug/app-debug.apk \
+            dist-apk/MOTRIX-Android-debug.apk
+
+      - name: Publicar APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOTRIX-Android-APK
+          path: dist-apk/MOTRIX-Android-debug.apk
+          if-no-files-found: error
+          retention-days: 30
