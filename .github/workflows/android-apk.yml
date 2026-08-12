@@ -56,7 +56,29 @@ jobs:
 
       - name: Instalar dependencias Capacitor
         working-directory: frontend/src-capacitor
-        run: npm install --no-audit --no-fund
+        shell: bash
+        run: |
+          npm config set fetch-retries 5
+          npm config set fetch-retry-factor 2
+          npm config set fetch-retry-mintimeout 10000
+          npm config set fetch-retry-maxtimeout 60000
+
+          for intento in 1 2 3; do
+            echo "Intento npm ${intento}/3 para dependencias Capacitor"
+
+            if npm install --no-audit --no-fund; then
+              exit 0
+            fi
+
+            if [ "$intento" -eq 3 ]; then
+              echo "npm install falló después de 3 intentos."
+              exit 1
+            fi
+
+            echo "Descarga interrumpida. Limpiando instalación parcial y reintentando..."
+            rm -rf node_modules/sharp node_modules/@img || true
+            sleep 12
+          done
 
       - name: Crear plataforma Android
         working-directory: frontend/src-capacitor
