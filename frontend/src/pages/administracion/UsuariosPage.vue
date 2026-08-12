@@ -642,7 +642,6 @@ function confirmarEliminar(usuario) {
   $q.dialog({
     title: 'Eliminar cuenta',
     message: `¿Eliminar la cuenta administrativa de ${nombreUsuario(usuario)}?`,
-    cancel: true,
     persistent: true,
     ok: { label: 'Eliminar', color: 'negative', noCaps: true },
     cancel: { label: 'Cancelar', flat: true, noCaps: true }
