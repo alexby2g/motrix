@@ -1,9 +1,9 @@
 {
-  "name": "motrix",
-  "version": "1.0.0",
+  "name": "mototaxi-front",
+  "version": "0.0.1",
   "description": "Sistema web y móvil para la administración de sindicatos y servicios de mototaxis",
   "productName": "MOTRIX",
-  "author": "Instituto Tecnológico Superior José Castillo",
+  "author": "Rodrigo Lopez Sosa",
   "type": "module",
   "private": true,
   "scripts": {
