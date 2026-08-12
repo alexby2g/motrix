@@ -82,3 +82,9 @@ services:
         sync: false
       - key: REVERB_SERVER_HOST
         value: 0.0.0.0
+      - key: REVERB_HOST
+        value: motrix-reverb.onrender.com
+      - key: REVERB_PORT
+        value: "443"
+      - key: REVERB_SCHEME
+        value: https
