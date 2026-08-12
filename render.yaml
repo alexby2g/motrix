@@ -59,7 +59,7 @@ services:
     branch: main
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    dockerCommand: sh -c 'php artisan config:cache && php artisan reverb:start --host=0.0.0.0 --port=${PORT:-10000}'
+    dockerCommand: php artisan reverb:start --host=0.0.0.0 --port=10000
     autoDeployTrigger: commit
     envVars:
       - key: APP_NAME
@@ -82,6 +82,8 @@ services:
         sync: false
       - key: REVERB_SERVER_HOST
         value: 0.0.0.0
+      - key: REVERB_SERVER_PORT
+        value: "10000"
       - key: REVERB_HOST
         value: motrix-reverb.onrender.com
       - key: REVERB_PORT
