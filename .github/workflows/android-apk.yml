@@ -70,6 +70,19 @@ jobs:
             npx cap add android
           fi
 
+      - name: Generar icono y splash MOTRIX
+        working-directory: frontend/src-capacitor
+        shell: bash
+        run: |
+          npx @capacitor/assets generate \
+            --android \
+            --assetPath assets \
+            --iconBackgroundColor '#176B2C' \
+            --iconBackgroundColorDark '#0A2E0A' \
+            --splashBackgroundColor '#176B2C' \
+            --splashBackgroundColorDark '#0A2E0A' \
+            --logoSplashScale 0.28
+
       - name: Compilar interfaz MOTRIX y sincronizar Capacitor
         working-directory: frontend
         run: npx quasar build -m capacitor -T android --skip-pkg
