@@ -1,0 +1,114 @@
+/*
+ * Ajuste final del menú lateral MOTRIX.
+ * Mantiene icono + texto como un solo grupo visual.
+ * Se carga después de app.scss para anular parches anteriores.
+ */
+
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-height: 50px !important;
+  margin: 0 0 6px !important;
+  padding: 0 18px !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  transform: none !important;
+}
+
+/* Icono: siempre dentro del flujo y pegado al texto. */
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item > .q-item__section--avatar,
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item > .q-item__section--side {
+  position: static !important;
+  inset: auto !important;
+  display: flex !important;
+  flex: 0 0 24px !important;
+  width: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  min-height: 24px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transform: none !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item > .q-item__section--avatar .q-icon,
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item > .q-item__section--side .q-icon {
+  position: static !important;
+  inset: auto !important;
+  display: inline-flex !important;
+  flex: 0 0 22px !important;
+  width: 22px !important;
+  height: 22px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 22px !important;
+  line-height: 22px !important;
+  transform: none !important;
+}
+
+/* Texto: empieza inmediatamente después del icono. */
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item > .q-item__section--main {
+  position: static !important;
+  display: flex !important;
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  transform: none !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item .q-item__label {
+  margin: 0 !important;
+  padding: 0 !important;
+  white-space: nowrap !important;
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+}
+
+/* Estado activo: franja interna, sin empujar icono ni texto. */
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.menu-item-active,
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--active,
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--exact-active {
+  padding: 0 18px !important;
+  border: 0 !important;
+  border-left: 0 !important;
+  background: rgba(67, 160, 71, 0.34) !important;
+  box-shadow:
+    inset 4px 0 0 #ef4444,
+    inset 0 0 0 1px rgba(165, 214, 167, 0.10),
+    0 5px 14px rgba(0, 0, 0, 0.12) !important;
+  transform: none !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item::before,
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Sin saltos laterales al pasar el mouse. */
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item:hover {
+  transform: none !important;
+}
+
+@media (max-width: 599px) {
+  html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item {
+    gap: 10px !important;
+    min-height: 52px !important;
+    padding: 0 20px !important;
+  }
+
+  html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.menu-item-active,
+  html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--active,
+  html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--exact-active {
+    padding: 0 20px !important;
+  }
+}
