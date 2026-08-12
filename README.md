@@ -1,19 +1,38 @@
-# Motrix
+# MOTRIX
 
-Repositorio principal del proyecto Motrix.
+Sistema independiente de gestión de mototaxis.
 
 ## Estructura
 
-- `backend/`: API Laravel.
-- `frontend/`: aplicación Quasar/Vue (web/PWA; preparada para evolución móvil).
+```text
+motrix/
+├── backend/      Laravel 12 / API / Sanctum / Reverb
+├── frontend/     Quasar / Vue / SPA / PWA
+├── docs/         documentación de despliegue
+└── render.yaml   Blueprint para Render
+```
 
-## Despliegue previsto
+## Base de datos
 
-- Backend: Render.
-- Base de datos: Neon PostgreSQL.
-- Frontend: Vercel.
-- Android/APK: Quasar + Capacitor en una fase posterior.
+- Desarrollo local: MySQL en Laragon, base `motrix_integrado`.
+- Producción: PostgreSQL en Neon.
+- La estructura oficial se mantiene mediante migraciones Laravel.
+- Los dumps SQL con datos personales, tokens o credenciales no forman parte del repositorio.
 
-## Seguridad
+## Publicar este paquete en GitHub
 
-Los archivos `.env`, dumps SQL, dependencias instaladas y datos generados en ejecución no se versionan.
+En Windows, extrae el ZIP y ejecuta `SUBIR_A_GITHUB.bat`. El asistente conserva el historial remoto de `alexby2g/motrix`, crea un commit con el código limpio y lo publica en `main`.
+
+## Despliegue objetivo
+
+```text
+Vercel (Quasar)
+       |
+       v
+Render API (Laravel) ----> Neon PostgreSQL
+       |
+       v
+Render Reverb (WebSockets)
+```
+
+Consulta [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) para los pasos de instalación y despliegue.

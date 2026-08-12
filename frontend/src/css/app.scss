@@ -1,0 +1,52 @@
+/* Identidad visual global de MOTRIX */
+
+html,
+body,
+#q-app {
+  min-height: 100%;
+}
+
+body {
+  background: #f1f8e9;
+}
+
+.q-card {
+  border-radius: 14px;
+}
+
+.q-btn {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.q-field--outlined .q-field__control {
+  border-radius: 9px;
+}
+
+.q-dialog__inner > .q-card {
+  overflow: hidden;
+}
+
+body.body--dark {
+  background: #121812;
+
+  .text-green-9 {
+    color: #81c784 !important;
+  }
+
+  .text-green-8 {
+    color: #66bb6a !important;
+  }
+
+  .q-icon.text-green-9 {
+    color: #81c784 !important;
+  }
+
+  .q-icon.text-green-8 {
+    color: #66bb6a !important;
+  }
+
+  .bg-grey-3 {
+    background-color: #2a2a2a !important;
+  }
+}

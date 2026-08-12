@@ -1,0 +1,64 @@
+const quitarBarraFinal = (valor) => String(valor || '').trim().replace(/\/+$/, '')
+
+const origenLocal = (() => {
+  if (typeof window === 'undefined') {
+    return 'http://127.0.0.1:8000'
+  }
+
+  return `${window.location.protocol}//${window.location.hostname}:8000`
+})()
+
+export const API_URL = quitarBarraFinal(
+  import.meta.env.VITE_API_URL || `${origenLocal}/api`
+)
+
+export const API_ORIGIN = (() => {
+  try {
+    return new URL(API_URL).origin
+  } catch {
+    return quitarBarraFinal(origenLocal)
+  }
+})()
+
+export const BROADCAST_AUTH_URL = `${API_URL}/broadcasting/auth`
+
+const apiUrl = (() => {
+  try {
+    return new URL(API_URL)
+  } catch {
+    return null
+  }
+})()
+
+export const REVERB_APP_KEY = String(
+  import.meta.env.VITE_REVERB_APP_KEY || 'motrix-local-key'
+).trim()
+
+export const REVERB_HOST = String(
+  import.meta.env.VITE_REVERB_HOST || apiUrl?.hostname || '127.0.0.1'
+).trim()
+
+export const REVERB_SCHEME = String(
+  import.meta.env.VITE_REVERB_SCHEME
+    || (apiUrl?.protocol === 'https:' ? 'https' : 'http')
+).trim().toLowerCase()
+
+export const REVERB_FORCE_TLS = REVERB_SCHEME === 'https'
+
+const puertoPorDefecto = REVERB_FORCE_TLS ? 443 : 8080
+const puertoConfigurado = Number(import.meta.env.VITE_REVERB_PORT || puertoPorDefecto)
+
+export const REVERB_PORT = Number.isFinite(puertoConfigurado)
+  ? puertoConfigurado
+  : puertoPorDefecto
+
+export const echoOptions = () => ({
+  broadcaster: 'reverb',
+  key: REVERB_APP_KEY,
+  wsHost: REVERB_HOST,
+  wsPort: REVERB_PORT,
+  wssPort: REVERB_PORT,
+  forceTLS: REVERB_FORCE_TLS,
+  disableStats: true,
+  enabledTransports: ['ws', 'wss']
+})
