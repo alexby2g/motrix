@@ -27,6 +27,32 @@ body {
   overflow: hidden;
 }
 
+/* Ajuste estable del menú lateral: evita que el icono del item activo
+   se desplace o sobresalga del drawer. */
+.motrix-drawer .menu-item {
+  box-sizing: border-box !important;
+  overflow: hidden;
+}
+
+.motrix-drawer .menu-item .q-item__section--avatar {
+  min-width: 44px !important;
+  padding-right: 12px !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.motrix-drawer .menu-item .q-item__section--avatar .q-icon {
+  margin: 0 !important;
+  transform: none !important;
+}
+
+.motrix-drawer .menu-item.menu-item-active {
+  border-left: 0 !important;
+  box-shadow:
+    inset 4px 0 0 #c62828,
+    0 0 15px rgba(198, 40, 40, 0.25) !important;
+}
+
 body.body--dark {
   background: #121812;
 
