@@ -12,5 +12,8 @@
     "@capacitor/geolocation": "8.2.0",
     "@capacitor/haptics": "8.0.2",
     "@capacitor/splash-screen": "8.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5"
   }
 }
