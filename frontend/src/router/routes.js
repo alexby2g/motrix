@@ -1,7 +1,30 @@
-const paginaEscanerQr =
-  import.meta.env.QUASAR_CAPACITOR_MODE
-    ? () => import('pages/pasajeros/EscanearQrNativePage.vue')
-    : () => import('pages/pasajeros/EscanearQrPage.vue')
+function esContenedorNativo() {
+  if (typeof window === 'undefined') return false
+
+  if (window.__MOTRIX_NATIVE_APP__ === true) {
+    return true
+  }
+
+  try {
+    if (window.Capacitor?.isNativePlatform?.()) {
+      return true
+    }
+  } catch {
+    // Continuamos con la detección del origen del WebView.
+  }
+
+  return (
+    ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    && window.location.protocol === 'https:'
+    && !window.location.port
+  )
+}
+
+const paginaEscanerQr = () => (
+  esContenedorNativo()
+    ? import('pages/pasajeros/EscanearQrNativePage.vue')
+    : import('pages/pasajeros/EscanearQrPage.vue')
+)
 
 const routes = [
   {
