@@ -12,7 +12,8 @@ export default defineConfig((ctx) => {
     ],
 
     css: [
-      'app.scss'
+      'app.scss',
+      'menu-fix.scss'
     ],
 
     extras: [
