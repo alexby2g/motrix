@@ -1,17 +1,43 @@
 const quitarBarraFinal = (valor) => String(valor || '').trim().replace(/\/+$/, '')
 
-const esAplicacionNativa =
-  import.meta.env.QUASAR_CAPACITOR_MODE === true
+function detectarAplicacionNativa() {
+  if (typeof window === 'undefined') return false
+
+  try {
+    if (window.__MOTRIX_NATIVE_APP__ === true) {
+      return true
+    }
+
+    if (window.Capacitor?.isNativePlatform?.()) {
+      return true
+    }
+  } catch {
+    // Continuamos con la detección por origen del WebView.
+  }
+
+  const hostLocal = ['localhost', '127.0.0.1']
+    .includes(window.location.hostname)
+
+  return (
+    hostLocal
+    && window.location.protocol === 'https:'
+    && !window.location.port
+  )
+}
+
+const esAplicacionNativa = detectarAplicacionNativa()
 
 const esEntornoLocal = (() => {
   if (typeof window === 'undefined') {
-    return !esAplicacionNativa
+    return true
   }
 
-  return (
-    !esAplicacionNativa
-    && ['localhost', '127.0.0.1'].includes(window.location.hostname)
-  )
+  if (esAplicacionNativa) {
+    return false
+  }
+
+  return ['localhost', '127.0.0.1']
+    .includes(window.location.hostname)
 })()
 
 const origenLocal = (() => {
