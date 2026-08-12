@@ -41,6 +41,8 @@ jobs:
 
       - name: Configurar Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Instalar Android API 36
         shell: bash
@@ -61,6 +63,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p www
+          if [ ! -f www/index.html ]; then
+            printf '<!doctype html><html><body>MOTRIX</body></html>\n' > www/index.html
+          fi
           if [ ! -d android ]; then
             npx cap add android
           fi
