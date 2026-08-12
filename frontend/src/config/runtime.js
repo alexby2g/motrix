@@ -1,11 +1,17 @@
 const quitarBarraFinal = (valor) => String(valor || '').trim().replace(/\/+$/, '')
 
+const esAplicacionNativa =
+  import.meta.env.QUASAR_CAPACITOR_MODE === true
+
 const esEntornoLocal = (() => {
   if (typeof window === 'undefined') {
-    return true
+    return !esAplicacionNativa
   }
 
-  return ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  return (
+    !esAplicacionNativa
+    && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  )
 })()
 
 const origenLocal = (() => {
@@ -17,6 +23,7 @@ const origenLocal = (() => {
 })()
 
 const apiProduccion = 'https://motrix-api-h9aq.onrender.com/api'
+
 const reverbProduccion = {
   key: 'motrix-prod-key',
   host: 'motrix-reverb.onrender.com',
@@ -83,6 +90,8 @@ const puertoConfigurado = Number(
 export const REVERB_PORT = Number.isFinite(puertoConfigurado)
   ? puertoConfigurado
   : puertoPorDefecto
+
+export const ES_APLICACION_NATIVA = esAplicacionNativa
 
 export const echoOptions = () => ({
   broadcaster: 'reverb',
