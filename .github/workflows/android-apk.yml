@@ -106,7 +106,11 @@ jobs:
           faltantes = [linea for linea in permisos if linea not in xml]
 
           if faltantes:
-              cierre = xml.find('>') + 1
+              match = re.search(r'<manifest\b[^>]*>', xml, flags=re.DOTALL)
+              if not match:
+                  raise RuntimeError('No se encontró la etiqueta <manifest> en AndroidManifest.xml')
+
+              cierre = match.end()
               xml = (
                   xml[:cierre]
                   + '\n    '
