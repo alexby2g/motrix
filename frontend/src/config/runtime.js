@@ -1,5 +1,13 @@
 const quitarBarraFinal = (valor) => String(valor || '').trim().replace(/\/+$/, '')
 
+const esEntornoLocal = (() => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+
+  return ['localhost', '127.0.0.1'].includes(window.location.hostname)
+})()
+
 const origenLocal = (() => {
   if (typeof window === 'undefined') {
     return 'http://127.0.0.1:8000'
@@ -8,8 +16,11 @@ const origenLocal = (() => {
   return `${window.location.protocol}//${window.location.hostname}:8000`
 })()
 
+const apiProduccion = 'https://motrix-api-h9aq.onrender.com/api'
+
 export const API_URL = quitarBarraFinal(
-  import.meta.env.VITE_API_URL || `${origenLocal}/api`
+  import.meta.env.VITE_API_URL
+    || (esEntornoLocal ? `${origenLocal}/api` : apiProduccion)
 )
 
 export const API_ORIGIN = (() => {
