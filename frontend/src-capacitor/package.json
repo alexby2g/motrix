@@ -4,13 +4,13 @@
   "private": true,
   "description": "Contenedor Android nativo para MOTRIX",
   "dependencies": {
-    "@capacitor/android": "^8.4.2",
-    "@capacitor/app": "^8.0.0",
-    "@capacitor/barcode-scanner": "^8.0.0",
-    "@capacitor/cli": "^8.4.2",
-    "@capacitor/core": "^8.4.2",
-    "@capacitor/geolocation": "^8.0.0",
-    "@capacitor/haptics": "^8.0.0",
-    "@capacitor/splash-screen": "^8.0.0"
+    "@capacitor/android": "8.4.2",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/barcode-scanner": "3.1.0",
+    "@capacitor/cli": "8.4.2",
+    "@capacitor/core": "8.4.2",
+    "@capacitor/geolocation": "8.2.0",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/splash-screen": "8.0.2"
   }
 }
