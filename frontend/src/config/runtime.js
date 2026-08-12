@@ -17,6 +17,12 @@ const origenLocal = (() => {
 })()
 
 const apiProduccion = 'https://motrix-api-h9aq.onrender.com/api'
+const reverbProduccion = {
+  key: 'motrix-prod-key',
+  host: 'motrix-reverb.onrender.com',
+  scheme: 'https',
+  port: 443
+}
 
 export const API_URL = quitarBarraFinal(
   import.meta.env.VITE_API_URL
@@ -42,22 +48,37 @@ const apiUrl = (() => {
 })()
 
 export const REVERB_APP_KEY = String(
-  import.meta.env.VITE_REVERB_APP_KEY || 'motrix-local-key'
+  esEntornoLocal
+    ? (import.meta.env.VITE_REVERB_APP_KEY || 'motrix-local-key')
+    : reverbProduccion.key
 ).trim()
 
 export const REVERB_HOST = String(
-  import.meta.env.VITE_REVERB_HOST || apiUrl?.hostname || '127.0.0.1'
+  esEntornoLocal
+    ? (import.meta.env.VITE_REVERB_HOST || apiUrl?.hostname || '127.0.0.1')
+    : reverbProduccion.host
 ).trim()
 
 export const REVERB_SCHEME = String(
-  import.meta.env.VITE_REVERB_SCHEME
-    || (apiUrl?.protocol === 'https:' ? 'https' : 'http')
+  esEntornoLocal
+    ? (
+        import.meta.env.VITE_REVERB_SCHEME
+        || (apiUrl?.protocol === 'https:' ? 'https' : 'http')
+      )
+    : reverbProduccion.scheme
 ).trim().toLowerCase()
 
 export const REVERB_FORCE_TLS = REVERB_SCHEME === 'https'
 
-const puertoPorDefecto = REVERB_FORCE_TLS ? 443 : 8080
-const puertoConfigurado = Number(import.meta.env.VITE_REVERB_PORT || puertoPorDefecto)
+const puertoPorDefecto = esEntornoLocal
+  ? (REVERB_FORCE_TLS ? 443 : 8080)
+  : reverbProduccion.port
+
+const puertoConfigurado = Number(
+  esEntornoLocal
+    ? (import.meta.env.VITE_REVERB_PORT || puertoPorDefecto)
+    : reverbProduccion.port
+)
 
 export const REVERB_PORT = Number.isFinite(puertoConfigurado)
   ? puertoConfigurado
