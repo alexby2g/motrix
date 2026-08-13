@@ -1,0 +1,35 @@
+/*
+ * Ajuste puntual del acceso Monitoreo.
+ * Quasar reserva un ancho amplio para la sección avatar; aquí lo reducimos
+ * y sustituimos el icono Material por el icono personalizado solicitado.
+ */
+.q-drawer a.q-item[href*="/monitoreo"] {
+  justify-content: flex-start !important;
+}
+
+.q-drawer a.q-item[href*="/monitoreo"] .q-item__section--avatar {
+  min-width: 0 !important;
+  width: 34px !important;
+  flex: 0 0 34px !important;
+  padding-right: 8px !important;
+  margin-right: 0 !important;
+}
+
+.q-drawer a.q-item[href*="/monitoreo"] .q-item__section--avatar .q-icon {
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  background: url('/icons/monitoreo-inspeccion.svg') center / contain no-repeat !important;
+}
+
+.q-drawer a.q-item[href*="/monitoreo"] .q-item__section--avatar .q-icon::before {
+  display: none !important;
+  content: none !important;
+}
+
+.q-drawer a.q-item[href*="/monitoreo"] .q-item__section:not(.q-item__section--avatar) {
+  min-width: 0 !important;
+  padding-left: 0 !important;
+}
