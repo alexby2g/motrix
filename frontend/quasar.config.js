@@ -13,7 +13,8 @@ export default defineConfig((ctx) => {
 
     css: [
       'app.scss',
-      'menu-fix.scss'
+      'menu-fix.scss',
+      'monitoreo-icon-fix.scss'
     ],
 
     extras: [
