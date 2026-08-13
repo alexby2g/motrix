@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class PersonaRequest extends FormRequest
 {
@@ -15,12 +16,21 @@ class PersonaRequest extends FormRequest
     {
         $id = $this->route('id');
 
+        $reglaCiUnico = Rule::unique(
+            'personas',
+            'ci'
+        );
+
+        if ($id !== null && $id !== '') {
+            $reglaCiUnico->ignore((int) $id);
+        }
+
         return [
             'ci' => [
                 'required',
                 'string',
                 'max:20',
-                'unique:personas,ci,' . $id,
+                $reglaCiUnico,
             ],
             'nombre' => [
                 'required',
