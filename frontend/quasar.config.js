@@ -14,7 +14,8 @@ export default defineConfig((ctx) => {
     css: [
       'app.scss',
       'menu-fix.scss',
-      'monitoreo-icon-fix.scss'
+      'monitoreo-icon-fix.scss',
+      'mobile-dialog-scroll-fix.scss'
     ],
 
     extras: [
