@@ -65,13 +65,20 @@ class AsignacionConductorService
                 'mototaxistas.latitud',
                 'mototaxistas.longitud'
             );
+            $bindingsDistancia = [
+                $latitud,
+                $longitud,
+                $latitud,
+            ];
 
+            /*
+             * PostgreSQL no permite usar el alias calculado
+             * "distancia_recogida_km" dentro de HAVING como lo hace MySQL.
+             * Filtramos y ordenamos usando directamente la fórmula para que
+             * la asignación automática funcione de forma nativa en PostgreSQL.
+             */
             $conductor = Mototaxista::query()
                 ->select('mototaxistas.*')
-                ->selectRaw(
-                    "$formula AS distancia_recogida_km",
-                    [$latitud, $longitud, $latitud]
-                )
                 ->where('mototaxistas.disponible', 1)
                 ->whereNotNull('mototaxistas.latitud')
                 ->whereNotNull('mototaxistas.longitud')
@@ -112,12 +119,17 @@ class AsignacionConductorService
                                 });
                         });
                 })
-                ->having(
-                    'distancia_recogida_km',
-                    '<=',
-                    self::RADIO_MAXIMO_KM
+                ->whereRaw(
+                    "$formula <= ?",
+                    array_merge(
+                        $bindingsDistancia,
+                        [self::RADIO_MAXIMO_KM]
+                    )
                 )
-                ->orderBy('distancia_recogida_km')
+                ->orderByRaw(
+                    "$formula ASC",
+                    $bindingsDistancia
+                )
                 ->orderBy('mototaxistas.id')
                 ->lockForUpdate()
                 ->first();
@@ -127,6 +139,7 @@ class AsignacionConductorService
             }
 
             $solicitud->mototaxista_id = $conductor->id;
+            $solicitud->estado = 'Buscando conductor';
             $solicitud->save();
 
             return $conductor;
@@ -185,13 +198,14 @@ class AsignacionConductorService
                 'latitud_origen',
                 'longitud_origen'
             );
+            $bindingsDistancia = [
+                $latitud,
+                $longitud,
+                $latitud,
+            ];
 
             $candidatas = Solicitud::query()
                 ->select('solicitudes.*')
-                ->selectRaw(
-                    "$formula AS distancia_recogida_km",
-                    [$latitud, $longitud, $latitud]
-                )
                 ->whereNull('mototaxista_id')
                 ->whereIn('estado', ['Pendiente', 'Buscando conductor'])
                 ->whereNotNull('latitud_origen')
@@ -201,12 +215,17 @@ class AsignacionConductorService
                         ->whereNull('expira_en')
                         ->orWhere('expira_en', '>', $ahoraUtc);
                 })
-                ->having(
-                    'distancia_recogida_km',
-                    '<=',
-                    self::RADIO_MAXIMO_KM
+                ->whereRaw(
+                    "$formula <= ?",
+                    array_merge(
+                        $bindingsDistancia,
+                        [self::RADIO_MAXIMO_KM]
+                    )
                 )
-                ->orderBy('distancia_recogida_km')
+                ->orderByRaw(
+                    "$formula ASC",
+                    $bindingsDistancia
+                )
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
@@ -221,6 +240,7 @@ class AsignacionConductorService
                 }
 
                 $solicitud->mototaxista_id = $conductor->id;
+                $solicitud->estado = 'Buscando conductor';
                 $solicitud->save();
 
                 return $solicitud;
@@ -265,6 +285,7 @@ class AsignacionConductorService
             $this->registrarRechazo($solicitudId, $mototaxistaId);
 
             $solicitud->mototaxista_id = null;
+            $solicitud->estado = 'Buscando conductor';
             $solicitud->save();
 
             $nuevo = $this->asignarConductorMasCercano(
