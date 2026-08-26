@@ -1,0 +1,127 @@
+/*
+ * MOTRIX · Menú lateral neutro
+ * Geometría estable: icono + texto permanecen alineados.
+ */
+
+html body #q-app .q-drawer.motrix-drawer,
+html body #q-app .q-drawer.motrix-drawer .q-drawer__content {
+  color: #ffffff !important;
+  background:
+    linear-gradient(
+      180deg,
+      #183c2b 0%,
+      #123524 100%
+    ) !important;
+  overflow-x: hidden !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list {
+  padding: 10px 10px 16px !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-height: 48px !important;
+  margin: 0 0 5px !important;
+  padding: 0 16px !important;
+  overflow: hidden !important;
+  color: #f6faf7 !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  transform: none !important;
+  transition:
+    background-color 0.16s ease,
+    box-shadow 0.16s ease !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item > .q-item__section--avatar,
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item > .q-item__section--side {
+  position: static !important;
+  inset: auto !important;
+  display: flex !important;
+  flex: 0 0 24px !important;
+  width: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  min-height: 24px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transform: none !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item .q-icon {
+  color: #bfd9c5 !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item > .q-item__section--main {
+  position: static !important;
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item .q-item__label {
+  margin: 0 !important;
+  padding: 0 !important;
+  color: #f7faf8 !important;
+  white-space: nowrap !important;
+  font-size: 13.5px !important;
+  line-height: 1.2 !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item:hover {
+  background: rgba(255, 255, 255, 0.07) !important;
+  transform: none !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.menu-item-active,
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--active,
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--exact-active {
+  padding: 0 16px !important;
+  color: #ffffff !important;
+  background: rgba(84, 151, 96, 0.34) !important;
+  box-shadow:
+    inset 3px 0 0 #6bc778,
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+  transform: none !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.menu-item-active .q-icon,
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--active .q-icon,
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--exact-active .q-icon {
+  color: #e2f2e5 !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item::before,
+html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item::after {
+  content: none !important;
+  display: none !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .drawer-section-title {
+  color: #8fd39a !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .q-scrollarea__thumb {
+  width: 4px !important;
+  opacity: 0.32 !important;
+  background: #a3c9ab !important;
+}
+
+@media (max-width: 599px) {
+  html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item {
+    min-height: 50px !important;
+    padding: 0 18px !important;
+  }
+}

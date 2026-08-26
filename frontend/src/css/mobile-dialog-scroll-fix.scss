@@ -1,0 +1,71 @@
+/* =========================================================
+   MOTRIX · FORMULARIOS MODALES EN MÓVILES
+   Evita que los campos inferiores queden fuera de la pantalla
+   en Android, Capacitor y navegadores móviles.
+========================================================= */
+
+@media (max-width: 1023px) {
+  /* app.scss oculta el overflow de las tarjetas de los diálogos.
+     En pantallas pequeñas eso impide alcanzar campos y acciones. */
+  .q-dialog__inner > .q-card {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+  }
+
+  /* Los módulos que ya usan una sección .scroll conservan su
+     desplazamiento táctil sin bloquear el resto del modal. */
+  .q-dialog__inner .q-card__section.scroll,
+  .q-dialog__inner .q-card__section.q-scrollarea,
+  .q-dialog__inner .scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+  }
+
+  /* Evita desbordes horizontales de formularios y mapas. */
+  .q-dialog__inner .q-form,
+  .q-dialog__inner form,
+  .q-dialog__inner .q-field,
+  .q-dialog__inner .q-card__section {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 599px) {
+  .q-dialog__inner {
+    box-sizing: border-box;
+    padding-top: max(8px, env(safe-area-inset-top)) !important;
+    padding-right: 8px !important;
+    padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    padding-left: 8px !important;
+  }
+
+  .q-dialog__inner > .q-card {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100vh - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    margin: 0 !important;
+  }
+
+  /* En el formulario de usuarios existe un max-height inline de 68vh.
+     Permitimos que la sección use mejor el alto real disponible y siga
+     siendo desplazable con el dedo. */
+  .q-dialog__inner .q-card__section.scroll {
+    max-height: calc(100vh - 180px) !important;
+    max-height: calc(100dvh - 180px) !important;
+    overflow-y: auto !important;
+  }
+
+  /* Un poco de espacio final para que el último campo o botón no quede
+     pegado a la barra de navegación de Android. */
+  .q-dialog__inner > .q-card > .q-form:last-child,
+  .q-dialog__inner > .q-card > form:last-child {
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+  }
+}

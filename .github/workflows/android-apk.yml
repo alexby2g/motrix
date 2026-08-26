@@ -1,0 +1,194 @@
+name: Build MOTRIX Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: motrix-android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    name: Compilar APK Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Configurar Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Instalar Android API 36
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
+      - name: Instalar dependencias Quasar
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Instalar dependencias Capacitor
+        working-directory: frontend/src-capacitor
+        shell: bash
+        run: |
+          npm config set fetch-retries 5
+          npm config set fetch-retry-factor 2
+          npm config set fetch-retry-mintimeout 10000
+          npm config set fetch-retry-maxtimeout 60000
+
+          for intento in 1 2 3; do
+            echo "Intento npm ${intento}/3 para dependencias Capacitor"
+
+            if npm install --no-audit --no-fund; then
+              exit 0
+            fi
+
+            if [ "$intento" -eq 3 ]; then
+              echo "npm install falló después de 3 intentos."
+              exit 1
+            fi
+
+            echo "Descarga interrumpida. Limpiando instalación parcial y reintentando..."
+            rm -rf node_modules/sharp node_modules/@img || true
+            sleep 12
+          done
+
+      - name: Crear plataforma Android
+        working-directory: frontend/src-capacitor
+        shell: bash
+        run: |
+          mkdir -p www
+          if [ ! -f www/index.html ]; then
+            printf '<!doctype html><html><body>MOTRIX</body></html>\n' > www/index.html
+          fi
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+
+      - name: Generar icono y splash MOTRIX
+        working-directory: frontend/src-capacitor
+        shell: bash
+        run: |
+          npx @capacitor/assets generate \
+            --android \
+            --assetPath assets \
+            --iconBackgroundColor '#176B2C' \
+            --iconBackgroundColorDark '#0A2E0A' \
+            --splashBackgroundColor '#176B2C' \
+            --splashBackgroundColorDark '#0A2E0A' \
+            --logoSplashScale 0.28
+
+      - name: Compilar interfaz MOTRIX y sincronizar Capacitor
+        working-directory: frontend
+        run: npx quasar build -m capacitor -T android --skip-pkg
+
+      - name: Configurar permisos y SDK Android
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path('frontend/src-capacitor/android')
+          variables = root / 'variables.gradle'
+          manifest = root / 'app/src/main/AndroidManifest.xml'
+
+          text = variables.read_text(encoding='utf-8')
+          text = re.sub(
+              r'minSdkVersion\s*=\s*\d+',
+              'minSdkVersion = 26',
+              text
+          )
+          variables.write_text(text, encoding='utf-8')
+
+          xml = manifest.read_text(encoding='utf-8')
+          permisos = [
+              '<uses-permission android:name="android.permission.INTERNET" />',
+              '<uses-permission android:name="android.permission.CAMERA" />',
+              '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />',
+              '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />',
+              '<uses-permission android:name="android.permission.VIBRATE" />',
+              '<uses-feature android:name="android.hardware.location.gps" android:required="false" />'
+          ]
+
+          faltantes = [linea for linea in permisos if linea not in xml]
+
+          if faltantes:
+              match = re.search(r'<manifest\b[^>]*>', xml, flags=re.DOTALL)
+              if not match:
+                  raise RuntimeError('No se encontró la etiqueta <manifest> en AndroidManifest.xml')
+
+              cierre = match.end()
+              xml = (
+                  xml[:cierre]
+                  + '\n    '
+                  + '\n    '.join(faltantes)
+                  + xml[cierre:]
+              )
+              manifest.write_text(xml, encoding='utf-8')
+          PY
+
+      - name: Compilar APK debug instalable
+        working-directory: frontend/src-capacitor/android
+        shell: bash
+        run: |
+          chmod +x gradlew
+
+          for intento in 1 2 3; do
+            echo "Intento Gradle ${intento}/3"
+
+            if ./gradlew assembleDebug --stacktrace; then
+              exit 0
+            fi
+
+            if [ "$intento" -eq 3 ]; then
+              echo "Gradle falló después de 3 intentos."
+              exit 1
+            fi
+
+            echo "Descarga/compilación interrumpida. Reintentando en 12 segundos..."
+            sleep 12
+          done
+
+      - name: Preparar APK final
+        shell: bash
+        run: |
+          mkdir -p dist-apk
+          cp \
+            frontend/src-capacitor/android/app/build/outputs/apk/debug/app-debug.apk \
+            dist-apk/MOTRIX-Android-debug.apk
+
+      - name: Publicar APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOTRIX-Android-APK
+          path: dist-apk/MOTRIX-Android-debug.apk
+          if-no-files-found: error
+          retention-days: 30
