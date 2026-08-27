@@ -86,7 +86,9 @@ const hostReverb = esEntornoLocal
 
 const esquemaReverb = String(
   import.meta.env.VITE_REVERB_SCHEME
-  || (esEntornoLocal ? (apiUrl?.protocol === 'https:' ? 'https' : 'http') : 'https')
+  || (esEntornoLocal
+    ? (apiUrl?.protocol === 'https:' ? 'https' : 'http')
+    : 'https')
 ).trim().toLowerCase()
 
 export const REVERB_APP_KEY = String(claveReverb).trim()
@@ -113,5 +115,5 @@ export const echoOptions = () => ({
   wssPort: REVERB_PORT,
   forceTLS: REVERB_FORCE_TLS,
   disableStats: true,
-  enabledTransports: REVERB_FORCE_TLS ? ['wss'] : ['ws']
+  enabledTransports: REVERB_FORCE_TLS ? ['ws', 'wss'] : ['ws']
 })
