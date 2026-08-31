@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ImagenPersona;
 use App\Models\Persona;
+use Cloudinary\Cloudinary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -22,17 +23,15 @@ class ImagenController extends Controller
             ],
         ]);
 
-        $ruta = $request
-            ->file('imagen')
-            ->store(
-                'personas',
-                'public'
-            );
+        $subida = $this->subirImagenCloudinary(
+            $request->file('imagen'),
+            'motrix/personas'
+        );
 
         return response()->json([
             'mensaje' =>
                 'Imagen subida correctamente.',
-            'ruta' => $ruta,
+            'ruta' => $subida['ruta'],
         ], 200);
     }
 
@@ -84,12 +83,12 @@ class ImagenController extends Controller
                     $datos,
                     &$ruta
                 ) {
-                    $ruta = $request
-                        ->file('imagen')
-                        ->store(
-                            'personas',
-                            'public'
-                        );
+                    $subida = $this->subirImagenCloudinary(
+                        $request->file('imagen'),
+                        'motrix/personas'
+                    );
+
+                    $ruta = $subida['ruta'];
 
                     $personaDatos = [
                         'ci' => $datos['ci'],
@@ -146,13 +145,10 @@ class ImagenController extends Controller
                 }
             );
         } catch (\Throwable $error) {
-            if (
-                $ruta
-                && Storage::disk('public')
-                    ->exists($ruta)
-            ) {
-                Storage::disk('public')
-                    ->delete($ruta);
+            if ($ruta) {
+                $this->eliminarArchivoImagen(
+                    $ruta
+                );
             }
 
             throw $error;
@@ -178,16 +174,14 @@ class ImagenController extends Controller
             ],
         ]);
 
-        $ruta = $request
-            ->file('imagen')
-            ->store(
-                'personas',
-                'public'
-            );
+        $subida = $this->subirImagenCloudinary(
+            $request->file('imagen'),
+            'motrix/personas'
+        );
 
         $imagen =
             ImagenPersona::create([
-                'ruta' => $ruta,
+                'ruta' => $subida['ruta'],
                 'tipo' => $request
                     ->file('imagen')
                     ->getClientOriginalExtension(),
@@ -223,17 +217,10 @@ class ImagenController extends Controller
             (int) $imagen->id_persona
         );
 
-        if (
-            $imagen->ruta
-            && Storage::disk('public')
-                ->exists(
-                    $imagen->ruta
-                )
-        ) {
-            Storage::disk('public')
-                ->delete(
-                    $imagen->ruta
-                );
+        if ($imagen->ruta) {
+            $this->eliminarArchivoImagen(
+                $imagen->ruta
+            );
         }
 
         $imagen->delete();
@@ -242,6 +229,203 @@ class ImagenController extends Controller
             'mensaje' =>
                 'Imagen eliminada correctamente.',
         ], 200);
+    }
+
+    private function subirImagenCloudinary(
+        $archivo,
+        string $carpeta
+    ): array {
+        $cloudinaryUrl = (string) env(
+            'CLOUDINARY_URL',
+            ''
+        );
+
+        if (trim($cloudinaryUrl) === '') {
+            abort(
+                500,
+                'No se configuró CLOUDINARY_URL.'
+            );
+        }
+
+        $cloudinary =
+            new Cloudinary(
+                $cloudinaryUrl
+            );
+
+        $resultado =
+            $cloudinary
+                ->uploadApi()
+                ->upload(
+                    $archivo->getRealPath(),
+                    [
+                        'folder' => $carpeta,
+                        'resource_type' => 'image',
+                    ]
+                );
+
+        $ruta =
+            $resultado['secure_url']
+            ?? $resultado['url']
+            ?? null;
+
+        if (! $ruta) {
+            throw new \RuntimeException(
+                'Cloudinary no devolvió una URL válida para la imagen.'
+            );
+        }
+
+        return [
+            'ruta' => $ruta,
+            'public_id' =>
+                $resultado['public_id']
+                ?? null,
+        ];
+    }
+
+    private function eliminarArchivoImagen(
+        string $ruta
+    ): void {
+        if (
+            str_starts_with(
+                $ruta,
+                'http://'
+            )
+            || str_starts_with(
+                $ruta,
+                'https://'
+            )
+        ) {
+            $this->eliminarDesdeCloudinary(
+                $ruta
+            );
+            return;
+        }
+
+        if (
+            Storage::disk('public')
+                ->exists($ruta)
+        ) {
+            Storage::disk('public')
+                ->delete($ruta);
+        }
+    }
+
+    private function eliminarDesdeCloudinary(
+        string $ruta
+    ): void {
+        $publicId =
+            $this->extraerPublicIdCloudinary(
+                $ruta
+            );
+
+        if (! $publicId) {
+            return;
+        }
+
+        $cloudinaryUrl = (string) env(
+            'CLOUDINARY_URL',
+            ''
+        );
+
+        if (trim($cloudinaryUrl) === '') {
+            return;
+        }
+
+        $cloudinary =
+            new Cloudinary(
+                $cloudinaryUrl
+            );
+
+        $cloudinary
+            ->uploadApi()
+            ->destroy(
+                $publicId,
+                [
+                    'resource_type' => 'image',
+                ]
+            );
+    }
+
+    private function extraerPublicIdCloudinary(
+        string $ruta
+    ): ?string {
+        $partes =
+            parse_url($ruta);
+
+        $path =
+            $partes['path']
+            ?? null;
+
+        if (! $path) {
+            return null;
+        }
+
+        $segmentos =
+            explode(
+                '/',
+                trim($path, '/')
+            );
+
+        $indiceUpload =
+            array_search(
+                'upload',
+                $segmentos,
+                true
+            );
+
+        if (
+            $indiceUpload === false
+            || ! isset(
+                $segmentos[
+                    $indiceUpload + 1
+                ]
+            )
+        ) {
+            return null;
+        }
+
+        $publicIdSegmentos =
+            array_slice(
+                $segmentos,
+                $indiceUpload + 1
+            );
+
+        if (
+            isset(
+                $publicIdSegmentos[0]
+            )
+            && preg_match(
+                '/^v\d+$/',
+                $publicIdSegmentos[0]
+            )
+        ) {
+            array_shift(
+                $publicIdSegmentos
+            );
+        }
+
+        if (empty($publicIdSegmentos)) {
+            return null;
+        }
+
+        $ultimo =
+            array_pop(
+                $publicIdSegmentos
+            );
+
+        $ultimoSinExtension =
+            pathinfo(
+                $ultimo,
+                PATHINFO_FILENAME
+            );
+
+        $publicIdSegmentos[] =
+            $ultimoSinExtension;
+
+        return implode(
+            '/',
+            $publicIdSegmentos
+        );
     }
 
     private function resolverPersona(
