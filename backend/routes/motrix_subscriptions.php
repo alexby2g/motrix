@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\LiquidacionMotrixController;
 use App\Http\Controllers\MotrixSubscriptionDashboardController;
+use App\Http\Controllers\MotrixSubscriptionReportController;
 use App\Http\Controllers\PagoSuscripcionMotrixController;
 use App\Http\Controllers\SuscripcionMotrixController;
 use Illuminate\Support\Facades\Route;
@@ -55,6 +56,23 @@ Route::middleware('auth:sanctum')->group(function () {
                     'marcarAlertaLeida',
                 ]
             )->whereNumber('id');
+
+
+            Route::get(
+                '/suscripcion-motrix/reporte',
+                [
+                    MotrixSubscriptionReportController::class,
+                    'conductorPreview',
+                ]
+            );
+
+            Route::get(
+                '/suscripcion-motrix/reporte/{formato}',
+                [
+                    MotrixSubscriptionReportController::class,
+                    'conductorExportar',
+                ]
+            )->whereIn('formato', ['pdf', 'excel']);
         });
 
     /*
@@ -207,6 +225,52 @@ Route::middleware('auth:sanctum')->group(function () {
                 'registrarTransferencia',
             ]
         )->whereNumber('id');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | REPORTES DE SUSCRIPCIONES MOTRIX - V5.5
+    |--------------------------------------------------------------------------
+    |
+    | PDF y Excel para Administración General y Secretaría. El secretario
+    | queda limitado automáticamente a su propio sindicato.
+    |
+    */
+    Route::middleware(
+        'role:admin_general,secretario'
+    )->group(function () {
+        Route::get(
+            '/reportes-suscripcion-motrix/catalogo',
+            [
+                MotrixSubscriptionReportController::class,
+                'catalogo',
+            ]
+        );
+
+        Route::get(
+            '/reportes-suscripcion-motrix/preview',
+            [
+                MotrixSubscriptionReportController::class,
+                'preview',
+            ]
+        );
+
+        Route::get(
+            '/reportes-suscripcion-motrix/{tipo}/{formato}',
+            [
+                MotrixSubscriptionReportController::class,
+                'exportar',
+            ]
+        )
+            ->whereIn('tipo', [
+                'suscripciones',
+                'pendientes',
+                'recaudacion',
+                'liquidaciones',
+                'historial',
+                'consolidado',
+            ])
+            ->whereIn('formato', ['pdf', 'excel']);
     });
 
     /*

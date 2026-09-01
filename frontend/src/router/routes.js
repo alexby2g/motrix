@@ -151,6 +151,11 @@ const routes = [
         meta: { roles: ['admin_general', 'secretario'] }
       },
       {
+        path: 'reportes-suscripciones-motrix',
+        component: () => import('pages/reportes/ReportesSuscripcionesMotrixPage.vue'),
+        meta: { roles: ['admin_general', 'secretario'] }
+      },
+      {
         path: 'reportes',
         component: () => import('pages/reportes/ReportesPage.vue'),
         meta: { roles: ['admin_general', 'admin_servicios'] }

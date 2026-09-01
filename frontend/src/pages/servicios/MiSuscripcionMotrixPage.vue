@@ -1,16 +1,34 @@
-<template>
+﻿<template>
   <q-page class="q-pa-md bg-grey-1">
     <div class="row items-center q-col-gutter-md q-mb-lg">
       <div class="col">
         <div class="text-h5 text-weight-bold text-green-9">
-          Mi suscripción MOTRIX
+          Mi suscripciÃ³n MOTRIX
         </div>
         <div class="text-body2 text-grey-7">
           Consulta tu plan, vencimiento, cuotas, pagos y recordatorios.
         </div>
       </div>
 
-      <div class="col-auto">
+      <div class="col-auto row q-gutter-sm">
+        <q-btn
+          v-if="configurada"
+          outline
+          color="red-8"
+          icon="picture_as_pdf"
+          label="PDF"
+          no-caps
+          @click="descargarReporte('pdf')"
+        />
+        <q-btn
+          v-if="configurada"
+          outline
+          color="green-8"
+          icon="table_view"
+          label="Excel"
+          no-caps
+          @click="descargarReporte('excel')"
+        />
         <q-btn
           outline
           color="green-8"
@@ -44,8 +62,8 @@
           color="orange-9"
         />
       </template>
-      Tu sindicato todavía no configuró una suscripción MOTRIX para tu cuenta.
-      Cuando sea asignada podrás consultar aquí el plan, la cuota y el vencimiento.
+      Tu sindicato todavÃ­a no configurÃ³ una suscripciÃ³n MOTRIX para tu cuenta.
+      Cuando sea asignada podrÃ¡s consultar aquÃ­ el plan, la cuota y el vencimiento.
     </q-banner>
 
     <template v-if="configurada && suscripcion">
@@ -143,7 +161,7 @@
                 {{
                   cuotaPendiente
                     ? dinero(cuotaPendiente.monto_esperado)
-                    : 'Al día'
+                    : 'Al dÃ­a'
                 }}
               </div>
             </q-card-section>
@@ -154,16 +172,16 @@
           <q-card flat bordered class="info-card">
             <q-card-section>
               <div class="text-caption text-grey-7">
-                Último pago
+                Ãšltimo pago
               </div>
               <div class="text-h6 text-weight-bold">
-                {{ ultimoPago?.periodo || '—' }}
+                {{ ultimoPago?.periodo || 'â€”' }}
               </div>
               <div class="text-caption text-grey-7">
                 {{
                   ultimoPago
                     ? fechaHora(ultimoPago.fecha_pago)
-                    : 'Todavía no registrado'
+                    : 'TodavÃ­a no registrado'
                 }}
               </div>
             </q-card-section>
@@ -180,7 +198,7 @@
                 {{ alertas.length }}
               </div>
               <div class="text-caption text-grey-7">
-                Avisos de renovación MOTRIX
+                Avisos de renovaciÃ³n MOTRIX
               </div>
             </q-card-section>
           </q-card>
@@ -204,8 +222,8 @@
           {{ bannerTitulo }}
         </div>
         <div>
-          Periodo {{ cuotaPendiente.periodo }} ·
-          {{ dinero(cuotaPendiente.monto_esperado) }} ·
+          Periodo {{ cuotaPendiente.periodo }} Â·
+          {{ dinero(cuotaPendiente.monto_esperado) }} Â·
           vence {{ fecha(cuotaPendiente.fecha_vencimiento) }}.
         </div>
       </q-banner>
@@ -255,7 +273,7 @@
                 color="green-8"
                 @click="marcarLeida(alerta)"
               >
-                <q-tooltip>Marcar como leída</q-tooltip>
+                <q-tooltip>Marcar como leÃ­da</q-tooltip>
               </q-btn>
             </q-item-section>
           </q-item>
@@ -268,7 +286,7 @@
             Historial de cuotas y renovaciones
           </div>
           <div class="text-caption text-grey-7">
-            Últimos movimientos registrados en tu suscripción MOTRIX.
+            Ãšltimos movimientos registrados en tu suscripciÃ³n MOTRIX.
           </div>
         </q-card-section>
 
@@ -280,7 +298,7 @@
           :rows="pagos"
           :columns="columnas"
           :pagination="{ rowsPerPage: 10 }"
-          no-data-label="Todavía no tienes movimientos de suscripción."
+          no-data-label="TodavÃ­a no tienes movimientos de suscripciÃ³n."
         >
           <template #body-cell-monto="props">
             <q-td :props="props">
@@ -441,7 +459,7 @@ const bannerTitulo = computed(() =>
     .toLowerCase()
   === 'vencido'
     ? 'Tienes una cuota vencida'
-    : 'Tienes una renovación pendiente'
+    : 'Tienes una renovaciÃ³n pendiente'
 )
 
 async function cargarTodo() {
@@ -508,7 +526,7 @@ async function marcarLeida(alerta) {
     $q.notify({
       type: 'positive',
       position: 'top',
-      message: 'Recordatorio marcado como leído.'
+      message: 'Recordatorio marcado como leÃ­do.'
     })
   } catch (error) {
     $q.notify({
@@ -538,7 +556,7 @@ function dinero(valor) {
 }
 
 function fecha(valor) {
-  if (!valor) return '—'
+  if (!valor) return 'â€”'
 
   const texto =
     String(valor).slice(0, 10)
@@ -554,7 +572,7 @@ function fecha(valor) {
 }
 
 function fechaHora(valor) {
-  if (!valor) return '—'
+  if (!valor) return 'â€”'
 
   const fechaValor = new Date(valor)
 
@@ -575,14 +593,14 @@ function textoDias(valor) {
   const dias = numero(valor)
 
   if (dias < 0) {
-    return `${Math.abs(dias)} día(s) desde el vencimiento`
+    return `${Math.abs(dias)} dÃ­a(s) desde el vencimiento`
   }
 
   if (dias === 0) {
     return 'Vence hoy'
   }
 
-  return `${dias} día(s) restantes`
+  return `${dias} dÃ­a(s) restantes`
 }
 
 function colorEstado(valor) {
@@ -629,8 +647,43 @@ function mensajeError(error) {
     primero
     || error.response?.data?.message
     || error.response?.data?.mensaje
-    || 'No se pudo cargar tu suscripción MOTRIX.'
+    || 'No se pudo cargar tu suscripciÃ³n MOTRIX.'
   )
+}
+
+async function descargarReporte(formato) {
+  try {
+    const respuesta = await api.get(
+      `/conductor/suscripcion-motrix/reporte/${formato}`,
+      {
+        responseType: 'blob'
+      }
+    )
+
+    const extension = formato === 'pdf' ? 'pdf' : 'xlsx'
+    descargarBlob(
+      respuesta.data,
+      `MOTRIX_historial_suscripcion.${extension}`
+    )
+  } catch (error) {
+    console.error('Error descargando reporte:', error)
+    $q.notify({
+      type: 'negative',
+      message: mensajeError(error),
+      position: 'top'
+    })
+  }
+}
+
+function descargarBlob(blob, nombre) {
+  const url = URL.createObjectURL(blob)
+  const enlace = document.createElement('a')
+  enlace.href = url
+  enlace.download = nombre
+  document.body.appendChild(enlace)
+  enlace.click()
+  enlace.remove()
+  URL.revokeObjectURL(url)
 }
 
 onMounted(

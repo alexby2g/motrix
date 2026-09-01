@@ -14,6 +14,14 @@
         <q-btn
           outline
           color="green-8"
+          icon="assessment"
+          label="Reportes"
+          no-caps
+          to="/reportes-suscripciones-motrix"
+        />
+        <q-btn
+          outline
+          color="green-8"
           icon="point_of_sale"
           label="Cobranza"
           no-caps
