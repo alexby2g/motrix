@@ -1,12 +1,13 @@
 <?php
 
+use App\Services\MotrixSubscriptionBillingService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
-
 
 Artisan::command('motrix:check-production', function () {
     $checks = [
@@ -41,5 +42,50 @@ Artisan::command('motrix:check-production', function () {
 
     $this->newLine();
     $this->info('MOTRIX superó las comprobaciones básicas de producción.');
+
     return 0;
 })->purpose('Verifica configuraciones críticas antes de publicar MOTRIX');
+
+Artisan::command('motrix:sync-subscriptions', function () {
+    $resultado = app(
+        MotrixSubscriptionBillingService::class
+    )->sincronizarTodas();
+
+    $this->info(
+        'Suscripciones procesadas: '
+        . $resultado['procesadas']
+    );
+
+    $this->info(
+        'Alertas generadas: '
+        . $resultado['alertas_creadas']
+    );
+
+    if ($resultado['errores'] > 0) {
+        $this->warn(
+            'Suscripciones con error: '
+            . $resultado['errores']
+        );
+    }
+
+    return $resultado['errores'] > 0
+        ? 1
+        : 0;
+})->purpose(
+    'Genera renovaciones, vencimientos y alertas de suscripción MOTRIX'
+);
+
+/*
+|--------------------------------------------------------------------------
+| Automatización V5
+|--------------------------------------------------------------------------
+|
+| En producción el servidor debe ejecutar "php artisan schedule:run"
+| cada minuto mediante cron. El trabajo interno se ejecuta una vez al día.
+|
+*/
+Schedule::command(
+    'motrix:sync-subscriptions'
+)
+    ->dailyAt('00:10')
+    ->withoutOverlapping();
