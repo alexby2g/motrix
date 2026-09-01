@@ -325,6 +325,20 @@
           no-caps
           stack
           dense
+          icon="workspace_premium"
+          label="Suscripción"
+          class="driver-nav-item"
+          :class="{
+            'driver-nav-active':
+              esRutaConductorActiva('/conductor/suscripcion', true)
+          }"
+          @click="navegarConductor('/conductor/suscripcion')"
+        />
+        <q-btn
+          flat
+          no-caps
+          stack
+          dense
           icon="account_circle"
           label="Perfil"
           class="driver-nav-item"
@@ -890,6 +904,9 @@ const menuAdministradorGeneral = [
     opciones: [
       { etiqueta: 'Pagos de viajes', icono: 'payments', ruta: '/pagos' },
       { etiqueta: 'Pagos sindicales', icono: 'account_balance_wallet', ruta: '/pagos-sindicales' },
+      { etiqueta: 'Suscripciones MOTRIX', icono: 'workspace_premium', ruta: '/suscripciones-motrix' },
+      { etiqueta: 'Cobranza MOTRIX', icono: 'point_of_sale', ruta: '/cobranza-motrix' },
+      { etiqueta: 'Liquidaciones MOTRIX', icono: 'account_balance', ruta: '/liquidaciones-motrix' },
       { etiqueta: 'Reportes', icono: 'bar_chart', ruta: '/reportes' }
     ]
   }
@@ -972,6 +989,21 @@ const menuSecretario = [
         etiqueta: 'Pagos y aportes',
         icono: 'account_balance_wallet',
         ruta: '/pagos-sindicales'
+      },
+      {
+        etiqueta: 'Suscripciones MOTRIX',
+        icono: 'workspace_premium',
+        ruta: '/suscripciones-motrix'
+      },
+      {
+        etiqueta: 'Cobranza MOTRIX',
+        icono: 'point_of_sale',
+        ruta: '/cobranza-motrix'
+      },
+      {
+        etiqueta: 'Liquidaciones MOTRIX',
+        icono: 'account_balance',
+        ruta: '/liquidaciones-motrix'
       }
     ]
   },
@@ -1046,6 +1078,14 @@ const menuConductor = [
         etiqueta: 'Ganancias e historial',
         icono: 'account_balance_wallet',
         ruta: '/conductor/ganancias',
+        exact: true,
+        color: 'positive',
+        activeClass: 'menu-item-active'
+      },
+      {
+        etiqueta: 'Mi suscripción MOTRIX',
+        icono: 'workspace_premium',
+        ruta: '/conductor/suscripcion',
         exact: true,
         color: 'positive',
         activeClass: 'menu-item-active'

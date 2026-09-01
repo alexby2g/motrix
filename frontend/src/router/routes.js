@@ -136,6 +136,16 @@ const routes = [
         meta: { roles: ['admin_general', 'admin_registro', 'secretario'] }
       },
       {
+        path: 'suscripciones-motrix',
+        component: () => import('pages/administracion/SuscripcionesMotrixPage.vue'),
+        meta: { roles: ['admin_general', 'secretario'] }
+      },
+      {
+        path: 'cobranza-motrix',
+        component: () => import('pages/administracion/CobranzaMotrixPage.vue'),
+        meta: { roles: ['admin_general', 'secretario'] }
+      },
+      {
         path: 'liquidaciones-motrix',
         component: () => import('pages/administracion/LiquidacionesMotrixPage.vue'),
         meta: { roles: ['admin_general', 'secretario'] }
@@ -168,6 +178,11 @@ const routes = [
       {
         path: 'conductor/ganancias',
         component: () => import('pages/servicios/GananciasConductorPage.vue'),
+        meta: { roles: ['conductor'] }
+      },
+      {
+        path: 'conductor/suscripcion',
+        component: () => import('pages/servicios/MiSuscripcionMotrixPage.vue'),
         meta: { roles: ['conductor'] }
       },
       {

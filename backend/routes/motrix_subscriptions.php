@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\LiquidacionMotrixController;
+use App\Http\Controllers\MotrixSubscriptionDashboardController;
 use App\Http\Controllers\PagoSuscripcionMotrixController;
 use App\Http\Controllers\SuscripcionMotrixController;
 use Illuminate\Support\Facades\Route;
@@ -81,6 +82,16 @@ Route::middleware('auth:sanctum')->group(function () {
                 SuscripcionMotrixController::class,
                 'index',
             ]
+        );
+
+        Route::get(
+            '/suscripciones-motrix/panel',
+            [
+                MotrixSubscriptionDashboardController::class,
+                'resumen',
+            ]
+        )->middleware(
+            'role:admin_general,secretario'
         );
 
         Route::post(
