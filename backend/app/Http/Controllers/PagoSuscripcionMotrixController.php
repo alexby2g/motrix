@@ -161,6 +161,17 @@ class PagoSuscripcionMotrixController extends Controller
         Request $request,
         int $id
     ): JsonResponse {
+        $canalesPermitidos =
+            $this->rol($request)
+                === 'secretario'
+                ? [
+                    MotrixSubscriptionBillingService::CANAL_SINDICATO,
+                ]
+                : [
+                    MotrixSubscriptionBillingService::CANAL_SINDICATO,
+                    MotrixSubscriptionBillingService::CANAL_MOTRIX_DIRECTO,
+                ];
+
         $datos = $request->validate([
             'monto_pagado' => [
                 'required',
@@ -180,10 +191,9 @@ class PagoSuscripcionMotrixController extends Controller
             ],
             'canal_cobro' => [
                 'required',
-                Rule::in([
-                    MotrixSubscriptionBillingService::CANAL_SINDICATO,
-                    MotrixSubscriptionBillingService::CANAL_MOTRIX_DIRECTO,
-                ]),
+                Rule::in(
+                    $canalesPermitidos
+                ),
             ],
             'referencia_pago' => [
                 'nullable',

@@ -181,6 +181,109 @@ class MotrixSubscriptionBillingTest extends TestCase
         );
     }
 
+    public function test_secretario_no_puede_registrar_pago_como_motrix_directo(): void
+    {
+        [
+            $suscripcion,
+            $sindicato,
+        ] = $this->crearSuscripcion(
+            'Sindicato Canal',
+            '910002'
+        );
+
+        $pago = app(
+            MotrixSubscriptionBillingService::class
+        )->asegurarCuotaInicial(
+            $suscripcion
+        );
+
+        $secretario =
+            User::factory()->create([
+                'role' =>
+                    'secretario',
+                'sindicato_id' =>
+                    $sindicato->id,
+            ]);
+
+        Sanctum::actingAs(
+            $secretario
+        );
+
+        $this->postJson(
+            '/api/pagos-suscripcion-motrix/'
+            . $pago->id
+            . '/registrar',
+            [
+                'monto_pagado' => 15,
+                'forma_pago' =>
+                    'QR',
+                'canal_cobro' =>
+                    'motrix_directo',
+            ]
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(
+                'canal_cobro'
+            );
+
+        $this->assertDatabaseHas(
+            'pagos_suscripcion_motrix',
+            [
+                'id' =>
+                    $pago->id,
+                'estado' =>
+                    'Pendiente',
+                'monto_pagado' =>
+                    0,
+            ]
+        );
+    }
+
+    public function test_admin_general_puede_registrar_pago_motrix_directo(): void
+    {
+        [
+            $suscripcion,
+        ] = $this->crearSuscripcion(
+            'Sindicato Directo',
+            '910003'
+        );
+
+        $pago = app(
+            MotrixSubscriptionBillingService::class
+        )->asegurarCuotaInicial(
+            $suscripcion
+        );
+
+        Sanctum::actingAs(
+            User::factory()->create([
+                'role' =>
+                    'admin_general',
+            ])
+        );
+
+        $this->postJson(
+            '/api/pagos-suscripcion-motrix/'
+            . $pago->id
+            . '/registrar',
+            [
+                'monto_pagado' => 15,
+                'forma_pago' =>
+                    'Transferencia',
+                'canal_cobro' =>
+                    'motrix_directo',
+            ]
+        )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.canal_cobro',
+                'motrix_directo'
+            )
+            ->assertJsonPath(
+                'data.estado',
+                'Pagado'
+            );
+    }
+
     public function test_sincronizacion_crea_recordatorio_de_vencimiento(): void
     {
         Carbon::setTestNow(

@@ -68,13 +68,27 @@ class LiquidacionMotrix extends Model
         );
     }
 
+    public function transferencias(): HasMany
+    {
+        return $this->hasMany(
+            TransferenciaLiquidacionMotrix::class,
+            'liquidacion_id'
+        );
+    }
+
     public function saldoPendiente(): string
     {
-        $declarado = (float) $this->monto_declarado;
-        $transferido = (float) $this->monto_transferido;
+        $declarado =
+            (float) $this->monto_declarado;
+
+        $transferido =
+            (float) $this->monto_transferido;
 
         return number_format(
-            max(0, $declarado - $transferido),
+            max(
+                0,
+                $declarado - $transferido
+            ),
             2,
             '.',
             ''

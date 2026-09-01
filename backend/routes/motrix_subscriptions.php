@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\LiquidacionMotrixController;
 use App\Http\Controllers\PagoSuscripcionMotrixController;
 use App\Http\Controllers\SuscripcionMotrixController;
 use Illuminate\Support\Facades\Route;
@@ -13,7 +14,6 @@ use Illuminate\Support\Facades\Route;
 | Maneja exclusivamente la suscripción comercial al servicio MOTRIX.
 |
 */
-
 Route::middleware('auth:sanctum')->group(function () {
     /*
     |--------------------------------------------------------------------------
@@ -139,7 +139,68 @@ Route::middleware('auth:sanctum')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | PLANES Y SINCRONIZACIÓN - SOLO ADMIN GENERAL
+    | LIQUIDACIONES SINDICATO -> MOTRIX - V5.3
+    |--------------------------------------------------------------------------
+    |
+    | Solo se concilian pagos efectivamente cobrados por el sindicato.
+    | Los pagos motrix_directo no generan saldo de liquidación sindical.
+    |
+    */
+    Route::middleware(
+        'role:admin_general,secretario'
+    )->group(function () {
+        Route::get(
+            '/liquidaciones-motrix',
+            [
+                LiquidacionMotrixController::class,
+                'index',
+            ]
+        );
+
+        Route::get(
+            '/liquidaciones-motrix/resumen',
+            [
+                LiquidacionMotrixController::class,
+                'resumen',
+            ]
+        );
+
+        Route::post(
+            '/liquidaciones-motrix/preparar',
+            [
+                LiquidacionMotrixController::class,
+                'preparar',
+            ]
+        );
+
+        Route::post(
+            '/liquidaciones-motrix/comprobante',
+            [
+                LiquidacionMotrixController::class,
+                'subirComprobante',
+            ]
+        );
+
+        Route::get(
+            '/liquidaciones-motrix/{id}',
+            [
+                LiquidacionMotrixController::class,
+                'show',
+            ]
+        )->whereNumber('id');
+
+        Route::post(
+            '/liquidaciones-motrix/{id}/transferencias',
+            [
+                LiquidacionMotrixController::class,
+                'registrarTransferencia',
+            ]
+        )->whereNumber('id');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | PLANES, SINCRONIZACIÓN Y VALIDACIÓN - SOLO ADMIN GENERAL
     |--------------------------------------------------------------------------
     */
     Route::middleware('role:admin_general')
@@ -167,5 +228,21 @@ Route::middleware('auth:sanctum')->group(function () {
                     'sincronizar',
                 ]
             );
+
+            Route::post(
+                '/transferencias-liquidacion-motrix/{id}/validar',
+                [
+                    LiquidacionMotrixController::class,
+                    'validarTransferencia',
+                ]
+            )->whereNumber('id');
+
+            Route::post(
+                '/transferencias-liquidacion-motrix/{id}/observar',
+                [
+                    LiquidacionMotrixController::class,
+                    'observarTransferencia',
+                ]
+            )->whereNumber('id');
         });
 });
