@@ -11,8 +11,6 @@ Broadcast::channel(
     }
 );
 
-
-
 /*
  * Eventos de solicitudes: canales privados por participante.
  * Evita exponer origen, destino, pasajero y conductor en un canal público.
@@ -24,9 +22,20 @@ Broadcast::channel(
             && (int) ($user->pasajero_id ?? 0) === (int) $pasajeroId;
     }
 );
-
 Broadcast::channel(
     'conductor.{mototaxistaId}.solicitudes',
+    function ($user, $mototaxistaId) {
+        return strtolower(trim((string) ($user->role ?? ''))) === 'conductor'
+            && (int) ($user->mototaxista_id ?? 0) === (int) $mototaxistaId;
+    }
+);
+
+/*
+ * Alertas comerciales de Suscripciones MOTRIX.
+ * Cada conductor puede escuchar únicamente su propio canal privado.
+ */
+Broadcast::channel(
+    'conductor.{mototaxistaId}.suscripcion',
     function ($user, $mototaxistaId) {
         return strtolower(trim((string) ($user->role ?? ''))) === 'conductor'
             && (int) ($user->mototaxista_id ?? 0) === (int) $mototaxistaId;
@@ -57,7 +66,6 @@ Broadcast::channel(
         );
     }
 );
-
 Broadcast::channel(
     'viajes.incidencias.{solicitudId}',
     function (

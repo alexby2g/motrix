@@ -1,9 +1,9 @@
-﻿<template>
+<template>
   <q-page class="q-pa-md bg-grey-1">
     <div class="row items-center q-col-gutter-md q-mb-lg">
       <div class="col">
         <div class="text-h5 text-weight-bold text-green-9">
-          Mi suscripciÃ³n MOTRIX
+          Mi suscripción MOTRIX
         </div>
         <div class="text-body2 text-grey-7">
           Consulta tu plan, vencimiento, cuotas, pagos y recordatorios.
@@ -36,7 +36,7 @@
           label="Actualizar"
           no-caps
           :loading="loading"
-          @click="cargarTodo"
+          @click="cargarTodo(false)"
         />
       </div>
     </div>
@@ -62,8 +62,8 @@
           color="orange-9"
         />
       </template>
-      Tu sindicato todavÃ­a no configurÃ³ una suscripciÃ³n MOTRIX para tu cuenta.
-      Cuando sea asignada podrÃ¡s consultar aquÃ­ el plan, la cuota y el vencimiento.
+      Tu sindicato todavía no configuró una suscripción MOTRIX para tu cuenta.
+      Cuando sea asignada podrás consultar aquí el plan, la cuota y el vencimiento.
     </q-banner>
 
     <template v-if="configurada && suscripcion">
@@ -82,14 +82,14 @@
                   text-color="green-9"
                   icon="workspace_premium"
                 />
-                <div class="q-ml-md">
+                <div class="q-ml-md min-width-zero">
                   <div class="text-caption text-grey-7">
                     Plan actual
                   </div>
-                  <div class="text-h5 text-weight-bold text-green-9">
+                  <div class="text-h5 text-weight-bold text-green-9 ellipsis">
                     {{ suscripcion.plan?.nombre || 'MOTRIX Conductor' }}
                   </div>
-                  <div class="text-body2 text-grey-7">
+                  <div class="text-body2 text-grey-7 ellipsis">
                     {{ suscripcion.sindicato?.nombre || 'Sindicato' }}
                   </div>
                 </div>
@@ -161,7 +161,7 @@
                 {{
                   cuotaPendiente
                     ? dinero(cuotaPendiente.monto_esperado)
-                    : 'Al dÃ­a'
+                    : 'Al día'
                 }}
               </div>
             </q-card-section>
@@ -172,16 +172,16 @@
           <q-card flat bordered class="info-card">
             <q-card-section>
               <div class="text-caption text-grey-7">
-                Ãšltimo pago
+                Último pago
               </div>
               <div class="text-h6 text-weight-bold">
-                {{ ultimoPago?.periodo || 'â€”' }}
+                {{ ultimoPago?.periodo || '—' }}
               </div>
               <div class="text-caption text-grey-7">
                 {{
                   ultimoPago
                     ? fechaHora(ultimoPago.fecha_pago)
-                    : 'TodavÃ­a no registrado'
+                    : 'Todavía no registrado'
                 }}
               </div>
             </q-card-section>
@@ -191,14 +191,31 @@
         <div class="col-12 col-sm-6 col-lg-3">
           <q-card flat bordered class="info-card">
             <q-card-section>
-              <div class="text-caption text-grey-7">
-                Alertas pendientes
-              </div>
-              <div class="text-h6 text-weight-bold">
-                {{ alertas.length }}
-              </div>
-              <div class="text-caption text-grey-7">
-                Avisos de renovaciÃ³n MOTRIX
+              <div class="row items-center justify-between no-wrap">
+                <div>
+                  <div class="text-caption text-grey-7">
+                    Alertas pendientes
+                  </div>
+                  <div class="text-h6 text-weight-bold">
+                    {{ alertas.length }}
+                  </div>
+                  <div class="text-caption text-grey-7">
+                    Avisos de renovación MOTRIX
+                  </div>
+                </div>
+                <q-icon
+                  :name="tiempoRealConectado ? 'sensors' : 'sync'"
+                  :color="tiempoRealConectado ? 'green-8' : 'grey-6'"
+                  size="28px"
+                >
+                  <q-tooltip>
+                    {{
+                      tiempoRealConectado
+                        ? 'Alertas en tiempo real conectadas'
+                        : 'La pantalla mantiene sincronización de respaldo'
+                    }}
+                  </q-tooltip>
+                </q-icon>
               </div>
             </q-card-section>
           </q-card>
@@ -217,13 +234,12 @@
             size="28px"
           />
         </template>
-
         <div class="text-weight-bold">
           {{ bannerTitulo }}
         </div>
         <div>
-          Periodo {{ cuotaPendiente.periodo }} Â·
-          {{ dinero(cuotaPendiente.monto_esperado) }} Â·
+          Periodo {{ cuotaPendiente.periodo }} ·
+          {{ dinero(cuotaPendiente.monto_esperado) }} ·
           vence {{ fecha(cuotaPendiente.fecha_vencimiento) }}.
         </div>
       </q-banner>
@@ -234,10 +250,23 @@
         bordered
         class="q-mb-lg"
       >
-        <q-card-section>
-          <div class="text-subtitle1 text-weight-bold">
-            Recordatorios
+        <q-card-section class="row items-center justify-between">
+          <div>
+            <div class="text-subtitle1 text-weight-bold">
+              Recordatorios
+            </div>
+            <div class="text-caption text-grey-7">
+              Los avisos permanecen aquí aunque no estuvieras conectado cuando fueron enviados.
+            </div>
           </div>
+          <q-chip
+            dense
+            :color="tiempoRealConectado ? 'green-1' : 'grey-3'"
+            :text-color="tiempoRealConectado ? 'green-9' : 'grey-8'"
+            :icon="tiempoRealConectado ? 'sensors' : 'sync'"
+          >
+            {{ tiempoRealConectado ? 'En vivo' : 'Sincronización automática' }}
+          </q-chip>
         </q-card-section>
 
         <q-separator />
@@ -262,6 +291,9 @@
               <q-item-label caption>
                 {{ alerta.mensaje }}
               </q-item-label>
+              <q-item-label caption class="q-mt-xs">
+                {{ fechaHora(alerta.enviada_en || alerta.programada_para) }}
+              </q-item-label>
             </q-item-section>
 
             <q-item-section side>
@@ -273,7 +305,7 @@
                 color="green-8"
                 @click="marcarLeida(alerta)"
               >
-                <q-tooltip>Marcar como leÃ­da</q-tooltip>
+                <q-tooltip>Marcar como leída</q-tooltip>
               </q-btn>
             </q-item-section>
           </q-item>
@@ -286,7 +318,7 @@
             Historial de cuotas y renovaciones
           </div>
           <div class="text-caption text-grey-7">
-            Ãšltimos movimientos registrados en tu suscripciÃ³n MOTRIX.
+            Últimos movimientos registrados en tu suscripción MOTRIX.
           </div>
         </q-card-section>
 
@@ -298,7 +330,8 @@
           :rows="pagos"
           :columns="columnas"
           :pagination="{ rowsPerPage: 10 }"
-          no-data-label="TodavÃ­a no tienes movimientos de suscripciÃ³n."
+          :grid="$q.screen.lt.md"
+          no-data-label="Todavía no tienes movimientos de suscripción."
         >
           <template #body-cell-monto="props">
             <q-td :props="props">
@@ -345,18 +378,45 @@
 <script setup>
 import {
   computed,
+  onBeforeUnmount,
   onMounted,
   ref
 } from 'vue'
 import {
   useQuasar
 } from 'quasar'
+import Echo from 'laravel-echo'
+import Pusher from 'pusher-js'
 
 import {
   api
 } from 'src/boot/axios.js'
+import {
+  BROADCAST_AUTH_URL,
+  echoOptions
+} from 'src/config/runtime.js'
+
+if (typeof window !== 'undefined') {
+  window.Pusher = Pusher
+}
 
 const $q = useQuasar()
+
+const usuarioAutenticado = (() => {
+  try {
+    return JSON.parse(
+      localStorage.getItem('motrix_user') || 'null'
+    )
+  } catch {
+    return null
+  }
+})()
+
+const MOTOTAXISTA_ID = Number(
+  usuarioAutenticado?.mototaxista_id
+  || localStorage.getItem('mototaxista_id')
+  || 0
+)
 
 const loading = ref(false)
 const cargado = ref(false)
@@ -364,6 +424,10 @@ const configurada = ref(false)
 const suscripcion = ref(null)
 const pagos = ref([])
 const alertas = ref([])
+const tiempoRealConectado = ref(false)
+
+let echoInstance = null
+let temporizadorRespaldo = null
 
 const columnas = [
   {
@@ -459,11 +523,13 @@ const bannerTitulo = computed(() =>
     .toLowerCase()
   === 'vencido'
     ? 'Tienes una cuota vencida'
-    : 'Tienes una renovaciÃ³n pendiente'
+    : 'Tienes una renovación pendiente'
 )
 
-async function cargarTodo() {
-  loading.value = true
+async function cargarTodo(silencioso = false) {
+  if (!silencioso) {
+    loading.value = true
+  }
 
   try {
     const [
@@ -472,13 +538,16 @@ async function cargarTodo() {
       respuestaAlertas
     ] = await Promise.all([
       api.get(
-        '/conductor/suscripcion-motrix'
+        '/conductor/suscripcion-motrix',
+        { params: { _t: Date.now() } }
       ),
       api.get(
-        '/conductor/suscripcion-motrix/pagos'
+        '/conductor/suscripcion-motrix/pagos',
+        { params: { _t: Date.now() } }
       ),
       api.get(
-        '/conductor/suscripcion-motrix/alertas'
+        '/conductor/suscripcion-motrix/alertas',
+        { params: { _t: Date.now() } }
       )
     ])
 
@@ -502,14 +571,43 @@ async function cargarTodo() {
 
     cargado.value = true
   } catch (error) {
-    $q.notify({
-      type: 'negative',
-      position: 'top',
-      message: mensajeError(error)
-    })
+    if (!silencioso) {
+      $q.notify({
+        type: 'negative',
+        position: 'top',
+        message: mensajeError(error)
+      })
+    }
   } finally {
-    loading.value = false
+    if (!silencioso) {
+      loading.value = false
+    }
   }
+}
+
+async function cargarAlertasSilencioso() {
+  try {
+    const respuesta = await api.get(
+      '/conductor/suscripcion-motrix/alertas',
+      { params: { _t: Date.now() } }
+    )
+
+    alertas.value = respuesta.data?.data || []
+  } catch (error) {
+    console.warn(
+      'No se pudieron refrescar las alertas MOTRIX:',
+      error
+    )
+  }
+}
+
+async function refrescarRespaldo() {
+  if (!configurada.value) {
+    await cargarTodo(true)
+    return
+  }
+
+  await cargarAlertasSilencioso()
 }
 
 async function marcarLeida(alerta) {
@@ -526,7 +624,7 @@ async function marcarLeida(alerta) {
     $q.notify({
       type: 'positive',
       position: 'top',
-      message: 'Recordatorio marcado como leÃ­do.'
+      message: 'Recordatorio marcado como leído.'
     })
   } catch (error) {
     $q.notify({
@@ -535,6 +633,139 @@ async function marcarLeida(alerta) {
       message: mensajeError(error)
     })
   }
+}
+
+function obtenerEndpointAutorizacion() {
+  const baseConfigurada = String(
+    api?.defaults?.baseURL || ''
+  ).trim().replace(/\/+$/, '')
+
+  if (/^https?:\/\//i.test(baseConfigurada)) {
+    return `${baseConfigurada}/broadcasting/auth`
+  }
+
+  return BROADCAST_AUTH_URL
+}
+
+function obtenerCabecerasAutorizacion() {
+  const token =
+    localStorage.getItem('motrix_token') || ''
+
+  return {
+    Accept: 'application/json',
+    ...(token
+      ? { Authorization: `Bearer ${token}` }
+      : {})
+  }
+}
+
+function procesarAlertaTiempoReal(data) {
+  const alerta = data?.alerta
+
+  if (
+    !alerta?.id
+    || Number(alerta.id_mototaxista || 0)
+      !== MOTOTAXISTA_ID
+  ) {
+    return
+  }
+
+  const indice = alertas.value.findIndex(
+    item => Number(item.id) === Number(alerta.id)
+  )
+
+  const esNueva = indice < 0
+
+  if (esNueva) {
+    alertas.value.unshift(alerta)
+  } else {
+    alertas.value.splice(indice, 1, {
+      ...alertas.value[indice],
+      ...alerta
+    })
+  }
+
+  cargarTodo(true).catch(() => {})
+
+  if (esNueva) {
+    $q.notify({
+      color: 'orange-9',
+      textColor: 'white',
+      icon: 'notifications_active',
+      position: 'top',
+      timeout: 9000,
+      message:
+        alerta.titulo
+        || 'Recordatorio de suscripción MOTRIX',
+      caption: alerta.mensaje || undefined
+    })
+  }
+}
+
+function inicializarTiempoReal() {
+  if (
+    echoInstance
+    || !MOTOTAXISTA_ID
+    || !localStorage.getItem('motrix_token')
+  ) {
+    return
+  }
+
+  try {
+    echoInstance = new Echo({
+      ...echoOptions(),
+      authEndpoint: obtenerEndpointAutorizacion(),
+      auth: {
+        headers: obtenerCabecerasAutorizacion()
+      }
+    })
+
+    const conexion =
+      echoInstance.connector?.pusher?.connection
+
+    conexion?.bind('connected', () => {
+      tiempoRealConectado.value = true
+      cargarAlertasSilencioso().catch(() => {})
+    })
+
+    conexion?.bind('disconnected', () => {
+      tiempoRealConectado.value = false
+    })
+
+    conexion?.bind('error', (error) => {
+      console.error(
+        'Error de conexión con alertas MOTRIX:',
+        error
+      )
+      tiempoRealConectado.value = false
+    })
+
+    echoInstance
+      .private(
+        `conductor.${MOTOTAXISTA_ID}.suscripcion`
+      )
+      .listen(
+        '.AlertaSuscripcionMotrixPublicada',
+        procesarAlertaTiempoReal
+      )
+  } catch (error) {
+    console.error(
+      'No se pudo inicializar el canal de suscripción MOTRIX:',
+      error
+    )
+    tiempoRealConectado.value = false
+  }
+}
+
+function desconectarTiempoReal() {
+  if (!echoInstance) return
+
+  echoInstance.leave(
+    `conductor.${MOTOTAXISTA_ID}.suscripcion`
+  )
+  echoInstance.disconnect()
+  echoInstance = null
+  tiempoRealConectado.value = false
 }
 
 function numero(valor) {
@@ -556,7 +787,7 @@ function dinero(valor) {
 }
 
 function fecha(valor) {
-  if (!valor) return 'â€”'
+  if (!valor) return '—'
 
   const texto =
     String(valor).slice(0, 10)
@@ -572,9 +803,13 @@ function fecha(valor) {
 }
 
 function fechaHora(valor) {
-  if (!valor) return 'â€”'
+  if (!valor) return '—'
 
-  const fechaValor = new Date(valor)
+  const normalizada = String(valor).includes('T')
+    ? String(valor)
+    : String(valor).replace(' ', 'T')
+
+  const fechaValor = new Date(normalizada)
 
   if (Number.isNaN(fechaValor.getTime())) {
     return String(valor)
@@ -593,14 +828,14 @@ function textoDias(valor) {
   const dias = numero(valor)
 
   if (dias < 0) {
-    return `${Math.abs(dias)} dÃ­a(s) desde el vencimiento`
+    return `${Math.abs(dias)} día(s) desde el vencimiento`
   }
 
   if (dias === 0) {
     return 'Vence hoy'
   }
 
-  return `${dias} dÃ­a(s) restantes`
+  return `${dias} día(s) restantes`
 }
 
 function colorEstado(valor) {
@@ -647,7 +882,7 @@ function mensajeError(error) {
     primero
     || error.response?.data?.message
     || error.response?.data?.mensaje
-    || 'No se pudo cargar tu suscripciÃ³n MOTRIX.'
+    || 'No se pudo cargar tu suscripción MOTRIX.'
   )
 }
 
@@ -660,13 +895,19 @@ async function descargarReporte(formato) {
       }
     )
 
-    const extension = formato === 'pdf' ? 'pdf' : 'xlsx'
+    const extension =
+      formato === 'pdf' ? 'pdf' : 'xlsx'
+
     descargarBlob(
       respuesta.data,
       `MOTRIX_historial_suscripcion.${extension}`
     )
   } catch (error) {
-    console.error('Error descargando reporte:', error)
+    console.error(
+      'Error descargando reporte:',
+      error
+    )
+
     $q.notify({
       type: 'negative',
       message: mensajeError(error),
@@ -678,6 +919,7 @@ async function descargarReporte(formato) {
 function descargarBlob(blob, nombre) {
   const url = URL.createObjectURL(blob)
   const enlace = document.createElement('a')
+
   enlace.href = url
   enlace.download = nombre
   document.body.appendChild(enlace)
@@ -686,9 +928,26 @@ function descargarBlob(blob, nombre) {
   URL.revokeObjectURL(url)
 }
 
-onMounted(
-  cargarTodo
-)
+onMounted(async () => {
+  await cargarTodo(false)
+  inicializarTiempoReal()
+
+  temporizadorRespaldo = window.setInterval(
+    () => {
+      refrescarRespaldo().catch(() => {})
+    },
+    60000
+  )
+})
+
+onBeforeUnmount(() => {
+  if (temporizadorRespaldo) {
+    window.clearInterval(temporizadorRespaldo)
+    temporizadorRespaldo = null
+  }
+
+  desconectarTiempoReal()
+})
 </script>
 
 <style scoped>
@@ -703,5 +962,9 @@ onMounted(
 
 .metric {
   min-width: 130px;
+}
+
+.min-width-zero {
+  min-width: 0;
 }
 </style>

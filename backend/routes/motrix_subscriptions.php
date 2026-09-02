@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\LiquidacionMotrixController;
 use App\Http\Controllers\MotrixSubscriptionDashboardController;
+use App\Http\Controllers\MotrixSubscriptionAutomationController;
 use App\Http\Controllers\MotrixSubscriptionReportController;
 use App\Http\Controllers\PagoSuscripcionMotrixController;
 use App\Http\Controllers\SuscripcionMotrixController;
@@ -296,10 +297,18 @@ Route::middleware('auth:sanctum')->group(function () {
                 ]
             )->whereNumber('id');
 
+            Route::get(
+                '/suscripciones-motrix/automatizacion',
+                [
+                    MotrixSubscriptionAutomationController::class,
+                    'estado',
+                ]
+            );
+
             Route::post(
                 '/suscripciones-motrix/sincronizar',
                 [
-                    PagoSuscripcionMotrixController::class,
+                    MotrixSubscriptionAutomationController::class,
                     'sincronizar',
                 ]
             );
