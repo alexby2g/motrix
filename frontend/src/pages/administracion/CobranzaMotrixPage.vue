@@ -188,8 +188,8 @@
       persistent
     >
       <q-card class="dialog-card">
-        <q-form @submit.prevent="registrarPago">
-          <q-card-section class="bg-green-8 text-white row items-center">
+        <q-form class="dialog-form" @submit.prevent="registrarPago">
+          <q-card-section class="dialog-header bg-green-8 text-white row items-center">
             <div>
               <div class="text-h6 text-weight-bold">
                 Registrar pago MOTRIX
@@ -209,7 +209,7 @@
             />
           </q-card-section>
 
-          <q-card-section>
+          <q-card-section class="dialog-body scroll">
             <q-banner
               rounded
               class="bg-green-1 text-green-10 q-mb-md"
@@ -306,7 +306,7 @@
 
           <q-separator />
 
-          <q-card-actions align="right" class="q-pa-md">
+          <q-card-actions align="right" class="dialog-actions q-pa-md">
             <q-btn
               flat
               label="Cancelar"
@@ -801,5 +801,33 @@ onMounted(async () => {
 .dialog-card {
   width: min(720px, 94vw);
   max-width: 720px;
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+}
+
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 32px);
+  min-height: 0;
+}
+
+.dialog-header,
+.dialog-actions {
+  flex: 0 0 auto;
+}
+
+.dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 599px) {
+  .dialog-card,
+  .dialog-form {
+    max-height: calc(100vh - 16px);
+  }
 }
 </style>
