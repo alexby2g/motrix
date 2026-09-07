@@ -239,7 +239,9 @@ class MototaxistaController extends Controller
                 'admin_registro',
                 'secretario',
             ],
-            'No tienes autorización para seleccionar mototaxistas para motocicletas.'
+            'No tienes autorización para seleccionar mototaxistas para motocicletas.',
+            true,
+            50
         );
     }
 
@@ -411,7 +413,9 @@ class MototaxistaController extends Controller
     private function opcionesLigeras(
         Request $request,
         array $rolesPermitidos,
-        string $mensajeNoAutorizado
+        string $mensajeNoAutorizado,
+        bool $permitirSinBusqueda = false,
+        int $limite = 8
     ) {
         $rol = $this->rolUsuario($request);
 
@@ -445,7 +449,8 @@ class MototaxistaController extends Controller
             : null;
 
         if (
-            mb_strlen($texto) < 2
+            ! $permitirSinBusqueda
+            && mb_strlen($texto) < 2
             && ! $includeId
         ) {
             return response()->json([], 200);
@@ -550,7 +555,7 @@ class MototaxistaController extends Controller
                 ])
                 ->orderBy('nro_chaleco')
                 ->orderBy('id')
-                ->limit(8)
+                ->limit($limite)
                 ->get(),
             200
         );

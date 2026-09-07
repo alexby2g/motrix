@@ -416,7 +416,7 @@
                   :hint="
                     form.id_mototaxista
                       ? undefined
-                      : 'Escribe al menos 2 caracteres del nombre, CI o chaleco.'
+                      : 'Selecciona un mototaxista o escribe al menos 2 caracteres para buscar.'
                   "
                   hide-bottom-space
                   :rules="[requerido]"
@@ -1000,7 +1000,7 @@ async function filtrarMototaxistas(valor, update) {
   const texto = String(valor || '').trim()
   terminoMototaxista.value = texto
 
-  if (texto.length < 2) {
+  if (texto.length === 1) {
     secuenciaBusquedaMototaxista += 1
     buscandoMototaxistas.value = false
 

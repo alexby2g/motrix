@@ -602,6 +602,22 @@ Route::middleware([
         );
 
         Route::get(
+            '/mototaxistas/opciones-motocicleta',
+            [
+                MototaxistaController::class,
+                'opcionesMotocicleta',
+            ]
+        );
+
+        Route::get(
+            '/mototaxistas/opciones-pago-sindical',
+            [
+                MototaxistaController::class,
+                'opcionesPagoSindical',
+            ]
+        );
+
+        Route::get(
             '/mototaxistas/{id}',
             [
                 MototaxistaController::class,
