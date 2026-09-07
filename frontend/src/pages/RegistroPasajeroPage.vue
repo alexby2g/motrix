@@ -110,10 +110,10 @@
               <q-input
                 v-model.trim="form.telefono"
                 outlined
-                label="Teléfono *"
+                label="Número de celular *"
                 type="tel"
                 autocomplete="tel"
-                :rules="[reglaObligatoria('El teléfono es obligatorio')]"
+                :rules="reglasTelefono"
               >
                 <template #prepend>
                   <q-icon name="phone" color="green-8" />
@@ -136,11 +136,11 @@
             <q-input
               v-model.trim="form.email"
               outlined
-              label="Correo electrónico *"
+              label="Correo electrónico (opcional)"
               type="email"
               autocomplete="email"
               class="q-mt-sm"
-              :rules="reglasEmail"
+              :rules="reglasEmailOpcional"
             >
               <template #prepend>
                 <q-icon name="mail" color="green-8" />
@@ -256,10 +256,18 @@ function reglaObligatoria(mensaje) {
     || mensaje
 }
 
-const reglasEmail = [
-  reglaObligatoria('El correo electrónico es obligatorio'),
-  valor =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(valor || ''))
+const reglasTelefono = [
+  reglaObligatoria('El número de celular es obligatorio'),
+  valor => {
+    const numero = String(valor || '').replace(/\D+/g, '')
+    return (numero.length >= 7 && numero.length <= 15)
+      || 'Ingresa un número de celular válido'
+  }
+]
+
+const reglasEmailOpcional = [
+  valor => !String(valor || '').trim()
+    || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(valor || ''))
     || 'Ingresa un correo electrónico válido'
 ]
 
@@ -298,7 +306,7 @@ async function registrar() {
 
   try {
     const respuesta = await api.post(
-      '/auth/registro-pasajero',
+      '/auth/registro-pasajero-celular',
       {
         ...form,
         device_name: 'MOTRIX Pasajero'
@@ -313,7 +321,7 @@ async function registrar() {
       type: 'positive',
       position: 'top',
       icon: 'check_circle',
-      message: 'Tu cuenta de pasajero fue creada correctamente.'
+      message: 'Tu cuenta fue creada. Desde ahora tu número de celular es tu usuario de acceso.'
     })
 
     await router.replace('/pasajero')

@@ -427,7 +427,7 @@
           Comparativo por sindicato
         </div>
         <div class="text-caption text-grey-7">
-          Recaudación y estado comercial del periodo {{ periodo }}.
+          Recaudación y estado comercial del periodo {{ periodoMMYYYY(periodo) }}.
         </div>
       </q-card-section>
       <q-separator />
@@ -764,10 +764,11 @@
 </template>
 
 <script setup>
+import { fechaISOHoyBolivia, motrixDateV57, periodoActualBolivia, periodoMMYYYY } from 'src/utils/motrixDate.js'
+
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios.js'
-
 const $q = useQuasar()
 
 const loadingPanel = ref(false)
@@ -816,7 +817,7 @@ const columnas = [
   { name: 'sindicato', label: 'Sindicato', field: row => row.sindicato?.nombre, align: 'left' },
   { name: 'plan', label: 'Plan / cuota', field: row => row.plan?.nombre, align: 'left' },
   { name: 'estado', label: 'Estado', field: 'estado_calculado', align: 'center' },
-  { name: 'vencimiento', label: 'Vencimiento', field: 'fecha_vencimiento', align: 'left' },
+  { name: 'vencimiento', label: 'Vencimiento', field: 'fecha_vencimiento', align: 'left', format: value => motrixDateV57(value) },
   { name: 'acciones', label: '', field: 'id', align: 'right' }
 ]
 
@@ -955,16 +956,11 @@ const tarjetasResumen = computed(() => {
 })
 
 function periodoActual () {
-  const hoy = new Date()
-  const mes = String(hoy.getMonth() + 1).padStart(2, '0')
-  return `${hoy.getFullYear()}-${mes}`
+  return periodoActualBolivia()
 }
 
 function fechaHoy () {
-  const hoy = new Date()
-  const mes = String(hoy.getMonth() + 1).padStart(2, '0')
-  const dia = String(hoy.getDate()).padStart(2, '0')
-  return `${hoy.getFullYear()}-${mes}-${dia}`
+  return fechaISOHoyBolivia()
 }
 
 function panelVacio () {

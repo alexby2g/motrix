@@ -114,28 +114,28 @@
 
               <div class="profile-data">
                 <q-icon
-                  name="email"
+                  name="phone_android"
                   color="green-8"
                 />
 
                 <div>
-                  <span>Correo</span>
+                  <span>Celular / usuario</span>
                   <strong>
-                    {{ usuario?.email || 'No disponible' }}
+                    {{ usuario?.telefono || usuario?.nickname || 'No registrado' }}
                   </strong>
                 </div>
               </div>
 
               <div class="profile-data">
                 <q-icon
-                  name="alternate_email"
+                  name="email"
                   color="green-8"
                 />
 
                 <div>
-                  <span>Nickname</span>
+                  <span>Correo (opcional)</span>
                   <strong>
-                    {{ usuario?.nickname || 'No registrado' }}
+                    {{ usuario?.email || 'No registrado' }}
                   </strong>
                 </div>
               </div>
@@ -183,6 +183,18 @@
             </q-banner>
 
             <div class="row q-col-gutter-sm q-mt-md">
+              <div class="col-12">
+                <q-btn
+                  outline
+                  color="green-8"
+                  icon="lock_reset"
+                  label="Cambiar contraseña"
+                  class="full-width"
+                  no-caps
+                  @click="router.push('/cuenta/cambiar-contrasena')"
+                />
+              </div>
+
               <div class="col-12 col-sm-6">
                 <q-btn
                   outline
@@ -245,10 +257,11 @@
                   </q-banner>
 
                   <q-input
-                    v-model.trim="emailConfirmacion"
+                    v-model="passwordActual"
                     outlined
-                    type="email"
-                    label="Confirma tu correo"
+                    type="password"
+                    label="Contraseña actual"
+                    autocomplete="current-password"
                     class="q-mb-md"
                   />
 
@@ -314,7 +327,7 @@ const route = useRoute()
 const cargando = ref(false)
 const dialogEliminarCuenta = ref(false)
 const eliminandoCuenta = ref(false)
-const emailConfirmacion = ref('')
+const passwordActual = ref('')
 const textoConfirmacion = ref('')
 const usuario = ref(
   leerUsuarioLocal()
@@ -405,13 +418,12 @@ async function cargarPerfil() {
 const puedeConfirmarEliminacion = computed(() => {
   return (
     textoConfirmacion.value === 'ELIMINAR'
-    && String(emailConfirmacion.value || '').trim().toLowerCase()
-      === String(usuario.value?.email || '').trim().toLowerCase()
+    && String(passwordActual.value || '').length > 0
   )
 })
 
 function abrirEliminarCuenta() {
-  emailConfirmacion.value = ''
+  passwordActual.value = ''
   textoConfirmacion.value = ''
   dialogEliminarCuenta.value = true
 }
@@ -429,10 +441,10 @@ async function eliminarCuenta() {
   eliminandoCuenta.value = true
 
   try {
-    const response = await api.delete('/pasajero/cuenta', {
+    const response = await api.delete('/pasajero/cuenta-segura', {
       data: {
         confirmacion: textoConfirmacion.value,
-        email_confirmacion: emailConfirmacion.value
+        password_actual: passwordActual.value
       }
     })
 

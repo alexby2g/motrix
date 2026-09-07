@@ -200,6 +200,8 @@
 </template>
 
 <script setup>
+import { periodoActualBolivia } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   onMounted,
@@ -212,7 +214,6 @@ import {
 import {
   api
 } from '../../boot/axios.js'
-
 const $q = useQuasar()
 const loading = ref(false)
 const cargandoSindicatos = ref(false)
@@ -220,7 +221,7 @@ const cargandoMototaxistas = ref(false)
 const catalogo = ref([])
 const sindicatos = ref([])
 const mototaxistas = ref([])
-const periodo = ref(new Date().toISOString().slice(0, 7))
+const periodo = ref(periodoActualBolivia())
 const sindicatoSeleccionado = ref(null)
 const mototaxistaSeleccionado = ref(null)
 const dialogoPreview = ref(false)

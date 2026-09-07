@@ -484,7 +484,7 @@
                     {{ detalle.sindicato?.nombre || '—' }}
                   </div>
                   <div class="text-body2 q-mt-xs">
-                    Periodo: {{ detalle.periodo }}
+                    Periodo: {{ periodoMMYYYY(detalle.periodo) }}
                   </div>
                 </q-card-section>
               </q-card>
@@ -570,7 +570,7 @@
 
             <template #body-cell-fecha="props">
               <q-td :props="props">
-                {{ fechaHora(props.row.fecha_transferencia) }}
+                {{ fechaDDMMYYYY(props.row.fecha_transferencia) }}
               </q-td>
             </template>
 
@@ -674,6 +674,8 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY, fechaHoraDDMMYYYY, fechaISOHoyBolivia, motrixDateV57, periodoActualBolivia, periodoMMYYYY } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   onMounted,
@@ -683,10 +685,7 @@ import {
   useQuasar
 } from 'quasar'
 
-import {
-  api
-} from 'src/boot/axios.js'
-
+import { api } from 'src/boot/axios.js'
 const $q = useQuasar()
 
 const loading = ref(false)
@@ -824,6 +823,7 @@ const columnasTransferencias = [
     name: 'fecha',
     label: 'Fecha',
     field: 'fecha_transferencia',
+    format: value => motrixDateV57(value),
     align: 'left'
   },
   {
@@ -953,35 +953,15 @@ function dinero(valor) {
 }
 
 function fechaHoy() {
-  const fecha = new Date()
-  const offset = fecha.getTimezoneOffset()
-  const local = new Date(
-    fecha.getTime()
-    - offset * 60 * 1000
-  )
-
-  return local
-    .toISOString()
-    .slice(0, 10)
+  return fechaISOHoyBolivia()
 }
 
 function periodoActual() {
-  return fechaHoy().slice(0, 7)
+  return periodoActualBolivia()
 }
 
 function fechaHora(valor) {
-  if (!valor) return '—'
-
-  const fecha = new Date(valor)
-
-  if (Number.isNaN(fecha.getTime())) {
-    return String(valor)
-  }
-
-  return fecha.toLocaleString('es-BO', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  })
+  return fechaHoraDDMMYYYY(valor)
 }
 
 function nombreConductor(pago) {

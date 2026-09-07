@@ -44,7 +44,7 @@
 
       <div v-if="!cargando && sindicatosFiltrados.length" class="row q-col-gutter-md">
         <div v-for="sindicato in sindicatosFiltrados" :key="sindicato.id" class="col-12 col-sm-6 col-lg-4">
-          <q-card flat bordered class="sindicato-card full-height">
+          <q-card flat bordered class="sindicato-card full-height cursor-pointer" @click="abrirDetalle(sindicato)">
             <q-card-section class="row no-wrap items-start">
               <q-avatar size="62px" color="green-1" text-color="green-8" class="q-mr-md">
                 <img
@@ -68,14 +68,14 @@
                 </div>
                 <div class="text-caption text-grey-7 q-mt-xs">
                   <q-icon name="calendar_month" size="14px" class="q-mr-xs" />
-                  {{ sindicato.fecha_creacion || 'Sin fecha registrada' }}
+                  {{ fechaDDMMYYYY(sindicato.fecha_creacion, 'Sin fecha registrada') }}
                 </div>
               </div>
             </q-card-section>
 
             <q-separator />
 
-            <q-card-section class="row items-center q-py-sm">
+            <q-card-section class="row items-center q-py-sm" @click.stop>
               <q-chip dense color="blue-1" text-color="blue-9" icon="two_wheeler">
                 {{ sindicato.mototaxistas_count || 0 }} afiliado{{ Number(sindicato.mototaxistas_count || 0) === 1 ? '' : 's' }}
               </q-chip>
@@ -146,7 +146,7 @@
                   <q-item-section avatar><q-icon name="calendar_month" color="green-8" /></q-item-section>
                   <q-item-section>
                     <q-item-label caption>Fecha de creación</q-item-label>
-                    <q-item-label>{{ seleccionado.fecha_creacion || 'No registrada' }}</q-item-label>
+                    <q-item-label>{{ fechaDDMMYYYY(seleccionado.fecha_creacion, 'No registrada') }}</q-item-label>
                   </q-item-section>
                 </q-item>
                 <q-item>
@@ -158,15 +158,30 @@
                 </q-item>
               </q-list>
 
-              <q-btn
-                color="purple-7"
-                icon="image"
-                label="Cambiar logo"
-                no-caps
-                unelevated
-                class="q-mt-md"
-                @click="cambiarLogoDesdeDetalle"
-              />
+              <div class="row q-col-gutter-sm q-mt-md">
+                <div class="col-12 col-sm-7">
+                  <q-btn
+                    color="green-8"
+                    icon="two_wheeler"
+                    :label="`Ver afiliados (${seleccionado.mototaxistas_count || 0})`"
+                    no-caps
+                    unelevated
+                    class="full-width"
+                    @click="verMototaxistasAfiliados"
+                  />
+                </div>
+                <div class="col-12 col-sm-5">
+                  <q-btn
+                    outline
+                    color="purple-7"
+                    icon="image"
+                    label="Cambiar logo"
+                    no-caps
+                    class="full-width"
+                    @click="cambiarLogoDesdeDetalle"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </q-card-section>
@@ -241,13 +256,15 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from 'src/boot/axios.js'
-
 const $q = useQuasar()
 const route = useRoute()
+const router = useRouter()
 
 function leerUsuarioActual() {
   try {
@@ -316,6 +333,15 @@ async function cargar() {
 function abrirDetalle(item) {
   seleccionado.value = item
   dialogoDetalle.value = true
+}
+
+function verMototaxistasAfiliados() {
+  if (!seleccionado.value?.id) return
+  dialogoDetalle.value = false
+  router.push({
+    path: '/mototaxistas',
+    query: { sindicato: seleccionado.value.id }
+  })
 }
 
 function cambiarLogoDesdeDetalle() {

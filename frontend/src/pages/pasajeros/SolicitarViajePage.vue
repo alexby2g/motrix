@@ -1405,6 +1405,8 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY, fechaISOHoyBolivia } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   nextTick,
@@ -1425,7 +1427,6 @@ import 'leaflet/dist/leaflet.css'
 
 import { api } from '../../boot/axios.js'
 import { BROADCAST_AUTH_URL, echoOptions } from '../../config/runtime.js'
-
 window.Pusher = Pusher
 
 const $q = useQuasar()
@@ -1565,12 +1566,7 @@ const metodosPago = [
 ]
 
 function obtenerFechaActual() {
-  const fecha = new Date()
-  const year = fecha.getFullYear()
-  const month = String(fecha.getMonth() + 1).padStart(2, '0')
-  const day = String(fecha.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
+  return fechaISOHoyBolivia()
 }
 
 const form = reactive({
@@ -1979,23 +1975,7 @@ function formatearDistancia(distancia) {
 }
 
 function formatearFecha(fecha) {
-  if (!fecha) {
-    return 'Fecha no registrada'
-  }
-
-  const valor = String(fecha).includes('T')
-    ? new Date(fecha)
-    : new Date(`${fecha}T00:00:00`)
-
-  if (Number.isNaN(valor.getTime())) {
-    return String(fecha)
-  }
-
-  return new Intl.DateTimeFormat('es-BO', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  }).format(valor)
+  return fechaDDMMYYYY(fecha, 'Fecha no registrada')
 }
 
 function extraerMensajeError(error) {

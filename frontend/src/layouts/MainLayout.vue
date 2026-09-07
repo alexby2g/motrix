@@ -243,11 +243,11 @@
                 v-for="opcion in seccion.opciones"
                 :key="opcion.ruta"
                 clickable
-                :to="opcion.ruta"
+
                 :exact="opcion.exact === true"
                 :active-class="opcion.activeClass || 'menu-item-active'"
                 class="menu-item"
-                @click="cerrarDrawerMovil"
+                @click="navegarMenu(opcion.ruta)"
               >
                 <q-item-section avatar>
                   <q-icon
@@ -277,7 +277,7 @@
           />
 
           <div class="text-caption text-center q-mt-md drawer-footer-text">
-            Instituto José Castillo · Trinidad - Beni 2026
+            MOTRIX · Trinidad - Beni · 2026
           </div>
         </div>
       </div>
@@ -692,10 +692,14 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-  </q-layout>
+    <LegalAcceptanceGate />
+</q-layout>
 </template>
 
 <script setup>
+import { fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+
+import LegalAcceptanceGate from 'src/components/legal/LegalAcceptanceGate.vue'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
@@ -704,7 +708,6 @@ import Pusher from 'pusher-js'
 
 import { api } from '../boot/axios.js'
 import { echoOptions } from '../config/runtime.js'
-
 window.Pusher = Pusher
 
 const $q = useQuasar()
@@ -1102,6 +1105,14 @@ const menuConductor = [
         exact: true,
         color: 'positive',
         activeClass: 'menu-item-active'
+      },
+      {
+        etiqueta: 'Cambiar contraseña',
+        icono: 'lock_reset',
+        ruta: '/cuenta/cambiar-contrasena',
+        exact: true,
+        color: 'positive',
+        activeClass: 'menu-item-active'
       }
     ]
   }
@@ -1152,6 +1163,14 @@ const menuPasajero = [
         etiqueta: 'Mi perfil',
         icono: 'account_circle',
         ruta: '/pasajero/perfil',
+        exact: true,
+        color: 'positive',
+        activeClass: 'menu-item-active'
+      },
+      {
+        etiqueta: 'Cambiar contraseña',
+        icono: 'lock_reset',
+        ruta: '/cuenta/cambiar-contrasena',
         exact: true,
         color: 'positive',
         activeClass: 'menu-item-active'
@@ -1232,27 +1251,7 @@ function colorPrioridadIncidencia(prioridad) {
 }
 
 function formatearFechaHoraIncidencia(fecha) {
-  if (!fecha) return 'Fecha no disponible'
-
-  const texto = String(fecha)
-  const normalizada = texto.includes('T')
-    ? new Date(texto)
-    : new Date(texto.replace(' ', 'T'))
-
-  if (Number.isNaN(normalizada.getTime())) {
-    return texto
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }
-  ).format(normalizada)
+  return fechaHoraDDMMYYYY(fecha, 'Fecha no disponible')
 }
 
 function tieneUbicacionIncidencia(incidencia) {
@@ -2243,6 +2242,19 @@ function navegarPasajero(rutaDestino) {
   cerrarDrawerMovil()
 }
 
+function navegarMenu(rutaDestino) {
+  const destino = String(rutaDestino || '').trim()
+
+  if (!destino) {
+    return
+  }
+
+  if (route.path !== destino) {
+    router.push(destino)
+  }
+
+  cerrarDrawerMovil()
+}
 function cerrarDrawerMovil() {
   if ($q.screen.lt.md) {
     leftDrawerOpen.value = false
@@ -2284,7 +2296,7 @@ async function cerrarSesion() {
       type: 'positive',
       icon: 'logout',
       message: 'Sesión cerrada correctamente.',
-      position: 'top' 
+      position: 'top'
     })
   }
 }

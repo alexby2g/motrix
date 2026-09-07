@@ -47,7 +47,7 @@
 
       <div v-if="!cargando && federaciones.length" class="row q-col-gutter-md">
         <div v-for="federacion in federaciones" :key="federacion.id" class="col-12 col-sm-6 col-md-4 col-lg-3">
-          <q-card flat bordered class="federacion-card full-height">
+          <q-card flat bordered class="federacion-card full-height cursor-pointer" @click="abrirDetalle(federacion)">
             <q-card-section class="row items-start no-wrap">
               <q-avatar size="64px" color="green-1" text-color="green-8" class="q-mr-md">
                 <img
@@ -69,7 +69,7 @@
                 </q-chip>
               </div>
 
-              <q-btn flat round dense icon="more_vert" color="grey-7">
+              <q-btn flat round dense icon="more_vert" color="grey-7" @click.stop>
                 <q-menu>
                   <q-list style="min-width: 175px">
                     <q-item clickable v-close-popup @click="abrirDetalle(federacion)">

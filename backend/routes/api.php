@@ -108,9 +108,10 @@ Broadcast::routes([
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(
-    'auth:sanctum'
-)->group(function () {
+Route::middleware([
+    'auth:sanctum',
+    \App\Http\Middleware\EnsureMotrixLegalAccepted::class,
+])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
@@ -1185,3 +1186,10 @@ Route::middleware(
         );
     });
 });
+
+require __DIR__ . '/motrix_release.php';
+
+require __DIR__ . '/conductor_account_release.php';
+
+/* MOTRIX V5.7 - términos y privacidad */
+require __DIR__ . '/motrix_legal.php';

@@ -404,6 +404,8 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY, fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   onMounted,
@@ -418,10 +420,7 @@ import {
   useRouter
 } from 'vue-router'
 
-import {
-  api
-} from 'src/boot/axios.js'
-
+import { api } from 'src/boot/axios.js'
 const $q = useQuasar()
 const router = useRouter()
 
@@ -548,44 +547,11 @@ function tieneCalificacion(item) {
 }
 
 function formatearFecha(valor) {
-  if (!valor) return 'Sin fecha'
-
-  const fecha =
-    new Date(`${valor}T12:00:00`)
-
-  if (Number.isNaN(fecha.getTime())) {
-    return String(valor)
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    }
-  ).format(fecha)
+  return fechaDDMMYYYY(valor)
 }
 
 function formatearFechaHora(valor) {
-  if (!valor) return 'Sin fecha'
-
-  const fecha = new Date(valor)
-
-  if (Number.isNaN(fecha.getTime())) {
-    return String(valor)
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }
-  ).format(fecha)
+  return fechaHoraDDMMYYYY(valor)
 }
 
 onMounted(() => {

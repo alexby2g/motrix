@@ -138,7 +138,8 @@
         <q-card
           flat
           bordered
-          class="mototaxista-card full-height"
+          class="mototaxista-card full-height cursor-pointer"
+          @click="abrirDetalle(m)"
         >
           <div
             class="franja-estado"
@@ -223,6 +224,7 @@
               dense
               icon="more_vert"
               color="grey-7"
+              @click.stop
             >
               <q-menu>
                 <q-list style="min-width: 215px">
@@ -687,7 +689,10 @@
                       <strong>Cuenta conductor:</strong>
                       {{
                         seleccionado.usuario_conductor
-                          ? seleccionado.usuario_conductor.email
+                          ? (seleccionado.usuario_conductor.nickname
+                            || seleccionado.telefono
+                            || seleccionado.persona?.telefono
+                            || 'Cuenta creada')
                           : 'No creada'
                       }}
                     </div>
@@ -968,25 +973,18 @@
 
         <q-card-section class="q-pa-lg">
           <q-input
-            v-model.trim="cuenta.email"
+            v-model.trim="cuenta.telefono"
             outlined
-            type="email"
-            label="Correo *"
+            type="tel"
+            label="Número de celular *"
+            hint="Este número será el usuario de acceso del mototaxista."
             class="q-mb-md"
+            :rules="[
+              val => String(val || '').replace(/\D+/g, '').length >= 7 || 'Ingresa un celular válido'
+            ]"
           >
             <template #prepend>
-              <q-icon name="email" color="purple-7" />
-            </template>
-          </q-input>
-
-          <q-input
-            v-model.trim="cuenta.nickname"
-            outlined
-            label="Nickname (opcional)"
-            class="q-mb-md"
-          >
-            <template #prepend>
-              <q-icon name="alternate_email" color="purple-7" />
+              <q-icon name="phone_android" color="purple-7" />
             </template>
           </q-input>
 
@@ -1006,7 +1004,7 @@
           </q-input>
 
           <q-banner rounded class="bg-purple-1 text-purple-9 q-mt-md">
-            El mototaxista debe estar Activo y tener QR generado.
+            El mototaxista debe estar Activo y tener QR generado. El celular será su usuario para ingresar a MOTRIX.
           </q-banner>
         </q-card-section>
 
@@ -1041,13 +1039,14 @@ import {
 } from 'vue'
 
 import { useQuasar } from 'quasar'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import QRCode from 'qrcode'
 import { api } from 'src/boot/axios.js'
 import { API_ORIGIN } from 'src/config/runtime.js'
 
 const $q = useQuasar()
 const router = useRouter()
+const route = useRoute()
 
 const esAdminGeneral = computed(() => {
   try {
@@ -1148,8 +1147,7 @@ const mensajeBusquedaPersona = computed(() => {
 
 
 const cuenta = ref({
-  email: '',
-  nickname: '',
+  telefono: '',
   password: ''
 })
 
@@ -1971,8 +1969,7 @@ function abrirCuenta(m) {
   seleccionadoCuenta.value = m
 
   cuenta.value = {
-    email: '',
-    nickname: '',
+    telefono: m.telefono || m.persona?.telefono || '',
     password: ''
   }
 
@@ -1982,14 +1979,14 @@ function abrirCuenta(m) {
 async function crearCuenta() {
   if (
     !seleccionadoCuenta.value?.id
-    || !cuenta.value.email
+    || !String(cuenta.value.telefono || '').replace(/\D+/g, '')
     || !cuenta.value.password
   ) {
     $q.notify({
       type: 'negative',
       position: 'top',
       message:
-        'Correo y contraseña son obligatorios.'
+        'Celular y contraseña son obligatorios.'
     })
 
     return
@@ -2008,14 +2005,10 @@ async function crearCuenta() {
 
   try {
     await api.post(
-      `/mototaxistas/${seleccionadoCuenta.value.id}/cuenta-conductor`,
+      `/mototaxistas/${seleccionadoCuenta.value.id}/cuenta-conductor-celular`,
       {
-        email:
-          cuenta.value.email,
-        nickname:
-          cuenta.value.nickname || null,
-        password:
-          cuenta.value.password
+        telefono: cuenta.value.telefono,
+        password: cuenta.value.password
       }
     )
 
@@ -2023,7 +2016,7 @@ async function crearCuenta() {
       type: 'positive',
       position: 'top',
       message:
-        'Cuenta de conductor creada correctamente.'
+        'Cuenta de conductor creada. El celular es su usuario de acceso.'
     })
 
     dialogCuenta.value = false
@@ -2097,9 +2090,19 @@ watch(
   }
 )
 
-onMounted(
-  cargarTodo
-)
+onMounted(async () => {
+  await cargarTodo()
+
+  const sindicatoId = Number(route.query.sindicato || 0)
+  if (sindicatoId) {
+    const sindicato = sindicatos.value.find(
+      item => Number(item.id) === sindicatoId
+    )
+    if (sindicato?.nombre) {
+      filtroSindicato.value = sindicato.nombre
+    }
+  }
+})
 </script>
 
 <style scoped>
@@ -2155,8 +2158,8 @@ onMounted(
 }
 
 .credencial-dialog {
-  width: 940px;
-  max-width: 96vw;
+  width: min(1040px, 96vw);
+  max-width: 1040px;
   border-radius: 18px;
   overflow: hidden;
 }
@@ -2171,6 +2174,8 @@ onMounted(
   box-shadow: 0 10px 30px rgba(27, 94, 32, 0.08);
 }
 
+.credencial-dialog .text-body2 { font-size: 1rem; line-height: 1.7; }
+.credencial-dialog .text-h5 { font-size: 1.65rem; }
 .credencial-foto {
   border: 4px solid #e8f5e9;
   box-shadow: 0 6px 18px rgba(27, 94, 32, 0.12);

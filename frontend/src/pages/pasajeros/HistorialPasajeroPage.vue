@@ -350,6 +350,8 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY, fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import {
   onMounted,
   ref
@@ -363,10 +365,7 @@ import {
   useRouter
 } from 'vue-router'
 
-import {
-  api
-} from '../../boot/axios.js'
-
+import { api } from '../../boot/axios.js'
 const $q = useQuasar()
 const router = useRouter()
 
@@ -470,25 +469,7 @@ function tieneCalificacion(viaje) {
 }
 
 function formatearFechaHora(fecha) {
-  if (!fecha) {
-    return 'Fecha no registrada'
-  }
-
-  const valor = new Date(
-    String(fecha).replace(' ', 'T')
-  )
-
-  if (Number.isNaN(valor.getTime())) {
-    return String(fecha)
-  }
-
-  return new Intl.DateTimeFormat('es-BO', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(valor)
+  return fechaHoraDDMMYYYY(fecha)
 }
 
 function formatearPrecio(precio) {
@@ -510,23 +491,7 @@ function formatearDistancia(distancia) {
 }
 
 function formatearFecha(fecha) {
-  if (!fecha) {
-    return 'Fecha no registrada'
-  }
-
-  const valor = String(fecha).includes('T')
-    ? new Date(fecha)
-    : new Date(`${fecha}T00:00:00`)
-
-  if (Number.isNaN(valor.getTime())) {
-    return String(fecha)
-  }
-
-  return new Intl.DateTimeFormat('es-BO', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  }).format(valor)
+  return fechaDDMMYYYY(fecha)
 }
 
 function volver() {

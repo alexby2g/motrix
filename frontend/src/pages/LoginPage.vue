@@ -83,8 +83,7 @@
             </div>
 
             <div class="branding-footer text-green-3 text-caption">
-              Instituto Tecnológico Superior José Castillo
-              · Trinidad - Beni 2026
+              MOTRIX · Movilidad urbana segura · Trinidad, Beni
             </div>
           </section>
 
@@ -115,7 +114,7 @@
               </div>
 
               <div class="text-body2 text-grey-6 q-mb-lg">
-                Ingresa con tu correo electrónico o nickname.
+                Ingresa con tu número de celular. También puedes usar correo o usuario si tu cuenta lo tiene.
               </div>
 
               <div
@@ -140,7 +139,7 @@
               >
                 <q-input
                   v-model.trim="form.login"
-                  label="Correo o nickname"
+                  label="Celular, correo o usuario"
                   outlined
                   autocomplete="username"
                   class="q-mb-md"
@@ -295,7 +294,7 @@ const form = reactive({
 const reglasLogin = [
   valor =>
     Boolean(String(valor || '').trim())
-    || 'El correo o nickname es obligatorio'
+    || 'El celular, correo o usuario es obligatorio'
 ]
 
 const reglasPassword = [

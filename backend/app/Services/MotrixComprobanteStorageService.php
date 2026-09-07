@@ -11,10 +11,7 @@ class MotrixComprobanteStorageService
         UploadedFile $archivo
     ): string {
         $cloudinaryUrl = trim(
-            (string) env(
-                'CLOUDINARY_URL',
-                ''
-            )
+            (string) config('cloudinary.url', '')
         );
 
         abort_if(

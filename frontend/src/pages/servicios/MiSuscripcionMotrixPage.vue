@@ -155,7 +155,7 @@
                 Periodo pendiente
               </div>
               <div class="text-h6 text-weight-bold">
-                {{ cuotaPendiente?.periodo || 'Sin deuda' }}
+                {{ cuotaPendiente?.periodo ? periodoMMYYYY(cuotaPendiente.periodo) : 'Sin deuda' }}
               </div>
               <div class="text-caption text-grey-7">
                 {{
@@ -175,7 +175,7 @@
                 Último pago
               </div>
               <div class="text-h6 text-weight-bold">
-                {{ ultimoPago?.periodo || '—' }}
+                {{ periodoMMYYYY(ultimoPago?.periodo) }}
               </div>
               <div class="text-caption text-grey-7">
                 {{
@@ -238,7 +238,7 @@
           {{ bannerTitulo }}
         </div>
         <div>
-          Periodo {{ cuotaPendiente.periodo }} ·
+          Periodo {{ periodoMMYYYY(cuotaPendiente.periodo) }} ·
           {{ dinero(cuotaPendiente.monto_esperado) }} ·
           vence {{ fecha(cuotaPendiente.fecha_vencimiento) }}.
         </div>
@@ -376,6 +376,8 @@
 </template>
 
 <script setup>
+import { fechaHoraDDMMYYYY, motrixDateV57, periodoMMYYYY } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   onBeforeUnmount,
@@ -452,6 +454,7 @@ const columnas = [
     name: 'fecha',
     label: 'Pago / vencimiento',
     field: 'fecha_pago',
+    format: value => motrixDateV57(value),
     align: 'left'
   },
   {
@@ -803,25 +806,7 @@ function fecha(valor) {
 }
 
 function fechaHora(valor) {
-  if (!valor) return '—'
-
-  const normalizada = String(valor).includes('T')
-    ? String(valor)
-    : String(valor).replace(' ', 'T')
-
-  const fechaValor = new Date(normalizada)
-
-  if (Number.isNaN(fechaValor.getTime())) {
-    return String(valor)
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      dateStyle: 'short',
-      timeStyle: 'short'
-    }
-  ).format(fechaValor)
+  return fechaHoraDDMMYYYY(valor)
 }
 
 function textoDias(valor) {

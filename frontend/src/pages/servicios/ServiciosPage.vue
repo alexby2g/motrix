@@ -121,6 +121,7 @@
           flat
           binary-state-sort
           @request="onRequestServicios"
+          @row-click="(_, row) => openDetail(row)"
         >
           <template #top>
             <div
@@ -210,7 +211,7 @@
           </template>
 
           <template #body-cell-actions="props">
-            <q-td :props="props" class="text-center">
+            <q-td :props="props" class="text-center" @click.stop>
               <q-btn
                 flat
                 round
@@ -251,7 +252,8 @@
           <template #item="props">
             <div class="q-pa-sm col-12 col-md-6">
               <q-card
-                class="service-card border-radius-md shadow-1 full-height"
+                class="service-card border-radius-md shadow-1 full-height cursor-pointer"
+                @click="openDetail(props.row)"
               >
                 <q-card-section class="q-pb-sm">
                   <div class="row items-start no-wrap">
@@ -280,6 +282,7 @@
                       dense
                       icon="more_vert"
                       color="grey-8"
+                      @click.stop
                     >
                       <q-menu
                         auto-close

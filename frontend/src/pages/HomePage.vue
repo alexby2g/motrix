@@ -66,31 +66,27 @@
               @click="goToModule(card.route)"
             >
               <q-card-section
-                class="q-pa-md flex flex-center column"
+                class="dashboard-card-section q-pa-lg flex flex-center column"
               >
                 <q-avatar
-                  size="56px"
-                  :color="card.bgColor"
-                  :text-color="card.color"
-                  class="q-mb-sm"
+                  size="72px"
+                  class="dashboard-card-icon q-mb-md"
+                  :class="`dashboard-card-icon--${card.key}`"
                 >
                   <q-icon
                     :name="card.icon"
-                    size="28px"
+                    size="36px"
                   />
                 </q-avatar>
 
                 <div
-                  class="text-caption text-grey-7
-                         text-uppercase text-bold
-                         tracking-wider"
+                  class="dashboard-card-title text-uppercase text-bold tracking-wider"
                 >
                   {{ card.title }}
                 </div>
 
                 <div
-                  class="text-h4 text-bold q-mt-xs"
-                  :class="`text-${card.color}`"
+                  class="dashboard-card-value text-bold q-mt-sm"
                 >
                   {{ stats[card.key] }}
                 </div>
@@ -115,31 +111,27 @@
               @click="goToModule(card.route)"
             >
               <q-card-section
-                class="q-pa-md flex flex-center column"
+                class="dashboard-card-section dashboard-card-section--operational q-pa-md flex flex-center column"
               >
                 <q-avatar
-                  size="52px"
-                  :color="card.bgColor"
-                  :text-color="card.color"
-                  class="q-mb-sm"
+                  size="64px"
+                  class="dashboard-card-icon dashboard-card-icon--operational q-mb-md"
+                  :class="`dashboard-card-icon--${card.key}`"
                 >
                   <q-icon
                     :name="card.icon"
-                    size="24px"
+                    size="31px"
                   />
                 </q-avatar>
 
                 <div
-                  class="text-caption text-grey-7
-                         text-uppercase text-bold
-                         tracking-wider"
+                  class="dashboard-card-title dashboard-card-title--operational text-uppercase text-bold tracking-wider"
                 >
                   {{ card.title }}
                 </div>
 
                 <div
-                  class="text-h5 text-bold q-mt-xs"
-                  :class="`text-${card.color}`"
+                  class="dashboard-card-value dashboard-card-value--operational text-bold q-mt-sm"
                 >
                   <span
                     v-if="card.key === 'pagos'"
@@ -1894,6 +1886,8 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY, fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import {
   ref,
   computed,
@@ -1910,8 +1904,6 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 import { api } from '../boot/axios.js'
-
-
 const router = useRouter()
 const $q = useQuasar()
 
@@ -1939,19 +1931,7 @@ const nombreDashboard = computed(() => {
     .filter(Boolean)[0] || 'Administrador'
 })
 
-const fechaDashboard = computed(() => {
-  const texto = new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    }
-  ).format(new Date())
-
-  return texto.charAt(0).toUpperCase() + texto.slice(1)
-})
+const fechaDashboard = computed(() => fechaDDMMYYYY(new Date()))
 
 const loading = ref(false)
 const wsConnected = ref(false)
@@ -3600,25 +3580,8 @@ const escaparHtml = (valor) => {
     .replaceAll("'", '&#039;')
 }
 
-const formatearFechaHora = (valor) => {
-  if (!valor) {
-    return 'Sin registro'
-  }
-
-  const fecha = new Date(valor)
-
-  if (Number.isNaN(fecha.getTime())) {
-    return String(valor)
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      dateStyle: 'short',
-      timeStyle: 'short'
-    }
-  ).format(fecha)
-}
+const formatearFechaHora = (valor) =>
+  fechaHoraDDMMYYYY(valor, 'Sin registro')
 
 const obtenerColorConductor = (conductor) => {
   if (conductor.viaje) {
@@ -4281,29 +4244,8 @@ const iconoTipoIncidencia = (tipo) => {
   return 'sos'
 }
 
-const formatearFechaHoraIncidencia = (fecha) => {
-  if (!fecha) return 'Fecha no disponible'
-
-  const texto = String(fecha)
-  const valor = texto.includes('T')
-    ? new Date(texto)
-    : new Date(texto.replace(' ', 'T'))
-
-  if (Number.isNaN(valor.getTime())) {
-    return texto
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }
-  ).format(valor)
-}
+const formatearFechaHoraIncidencia = (fecha) =>
+  fechaHoraDDMMYYYY(fecha, 'Fecha no disponible')
 
 const tieneUbicacionIncidencia = (incidencia) => {
   return (
@@ -5072,12 +5014,13 @@ onBeforeUnmount(() => {
 
 .my-dashboard-card {
   height: 100%;
+  min-height: 184px;
   overflow: hidden;
-  border: 1px solid #e0e5e2;
-  border-radius: 14px;
+  border: 1px solid #dfe7e1;
+  border-radius: 18px;
   background: #ffffff;
   box-shadow:
-    0 4px 16px rgba(34, 47, 40, 0.055) !important;
+    0 5px 18px rgba(34, 47, 40, 0.065) !important;
   transition:
     transform 0.18s ease,
     border-color 0.18s ease,
@@ -5085,14 +5028,94 @@ onBeforeUnmount(() => {
 }
 
 .my-dashboard-card:hover {
-  transform: translateY(-2px);
-  border-color: #cbd7cf;
+  transform: translateY(-3px);
+  border-color: #bdd7c3;
   box-shadow:
-    0 9px 24px rgba(34, 47, 40, 0.085) !important;
+    0 12px 28px rgba(34, 47, 40, 0.11) !important;
 }
 
-.my-dashboard-card :deep(.q-avatar) {
-  border: 1px solid #e1ebe3;
+.dashboard-card-section {
+  min-height: 184px;
+}
+
+.dashboard-card-section--operational {
+  min-height: 164px;
+}
+
+.dashboard-card-icon {
+  color: #ffffff;
+  border: 0 !important;
+  background: linear-gradient(145deg, #2f9e44 0%, #237a35 100%);
+  box-shadow: 0 8px 18px rgba(35, 122, 53, .20);
+}
+
+.dashboard-card-icon--personas {
+  color: #237a35;
+  background: #e8f5e9;
+  box-shadow: inset 0 0 0 1px #d5ead8;
+}
+
+.dashboard-card-icon--mototaxistas,
+.dashboard-card-icon--motocicletas {
+  color: #1b7c41;
+  background: #e4f4ea;
+  box-shadow: inset 0 0 0 1px #cee6d6;
+}
+
+.dashboard-card-icon--pasajeros {
+  color: #296f51;
+  background: #e7f3ed;
+  box-shadow: inset 0 0 0 1px #d2e7dc;
+}
+
+.dashboard-card-icon--sindicatos {
+  color: #176b4a;
+  background: #e2f1e9;
+  box-shadow: inset 0 0 0 1px #cee4d7;
+}
+
+.dashboard-card-icon--solicitudes {
+  color: #856404;
+  background: #fff4cf;
+  box-shadow: inset 0 0 0 1px #f1e0a9;
+}
+
+.dashboard-card-icon--servicios {
+  color: #126a62;
+  background: #def3f0;
+  box-shadow: inset 0 0 0 1px #c6e8e3;
+}
+
+.dashboard-card-icon--pagos {
+  color: #2867a3;
+  background: #e4f0fb;
+  box-shadow: inset 0 0 0 1px #cedff0;
+}
+
+.dashboard-card-icon--reportes {
+  color: #6956a8;
+  background: #eeeafb;
+  box-shadow: inset 0 0 0 1px #ddd5f4;
+}
+
+.dashboard-card-title {
+  color: #67716b;
+  font-size: .84rem;
+  letter-spacing: .055em;
+}
+
+.dashboard-card-title--operational {
+  font-size: .78rem;
+}
+
+.dashboard-card-value {
+  color: #218838;
+  font-size: 2.45rem;
+  line-height: 1;
+}
+
+.dashboard-card-value--operational {
+  font-size: 1.95rem;
 }
 
 .sos-section-header {

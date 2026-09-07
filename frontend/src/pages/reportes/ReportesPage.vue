@@ -517,6 +517,8 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY, fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   onMounted,
@@ -529,10 +531,7 @@ import {
 
 import apexchart from 'vue3-apexcharts'
 
-import {
-  api
-} from '../../boot/axios.js'
-
+import { api } from '../../boot/axios.js'
 const $q = useQuasar()
 
 const loading = ref(false)
@@ -710,46 +709,11 @@ function textoCalificaciones(total) {
 }
 
 function formatearFechaHora(fecha) {
-  if (!fecha) {
-    return 'Fecha no registrada'
-  }
-
-  const valor = new Date(
-    String(fecha).replace(' ', 'T')
-  )
-
-  if (Number.isNaN(valor.getTime())) {
-    return String(fecha)
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }
-  ).format(valor)
+  return fechaHoraDDMMYYYY(fecha)
 }
 
 function formatearFechaGrafica(fecha) {
-  const valor = new Date(
-    `${fecha}T00:00:00`
-  )
-
-  if (Number.isNaN(valor.getTime())) {
-    return String(fecha)
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      day: '2-digit',
-      month: 'short'
-    }
-  ).format(valor)
+  return fechaDDMMYYYY(fecha)
 }
 
 function extraerMensajeError(error) {

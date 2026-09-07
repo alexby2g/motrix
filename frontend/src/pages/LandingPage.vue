@@ -1,8 +1,5 @@
 <template>
   <div class="landing-page">
-    <!-- =========================================================
-         ENCABEZADO PÚBLICO
-    ========================================================== -->
     <header class="public-header">
       <div class="header-inner">
         <button
@@ -15,33 +12,41 @@
             <q-icon name="two_wheeler" />
           </span>
 
-          <span class="brand-text">
+          <span class="brand-copy">
             <strong>MOTRIX</strong>
             <small>Movilidad · Gestión · Seguridad</small>
           </span>
         </button>
 
-        <nav class="desktop-nav" aria-label="Navegación principal">
-          <button type="button" @click="irA('proposito')">
-            Propósito
-          </button>
-
-          <button type="button" @click="irA('funciones')">
-            Funciones
-          </button>
-
-          <button type="button" @click="irA('flujo')">
+        <nav
+          class="desktop-nav"
+          aria-label="Navegación principal"
+        >
+          <button
+            type="button"
+            @click="irA('como-funciona')"
+          >
             Cómo funciona
           </button>
 
-          <button type="button" @click="irA('seguridad')">
+          <button
+            type="button"
+            @click="irA('beneficios')"
+          >
+            Beneficios
+          </button>
+
+          <button
+            type="button"
+            @click="irA('seguridad')"
+          >
             Seguridad
           </button>
         </nav>
 
         <q-btn
           color="green-8"
-          icon-right="arrow_forward"
+          icon="login"
           label="Ingresar"
           unelevated
           no-caps
@@ -51,636 +56,575 @@
       </div>
     </header>
 
-    <!-- =========================================================
-         HERO
-    ========================================================== -->
-    <section class="hero-section">
-      <div class="hero-glow hero-glow-one" />
-      <div class="hero-glow hero-glow-two" />
+    <main>
+      <section class="hero-section">
+        <div class="hero-glow hero-glow-one" />
+        <div class="hero-glow hero-glow-two" />
 
-      <div class="hero-grid">
-        <!-- VISUAL -->
-        <div class="hero-visual-wrap">
-          <div class="hero-visual">
-            <div class="visual-badge">
-              <q-icon name="location_city" />
-              TRINIDAD · BENI · 2026
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <div class="hero-kicker">
+              <span class="hero-kicker-dot" />
+              MOVILIDAD URBANA · TRINIDAD
             </div>
 
-            <div class="visual-map">
-              <div class="road road-a" />
-              <div class="road road-b" />
-              <div class="road road-c" />
+            <h1>
+              <span class="hero-brand">MOTRIX</span>
+              <span class="hero-title">
+                Mototaxis conectados en una sola plataforma
+              </span>
+            </h1>
 
-              <div class="map-pin pin-origin">
-                <q-icon name="my_location" />
-              </div>
+            <p class="hero-description">
+              Sistema de gestión y solicitud de mototaxis que conecta
+              pasajeros, conductores y administración para coordinar
+              viajes, seguimiento, seguridad y operación en tiempo real.
+            </p>
 
-              <div class="map-pin pin-destination">
-                <q-icon name="place" />
-              </div>
+            <div class="hero-actions">
+              <q-btn
+                color="green-8"
+                icon="login"
+                icon-right="arrow_forward"
+                label="Ingresar al sistema"
+                unelevated
+                no-caps
+                class="primary-action"
+                @click="irLogin"
+              />
 
-              <div class="moto-main">
-                <div class="moto-ring">
-                  <q-icon name="two_wheeler" />
-                </div>
-
-                <div class="moto-caption">
-                  <strong>MOTRIX</strong>
-                  <span>Conectando movilidad</span>
-                </div>
-              </div>
-
-              <div class="route-line route-one" />
-              <div class="route-line route-two" />
-
-              <div class="mini-card passenger-card">
-                <q-avatar
-                  color="green-1"
-                  text-color="green-8"
-                  icon="person_pin_circle"
-                  size="42px"
-                />
-
-                <div>
-                  <span>Pasajero</span>
-                  <strong>Solicita un viaje</strong>
-                </div>
-              </div>
-
-              <div class="mini-card driver-card">
-                <q-avatar
-                  color="green-1"
-                  text-color="green-8"
-                  icon="two_wheeler"
-                  size="42px"
-                />
-
-                <div>
-                  <span>Mototaxista</span>
-                  <strong>Recibe la solicitud</strong>
-                </div>
-              </div>
+              <q-btn
+                outline
+                color="green-9"
+                icon="route"
+                label="Ver cómo funciona"
+                no-caps
+                class="secondary-action"
+                @click="irA('como-funciona')"
+              />
             </div>
 
-            <div class="visual-bottom">
-              <div>
-                <q-icon name="near_me" />
-                Ubicación y ruta
+            <div class="hero-trust">
+              <div class="trust-item">
+                <q-icon name="verified_user" />
+                <span>
+                  <strong>Acceso por perfiles</strong>
+                  <small>Pasajero · Mototaxista · Administración</small>
+                </span>
               </div>
 
-              <div>
-                <q-icon name="shield" />
-                Seguridad
+              <div class="trust-item">
+                <q-icon name="sensors" />
+                <span>
+                  <strong>Operación en tiempo real</strong>
+                  <small>Solicitudes, estados y seguimiento</small>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-visual-wrap">
+            <div class="mobility-card">
+              <div class="visual-topbar">
+                <div class="city-badge">
+                  <q-icon name="location_on" />
+                  TRINIDAD · BENI
+                </div>
+
+                <div class="live-badge">
+                  <span class="live-dot" />
+                  EN VIVO
+                </div>
+              </div>
+
+              <div class="map-surface">
+                <div class="road road-one" />
+                <div class="road road-two" />
+                <div class="road road-three" />
+
+                <svg
+                  class="route-svg"
+                  viewBox="0 0 600 390"
+                  aria-hidden="true"
+                >
+                  <path
+                    class="route-shadow"
+                    d="M94 286 C176 236 208 292 281 228 C348 170 372 112 493 92"
+                  />
+                  <path
+                    class="route-path"
+                    d="M94 286 C176 236 208 292 281 228 C348 170 372 112 493 92"
+                  />
+                </svg>
+
+                <div class="route-point route-point-origin">
+                  <q-icon name="my_location" />
+                </div>
+
+                <div class="route-point route-point-destination">
+                  <q-icon name="place" />
+                </div>
+
+                <div class="motrix-core">
+                  <div class="motrix-core-ring">
+                    <q-icon name="two_wheeler" />
+                  </div>
+
+                </div>
+
+                <div class="floating-card passenger-card">
+                  <q-avatar
+                    color="green-1"
+                    text-color="green-9"
+                    icon="person_pin_circle"
+                    size="42px"
+                  />
+
+                  <div>
+                    <small>PASAJERO</small>
+                    <strong>Solicita un viaje</strong>
+                  </div>
+                </div>
+
+                <div class="floating-card driver-card">
+                  <q-avatar
+                    color="green-1"
+                    text-color="green-9"
+                    icon="two_wheeler"
+                    size="42px"
+                  />
+
+                  <div>
+                    <small>MOTOTAXISTA</small>
+                    <strong>Recibe la solicitud</strong>
+                  </div>
+                </div>
+
+                <div class="status-card">
+                  <span class="status-icon">
+                    <q-icon name="shield" />
+                  </span>
+
+                  <div>
+                    <small>SEGURIDAD</small>
+                    <strong>Viaje acompañado</strong>
+                  </div>
+
+                  <q-icon
+                    name="check_circle"
+                    color="positive"
+                    size="22px"
+                  />
+                </div>
+              </div>
+
+              <div class="visual-footer">
+                <div>
+                  <q-icon name="route" />
+                  Solicitud y asignación
+                </div>
+
+                <div>
+                  <q-icon name="my_location" />
+                  Seguimiento
+                </div>
+
+                <div>
+                  <q-icon name="sos" />
+                  Seguridad
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- TEXTO -->
-        <div class="hero-copy">
-          <div class="eyebrow">
-            <span class="eyebrow-line" />
-            PROYECTO TECNOLÓGICO · FERIA 2026
-          </div>
+        <button
+          type="button"
+          class="discover-button"
+          @click="irA('como-funciona')"
+        >
+          <span>Descubre MOTRIX</span>
+          <q-icon name="keyboard_arrow_down" />
+        </button>
+      </section>
 
-          <h1>
-            <span class="hero-brand">MOTRIX</span>
-
-            <span class="hero-title">
-              Sistema de Gestión y Solicitud de Mototaxis mediante
-              Plataforma Web y Aplicación Móvil en la Ciudad de Trinidad
+      <section class="value-strip">
+        <div class="value-grid">
+          <article>
+            <span class="value-icon">
+              <q-icon name="person_pin_circle" />
             </span>
-          </h1>
 
-          <p class="hero-description">
-            Una plataforma orientada a mejorar la organización,
-            solicitud, seguimiento y seguridad del servicio de
-            mototaxis, conectando pasajeros, conductores y
-            administración en un mismo sistema.
-          </p>
-
-          <div class="hero-actions">
-            <q-btn
-              color="green-8"
-              icon="login"
-              icon-right="arrow_forward"
-              label="Ingresar al sistema"
-              unelevated
-              no-caps
-              class="primary-action"
-              @click="irLogin"
-            />
-
-            <q-btn
-              outline
-              color="green-9"
-              icon="explore"
-              label="Conocer la plataforma"
-              no-caps
-              class="secondary-action"
-              @click="irA('proposito')"
-            />
-          </div>
-
-          <div class="hero-meta">
-            <div class="meta-item">
-              <span class="meta-icon meta-green">
-                <q-icon name="two_wheeler" />
-              </span>
-
-              <div>
-                <small>SERVICIO</small>
-                <strong>Mototaxis urbanos</strong>
-              </div>
+            <div>
+              <strong>Pasajeros</strong>
+              <span>Solicitud simple y seguimiento del viaje</span>
             </div>
+          </article>
 
-            <div class="meta-item">
-              <span class="meta-icon meta-blue">
-                <q-icon name="place" />
-              </span>
+          <article>
+            <span class="value-icon">
+              <q-icon name="two_wheeler" />
+            </span>
 
-              <div>
-                <small>COBERTURA</small>
-                <strong>Ciudad de Trinidad</strong>
-              </div>
+            <div>
+              <strong>Mototaxistas</strong>
+              <span>Solicitudes, disponibilidad y operación</span>
             </div>
-          </div>
+          </article>
+
+          <article>
+            <span class="value-icon">
+              <q-icon name="admin_panel_settings" />
+            </span>
+
+            <div>
+              <strong>Administración</strong>
+              <span>Control, monitoreo y trazabilidad</span>
+            </div>
+          </article>
+
+          <article>
+            <span class="value-icon">
+              <q-icon name="verified_user" />
+            </span>
+
+            <div>
+              <strong>Seguridad</strong>
+              <span>Alertas, incidencias y verificación</span>
+            </div>
+          </article>
         </div>
-      </div>
+      </section>
 
-      <button
-        type="button"
-        class="discover-button"
-        @click="irA('proposito')"
+      <section
+        id="como-funciona"
+        class="section workflow-section"
       >
-        <span>Descubre MOTRIX</span>
-        <q-icon name="keyboard_arrow_down" />
-      </button>
-    </section>
-
-    <!-- =========================================================
-         PILARES
-    ========================================================== -->
-    <section class="pillar-strip">
-      <div class="pillar-grid">
-        <article class="pillar-item">
-          <span class="pillar-icon pillar-blue">
-            <q-icon name="manage_accounts" />
-          </span>
-
-          <div>
-            <strong>Gestión</strong>
-            <span>Organización del servicio</span>
-          </div>
-        </article>
-
-        <article class="pillar-item">
-          <span class="pillar-icon pillar-orange">
-            <q-icon name="route" />
-          </span>
-
-          <div>
-            <strong>Solicitud</strong>
-            <span>Viajes y asignación</span>
-          </div>
-        </article>
-
-        <article class="pillar-item">
-          <span class="pillar-icon pillar-green">
-            <q-icon name="verified_user" />
-          </span>
-
-          <div>
-            <strong>Seguridad</strong>
-            <span>Seguimiento y alertas</span>
-          </div>
-        </article>
-
-        <article class="pillar-item">
-          <span class="pillar-icon pillar-purple">
-            <q-icon name="devices" />
-          </span>
-
-          <div>
-            <strong>Tecnología</strong>
-            <span>Web y experiencia móvil</span>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <!-- =========================================================
-         PROPÓSITO
-    ========================================================== -->
-    <section
-      id="proposito"
-      class="section light-section"
-    >
-      <div class="section-heading centered-heading">
-        <span>PROPÓSITO</span>
-
-        <h2>
-          Tecnología para fortalecer la
-          <em>movilidad urbana</em>
-        </h2>
-
-        <p>
-          MOTRIX centraliza en una misma plataforma los procesos de
-          gestión y solicitud del servicio, buscando brindar una
-          experiencia más organizada para pasajeros, mototaxistas y
-          administradores.
-        </p>
-      </div>
-
-      <div class="purpose-grid">
-        <article class="purpose-card">
-          <span class="purpose-number">01</span>
-
-          <span class="purpose-icon purpose-blue">
-            <q-icon name="hail" />
-          </span>
-
-          <h3>Facilitar la solicitud</h3>
-
-          <p>
-            El pasajero puede indicar origen y destino, consultar la
-            tarifa estimada y solicitar un mototaxi desde la plataforma.
-          </p>
-        </article>
-
-        <article class="purpose-card">
-          <span class="purpose-number">02</span>
-
-          <span class="purpose-icon purpose-orange">
-            <q-icon name="two_wheeler" />
-          </span>
-
-          <h3>Optimizar la operación</h3>
-
-          <p>
-            Los conductores gestionan su disponibilidad, reciben
-            solicitudes y actualizan el estado de cada servicio.
-          </p>
-        </article>
-
-        <article class="purpose-card">
-          <span class="purpose-number">03</span>
-
-          <span class="purpose-icon purpose-green">
-            <q-icon name="shield" />
-          </span>
-
-          <h3>Mejorar la seguridad</h3>
-
-          <p>
-            El sistema incorpora seguimiento, comunicación durante el
-            viaje y herramientas de alerta para situaciones de riesgo.
-          </p>
-        </article>
-
-        <article class="purpose-card">
-          <span class="purpose-number">04</span>
-
-          <span class="purpose-icon purpose-purple">
-            <q-icon name="monitoring" />
-          </span>
-
-          <h3>Fortalecer la gestión</h3>
-
-          <p>
-            La administración dispone de información operativa para
-            monitorear solicitudes, servicios e incidencias.
-          </p>
-        </article>
-      </div>
-    </section>
-
-    <!-- =========================================================
-         FUNCIONES
-    ========================================================== -->
-    <section
-      id="funciones"
-      class="section dark-section"
-    >
-      <div class="dark-decoration decoration-one" />
-      <div class="dark-decoration decoration-two" />
-
-      <div class="dark-inner">
-        <div class="section-heading dark-heading">
-          <span>FUNCIONES PRINCIPALES</span>
+        <div class="section-heading">
+          <span class="section-kicker">CÓMO FUNCIONA</span>
 
           <h2>
-            Un sistema que integra la
-            <em>operación del servicio</em>
+            Un flujo claro desde la solicitud
+            <em>hasta el destino</em>
           </h2>
 
           <p>
-            Los módulos trabajan de forma coordinada para cubrir desde
-            el registro y gestión hasta la solicitud y finalización del
-            viaje.
+            MOTRIX prioriza una experiencia directa. Cada usuario ve
+            solamente las acciones necesarias para completar su parte
+            del servicio.
           </p>
         </div>
 
-        <div class="feature-grid">
-          <article class="feature-card">
-            <span class="feature-number">01</span>
-            <span class="feature-icon feature-green">
-              <q-icon name="badge" />
-            </span>
-            <h3>Registro y control</h3>
+        <div class="workflow-grid">
+          <article class="workflow-card">
+            <span class="workflow-step">1</span>
+            <q-icon name="pin_drop" />
+
+            <h3>Solicita</h3>
+
             <p>
-              Personas, pasajeros, mototaxistas, sindicatos y
-              administración de información base.
+              El pasajero selecciona origen y destino y confirma el
+              viaje.
             </p>
           </article>
 
-          <article class="feature-card">
-            <span class="feature-number">02</span>
-            <span class="feature-icon feature-orange">
-              <q-icon name="map" />
-            </span>
-            <h3>Solicitud de viajes</h3>
+          <div class="workflow-arrow">
+            <q-icon name="arrow_forward" />
+          </div>
+
+          <article class="workflow-card">
+            <span class="workflow-step">2</span>
+            <q-icon name="two_wheeler" />
+
+            <h3>Asigna</h3>
+
             <p>
-              Selección de origen y destino, cálculo de tarifa y
-              búsqueda de conductor disponible.
+              MOTRIX conecta la solicitud con un mototaxista
+              disponible.
             </p>
           </article>
 
-          <article class="feature-card">
-            <span class="feature-number">03</span>
-            <span class="feature-icon feature-blue">
-              <q-icon name="gps_fixed" />
-            </span>
-            <h3>Seguimiento operativo</h3>
+          <div class="workflow-arrow">
+            <q-icon name="arrow_forward" />
+          </div>
+
+          <article class="workflow-card">
+            <span class="workflow-step">3</span>
+            <q-icon name="route" />
+
+            <h3>Viaja</h3>
+
             <p>
-              Estados del viaje, ubicación del conductor y monitoreo
-              del servicio desde la plataforma.
+              Pasajero y conductor disponen de estados, ubicación y
+              comunicación.
             </p>
           </article>
 
-          <article class="feature-card">
-            <span class="feature-number">04</span>
-            <span class="feature-icon feature-purple">
-              <q-icon name="chat" />
-            </span>
-            <h3>Comunicación</h3>
-            <p>
-              Chat entre pasajero y conductor vinculado directamente
-              con la solicitud activa.
-            </p>
-          </article>
+          <div class="workflow-arrow">
+            <q-icon name="arrow_forward" />
+          </div>
 
-          <article class="feature-card">
-            <span class="feature-number">05</span>
-            <span class="feature-icon feature-red">
-              <q-icon name="sos" />
-            </span>
-            <h3>Seguridad e incidencias</h3>
+          <article class="workflow-card">
+            <span class="workflow-step">4</span>
+            <q-icon name="task_alt" />
+
+            <h3>Finaliza</h3>
+
             <p>
-              Alertas SOS y centro de incidencias para el seguimiento
-              administrativo de eventos durante los viajes.
+              El servicio queda registrado para historial, pago y
+              calificación.
             </p>
           </article>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- =========================================================
-         CÓMO FUNCIONA
-    ========================================================== -->
-    <section
-      id="flujo"
-      class="section workflow-section"
-    >
-      <div class="section-heading centered-heading compact-heading">
-        <span>CÓMO FUNCIONA</span>
-
-        <h2>
-          Del pedido al destino en
-          <em>cuatro etapas</em>
-        </h2>
-      </div>
-
-      <div class="workflow-grid">
-        <article class="workflow-card">
-          <span class="workflow-step">1</span>
-
-          <q-icon name="pin_drop" />
-
-          <h3>Solicitar</h3>
-
-          <p>
-            El pasajero define su origen y destino y confirma la
-            solicitud.
-          </p>
-        </article>
-
-        <div class="workflow-arrow">
-          <q-icon name="arrow_forward" />
-        </div>
-
-        <article class="workflow-card">
-          <span class="workflow-step">2</span>
-
-          <q-icon name="two_wheeler" />
-
-          <h3>Asignar</h3>
-
-          <p>
-            MOTRIX busca un conductor disponible para atender el
-            servicio.
-          </p>
-        </article>
-
-        <div class="workflow-arrow">
-          <q-icon name="arrow_forward" />
-        </div>
-
-        <article class="workflow-card">
-          <span class="workflow-step">3</span>
-
-          <q-icon name="route" />
-
-          <h3>Realizar</h3>
-
-          <p>
-            Pasajero y conductor disponen de seguimiento, estados y
-            comunicación.
-          </p>
-        </article>
-
-        <div class="workflow-arrow">
-          <q-icon name="arrow_forward" />
-        </div>
-
-        <article class="workflow-card">
-          <span class="workflow-step">4</span>
-
-          <q-icon name="task_alt" />
-
-          <h3>Finalizar</h3>
-
-          <p>
-            El servicio queda registrado para historial, pago y
-            calificación.
-          </p>
-        </article>
-      </div>
-    </section>
-
-    <!-- =========================================================
-         SEGURIDAD
-    ========================================================== -->
-    <section
-      id="seguridad"
-      class="section security-section"
-    >
-      <div class="security-grid">
-        <div class="security-copy">
-          <div class="section-heading">
-            <span>SEGURIDAD</span>
+      <section
+        id="beneficios"
+        class="section benefits-section"
+      >
+        <div class="benefits-grid">
+          <div class="benefits-copy">
+            <span class="section-kicker">UNA PLATAFORMA, TRES EXPERIENCIAS</span>
 
             <h2>
-              Herramientas para un servicio
+              Diseñado para operar con
+              <em>menos pasos y más claridad</em>
+            </h2>
+
+            <p>
+              La interfaz organiza la información según el rol para
+              evitar recorridos innecesarios y mantener visible lo más
+              importante en cada momento.
+            </p>
+
+            <div class="benefit-list">
+              <div>
+                <q-icon name="speed" />
+                <span>
+                  <strong>Acciones directas</strong>
+                  <small>Menos pantallas para completar tareas frecuentes.</small>
+                </span>
+              </div>
+
+              <div>
+                <q-icon name="visibility" />
+                <span>
+                  <strong>Información visible</strong>
+                  <small>Estados, totales y alertas fáciles de identificar.</small>
+                </span>
+              </div>
+
+              <div>
+                <q-icon name="phone_android" />
+                <span>
+                  <strong>Experiencia móvil</strong>
+                  <small>Flujos pensados para uso diario desde el teléfono.</small>
+                </span>
+              </div>
+
+              <div>
+                <q-icon name="sync" />
+                <span>
+                  <strong>Sincronización</strong>
+                  <small>Datos operativos actualizados entre usuarios.</small>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="role-stack">
+            <article class="role-card role-passenger">
+              <div class="role-icon">
+                <q-icon name="person_pin_circle" />
+              </div>
+
+              <div>
+                <small>PASAJERO</small>
+                <h3>Solicita y sigue su viaje</h3>
+                <p>
+                  Origen, destino, conductor asignado, seguridad e
+                  historial en un flujo simple.
+                </p>
+              </div>
+            </article>
+
+            <article class="role-card role-driver">
+              <div class="role-icon">
+                <q-icon name="two_wheeler" />
+              </div>
+
+              <div>
+                <small>MOTOTAXISTA</small>
+                <h3>Recibe y gestiona servicios</h3>
+                <p>
+                  Disponibilidad, solicitudes, navegación, ganancias y
+                  suscripción MOTRIX.
+                </p>
+              </div>
+            </article>
+
+            <article class="role-card role-admin">
+              <div class="role-icon">
+                <q-icon name="monitoring" />
+              </div>
+
+              <div>
+                <small>ADMINISTRACIÓN</small>
+                <h3>Controla la operación</h3>
+                <p>
+                  Registros, monitoreo, incidencias, pagos, reportes y
+                  trazabilidad.
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="seguridad"
+        class="section security-section"
+      >
+        <div class="security-grid">
+          <div class="security-panel">
+            <div class="shield-orbit orbit-one" />
+            <div class="shield-orbit orbit-two" />
+
+            <div class="shield-core">
+              <q-icon name="shield" />
+            </div>
+
+            <div class="security-bubble bubble-passenger">
+              <q-icon name="person_pin_circle" />
+              Pasajero
+            </div>
+
+            <div class="security-bubble bubble-driver">
+              <q-icon name="two_wheeler" />
+              Mototaxista
+            </div>
+
+            <div class="security-bubble bubble-admin">
+              <q-icon name="admin_panel_settings" />
+              Administración
+            </div>
+
+            <div class="security-bubble bubble-sos">
+              <q-icon name="sos" />
+              SOS
+            </div>
+          </div>
+
+          <div class="security-copy">
+            <span class="section-kicker">SEGURIDAD Y CONTROL</span>
+
+            <h2>
+              Herramientas para una operación
               <em>más confiable</em>
             </h2>
 
             <p>
-              MOTRIX incorpora funciones pensadas para mantener
-              información del viaje y facilitar la atención ante
-              incidencias durante el servicio.
+              MOTRIX integra funciones de control de acceso, seguimiento
+              e incidencias para que cada servicio mantenga información
+              útil desde la solicitud hasta su cierre.
             </p>
-          </div>
 
-          <div class="security-list">
-            <div>
-              <q-icon name="verified_user" />
-              <span>
-                <strong>Control de acceso</strong>
-                <small>Perfiles separados para cada tipo de usuario.</small>
-              </span>
-            </div>
+            <div class="security-list">
+              <div>
+                <q-icon name="badge" />
+                <span>
+                  <strong>Perfiles separados</strong>
+                  <small>Permisos distintos según el rol de cada usuario.</small>
+                </span>
+              </div>
 
-            <div>
-              <q-icon name="my_location" />
-              <span>
-                <strong>Ubicación operativa</strong>
-                <small>Datos de posición asociados a la operación del conductor.</small>
-              </span>
-            </div>
+              <div>
+                <q-icon name="my_location" />
+                <span>
+                  <strong>Ubicación operativa</strong>
+                  <small>Seguimiento asociado al conductor y al viaje activo.</small>
+                </span>
+              </div>
 
-            <div>
-              <q-icon name="forum" />
-              <span>
-                <strong>Chat del viaje</strong>
-                <small>Comunicación vinculada directamente al servicio.</small>
-              </span>
-            </div>
+              <div>
+                <q-icon name="forum" />
+                <span>
+                  <strong>Comunicación vinculada</strong>
+                  <small>Interacción asociada al servicio en curso.</small>
+                </span>
+              </div>
 
-            <div>
-              <q-icon name="sos" />
-              <span>
-                <strong>Alertas SOS</strong>
-                <small>Registro y seguimiento de incidencias desde administración.</small>
-              </span>
+              <div>
+                <q-icon name="sos" />
+                <span>
+                  <strong>Centro de incidencias</strong>
+                  <small>Alertas SOS y seguimiento administrativo.</small>
+                </span>
+              </div>
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="security-panel">
-          <div class="security-orbit orbit-one" />
-          <div class="security-orbit orbit-two" />
+      <section class="final-cta">
+        <div class="cta-pattern" />
 
-          <div class="shield-main">
-            <q-icon name="shield" />
-          </div>
-
-          <div class="security-bubble bubble-one">
-            <q-icon name="person_pin_circle" />
-            Pasajero
-          </div>
-
-          <div class="security-bubble bubble-two">
-            <q-icon name="two_wheeler" />
-            Conductor
-          </div>
-
-          <div class="security-bubble bubble-three">
-            <q-icon name="admin_panel_settings" />
-            Administración
-          </div>
-
-          <div class="security-bubble bubble-four">
-            <q-icon name="sos" />
-            SOS
-          </div>
+        <div class="cta-icon">
+          <q-icon name="two_wheeler" />
         </div>
-      </div>
-    </section>
 
-    <!-- =========================================================
-         CTA FINAL
-    ========================================================== -->
-    <section class="final-cta">
-      <div class="cta-pattern" />
+        <span class="cta-kicker">MOTRIX · TRINIDAD</span>
 
-      <div class="cta-icon">
-        <q-icon name="rocket_launch" />
-      </div>
+        <h2>
+          Una movilidad más conectada empieza
+          <span>con un mejor flujo</span>
+        </h2>
 
-      <h2>
-        ¿Listo para conocer
-        <span>MOTRIX?</span>
-      </h2>
+        <p>
+          Ingresa a MOTRIX para acceder a las funciones disponibles
+          según tu perfil.
+        </p>
 
-      <p>
-        Ingresa a la plataforma para acceder a los módulos de gestión
-        y solicitud del servicio de mototaxis.
-      </p>
+        <div class="cta-actions">
+          <q-btn
+            color="white"
+            text-color="green-9"
+            icon="login"
+            icon-right="arrow_forward"
+            label="Iniciar sesión"
+            unelevated
+            no-caps
+            class="cta-login"
+            @click="irLogin"
+          />
 
-      <div class="cta-actions">
-        <q-btn
-          color="white"
-          text-color="green-9"
-          icon="login"
-          icon-right="arrow_forward"
-          label="Iniciar sesión"
-          unelevated
-          no-caps
-          class="cta-login"
-          @click="irLogin"
-        />
+          <q-btn
+            outline
+            color="white"
+            icon="keyboard_arrow_up"
+            label="Volver arriba"
+            no-caps
+            @click="irInicio"
+          />
+        </div>
+      </section>
+    </main>
 
-        <q-btn
-          outline
-          color="white"
-          icon="keyboard_arrow_up"
-          label="Volver arriba"
-          no-caps
-          @click="irInicio"
-        />
-      </div>
-    </section>
-
-    <!-- =========================================================
-         FOOTER
-    ========================================================== -->
     <footer class="public-footer">
-      <div>
-        <strong>MOTRIX</strong>
+      <div class="footer-brand">
+        <span class="footer-mark">
+          <q-icon name="two_wheeler" />
+        </span>
+
         <span>
-          Sistema de Gestión y Solicitud de Mototaxis
+          <strong>MOTRIX</strong>
+          <small>Sistema de Gestión y Solicitud de Mototaxis</small>
         </span>
       </div>
 
-      <div class="footer-center">
-        Proyecto tecnológico · Trinidad 2026
-      </div>
-
-      <div>
+      <div class="footer-location">
         <q-icon name="location_on" />
-        Trinidad · Beni
+        Trinidad · Beni · Bolivia
       </div>
     </footer>
   </div>
@@ -718,20 +662,20 @@ function irA(id) {
 }
 
 .landing-page {
-  --navy: #0a2e0a;
-  --navy-dark: #061f08;
-  --blue: #2e7d32;
   --green: #2e7d32;
   --green-dark: #1b5e20;
-  --orange: #c62828;
-  --cream: #f1f8e9;
-  --text: #17351b;
-  --muted: #6f7f70;
+  --green-deep: #0d3b22;
+  --green-soft: #eaf6e9;
+  --surface: #f5f8f2;
+  --text: #18351d;
+  --muted: #6b7a6d;
+  --line: rgba(25, 72, 35, 0.1);
+  --danger: #d32f2f;
 
   min-height: 100vh;
   overflow-x: hidden;
   color: var(--text);
-  background: #f4f8ef;
+  background: var(--surface);
   font-family:
     Inter,
     "Segoe UI",
@@ -739,19 +683,15 @@ function irA(id) {
     sans-serif;
 }
 
-/* HEADER */
 .public-header {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 60;
   height: 76px;
-  background:
-    rgba(255, 255, 255, 0.94);
-  border-bottom:
-    1px solid rgba(23, 52, 91, 0.08);
-  box-shadow:
-    0 8px 30px rgba(18, 49, 86, 0.08);
-  backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 8px 28px rgba(20, 56, 28, 0.06);
+  backdrop-filter: blur(16px);
 }
 
 .header-inner {
@@ -782,36 +722,30 @@ function irA(id) {
   place-items: center;
   color: white;
   font-size: 25px;
-  background:
-    linear-gradient(
-      145deg,
-      var(--green),
-      var(--green-dark)
-    );
+  background: linear-gradient(145deg, var(--green), var(--green-dark));
   border-radius: 14px;
-  box-shadow:
-    0 8px 18px rgba(35, 130, 56, 0.22);
+  box-shadow: 0 9px 20px rgba(35, 130, 56, 0.22);
 }
 
-.brand-text {
+.brand-copy {
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
 
-.brand-text strong {
-  color: var(--navy);
+.brand-copy strong {
+  color: var(--green-deep);
   font-size: 22px;
   line-height: 1;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.025em;
 }
 
-.brand-text small {
+.brand-copy small {
   margin-top: 5px;
   color: var(--muted);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 650;
 }
 
 .desktop-nav {
@@ -822,17 +756,17 @@ function irA(id) {
 }
 
 .desktop-nav button {
-  padding: 10px 12px;
-  color: #526b8a;
+  padding: 10px 13px;
+  color: #586c5b;
   background: transparent;
   border: 0;
-  border-radius: 9px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition:
-    color 0.15s ease,
-    background 0.15s ease;
+    color 0.16s ease,
+    background 0.16s ease;
 }
 
 .desktop-nav button:hover {
@@ -842,26 +776,44 @@ function irA(id) {
 
 .header-login {
   min-height: 42px;
-  padding-right: 17px;
-  padding-left: 17px;
-  border-radius: 11px;
-  font-weight: 700;
+  padding-right: 18px;
+  padding-left: 18px;
+  border-radius: 12px;
+  font-weight: 750;
 }
 
-/* HERO */
 .hero-section {
   position: relative;
   min-height: calc(100vh - 76px);
-  padding: 58px 0 86px;
+  padding: 64px 0 90px;
   display: flex;
   align-items: center;
   background:
-    linear-gradient(
-      120deg,
-      #f1f8e9 0%,
-      #f8fbf6 55%,
-      #e8f3e5 100%
-    );
+    radial-gradient(circle at 15% 20%, rgba(46, 125, 50, 0.1), transparent 28%),
+    radial-gradient(circle at 88% 14%, rgba(46, 125, 50, 0.08), transparent 26%),
+    linear-gradient(120deg, #f0f8eb 0%, #fbfdf9 48%, #edf6e9 100%);
+}
+
+.hero-glow {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.hero-glow-one {
+  width: 420px;
+  height: 420px;
+  top: -190px;
+  right: -120px;
+  background: rgba(46, 125, 50, 0.06);
+}
+
+.hero-glow-two {
+  width: 300px;
+  height: 300px;
+  bottom: -120px;
+  left: -130px;
+  background: rgba(46, 125, 50, 0.08);
 }
 
 .hero-grid {
@@ -870,1011 +822,780 @@ function irA(id) {
   width: min(1240px, calc(100% - 52px));
   margin: 0 auto;
   display: grid;
-  grid-template-columns:
-    minmax(420px, 0.88fr)
-    minmax(520px, 1.12fr);
+  grid-template-columns: minmax(430px, 0.92fr) minmax(520px, 1.08fr);
   align-items: center;
-  gap: 68px;
+  gap: 72px;
 }
 
-.hero-glow {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(2px);
-  pointer-events: none;
-}
-
-.hero-glow-one {
-  width: 420px;
-  height: 420px;
-  top: -160px;
-  right: -160px;
-  background:
-    rgba(198, 40, 40, 0.08);
-}
-
-.hero-glow-two {
-  width: 300px;
-  height: 300px;
-  left: -140px;
-  bottom: -80px;
-  background:
-    rgba(35, 130, 56, 0.12);
-}
-
-/* HERO VISUAL */
-.hero-visual-wrap {
-  min-width: 0;
-}
-
-.hero-visual {
-  position: relative;
-  min-height: 570px;
-  padding: 24px;
-  overflow: hidden;
-  background:
-    linear-gradient(
-      145deg,
-      #ffffff,
-      #edf6eb
-    );
-  border:
-    1px solid rgba(38, 94, 148, 0.12);
-  border-radius: 34px;
-  box-shadow:
-    0 28px 70px rgba(20, 66, 112, 0.15);
-}
-
-.visual-badge {
-  position: absolute;
-  z-index: 7;
-  top: 28px;
-  left: 28px;
-  padding: 9px 14px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: white;
-  background: var(--blue);
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  box-shadow:
-    0 9px 22px rgba(46, 125, 50, 0.22);
-}
-
-.visual-map {
-  position: absolute;
-  inset: 92px 28px 72px;
-  overflow: hidden;
-  background:
-    linear-gradient(
-      rgba(255, 255, 255, 0.78),
-      rgba(240, 248, 242, 0.86)
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent 0 41px,
-      rgba(16, 47, 95, 0.04) 42px 43px
-    ),
-    repeating-linear-gradient(
-      0deg,
-      transparent 0 41px,
-      rgba(16, 47, 95, 0.04) 42px 43px
-    );
-  border:
-    1px solid rgba(16, 47, 95, 0.08);
-  border-radius: 26px;
-}
-
-.road {
-  position: absolute;
-  height: 16px;
-  background: white;
-  border:
-    1px solid rgba(103, 130, 157, 0.12);
-  border-radius: 20px;
-  box-shadow:
-    0 4px 9px rgba(57, 92, 126, 0.05);
-}
-
-.road-a {
-  width: 130%;
-  top: 35%;
-  left: -15%;
-  transform: rotate(-18deg);
-}
-
-.road-b {
-  width: 120%;
-  top: 62%;
-  left: -10%;
-  transform: rotate(19deg);
-}
-
-.road-c {
-  width: 110%;
-  top: 47%;
-  left: -8%;
-  transform: rotate(77deg);
-}
-
-.moto-main {
-  position: absolute;
-  z-index: 6;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-}
-
-.moto-ring {
-  width: 152px;
-  height: 152px;
-  display: grid;
-  place-items: center;
-  color: white;
-  font-size: 78px;
-  background:
-    linear-gradient(
-      145deg,
-      var(--green),
-      #31a548
-    );
-  border:
-    12px solid rgba(255, 255, 255, 0.92);
-  border-radius: 50%;
-  box-shadow:
-    0 22px 45px rgba(35, 130, 56, 0.26);
-}
-
-.moto-caption {
-  margin-top: 9px;
-  display: flex;
-  flex-direction: column;
-}
-
-.moto-caption strong {
-  color: var(--navy);
-  font-size: 18px;
-}
-
-.moto-caption span {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.map-pin {
-  position: absolute;
-  z-index: 5;
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  color: white;
-  border:
-    5px solid rgba(255, 255, 255, 0.9);
-  border-radius: 50%;
-  box-shadow:
-    0 8px 18px rgba(20, 56, 94, 0.2);
-}
-
-.pin-origin {
-  top: 18%;
-  left: 18%;
-  background: var(--green);
-}
-
-.pin-destination {
-  right: 14%;
-  bottom: 18%;
-  background: #c62828;
-}
-
-.route-line {
-  position: absolute;
-  z-index: 3;
-  height: 5px;
-  transform-origin: left center;
-  background:
-    repeating-linear-gradient(
-      90deg,
-      var(--blue) 0 8px,
-      transparent 8px 15px
-    );
-  border-radius: 999px;
-}
-
-.route-one {
-  width: 38%;
-  top: 34%;
-  left: 24%;
-  transform: rotate(24deg);
-}
-
-.route-two {
-  width: 37%;
-  right: 17%;
-  bottom: 31%;
-  transform: rotate(24deg);
-}
-
-.mini-card {
-  position: absolute;
-  z-index: 8;
-  min-width: 190px;
-  padding: 11px 13px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.96);
-  border:
-    1px solid rgba(20, 68, 111, 0.1);
-  border-radius: 15px;
-  box-shadow:
-    0 12px 30px rgba(31, 71, 109, 0.13);
-}
-
-.mini-card > div {
-  display: flex;
-  flex-direction: column;
-}
-
-.mini-card span {
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.mini-card strong {
-  color: var(--navy);
-  font-size: 12px;
-}
-
-.passenger-card {
-  top: 18px;
-  right: 16px;
-}
-
-.driver-card {
-  bottom: 18px;
-  left: 16px;
-}
-
-.visual-bottom {
-  position: absolute;
-  right: 28px;
-  bottom: 23px;
-  left: 28px;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.visual-bottom div {
-  flex: 1;
-  padding: 9px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  color: #667866;
-  background: #f7faf5;
-  border:
-    1px solid rgba(16, 47, 95, 0.08);
-  border-radius: 11px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-/* HERO COPY */
 .hero-copy {
   min-width: 0;
 }
 
-.eyebrow {
-  margin-bottom: 22px;
-  display: flex;
+.hero-kicker,
+.section-kicker,
+.cta-kicker {
+  display: inline-flex;
   align-items: center;
-  gap: 11px;
-  color: var(--blue);
+  gap: 9px;
+  color: var(--green);
   font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-weight: 850;
+  letter-spacing: 0.09em;
 }
 
-.eyebrow-line {
-  width: 44px;
-  height: 4px;
-  display: inline-block;
-  background:
-    linear-gradient(
-      90deg,
-      var(--green),
-      var(--orange)
-    );
-  border-radius: 999px;
+.hero-kicker-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 0 6px rgba(46, 125, 50, 0.1);
 }
 
 .hero-copy h1 {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  margin: 18px 0 18px;
 }
 
 .hero-brand {
-  color: var(--navy);
-  font-size: clamp(54px, 6vw, 82px);
-  font-weight: 950;
-  line-height: 0.92;
-  letter-spacing: -0.045em;
+  display: block;
+  color: var(--green);
+  font-size: clamp(42px, 5.2vw, 72px);
+  font-weight: 900;
+  line-height: 0.96;
+  letter-spacing: -0.035em;
 }
 
 .hero-title {
+  display: block;
   max-width: 720px;
-  color: #204d27;
-  font-size: clamp(24px, 2.5vw, 37px);
+  margin-top: 14px;
+  color: var(--green-deep);
+  font-size: clamp(30px, 3.2vw, 48px);
   font-weight: 850;
-  line-height: 1.14;
-  letter-spacing: -0.025em;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
 .hero-description {
-  max-width: 720px;
-  margin: 24px 0 0;
-  color: #6d806d;
+  max-width: 650px;
+  margin: 0;
+  color: #607164;
   font-size: 17px;
-  line-height: 1.75;
+  line-height: 1.72;
 }
 
 .hero-actions {
-  margin-top: 27px;
+  margin-top: 30px;
   display: flex;
   flex-wrap: wrap;
-  gap: 13px;
+  gap: 12px;
 }
 
 .primary-action,
 .secondary-action {
-  min-height: 54px;
-  padding-right: 22px;
-  padding-left: 22px;
-  border-radius: 14px;
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.hero-meta {
-  margin-top: 30px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-}
-
-.meta-item {
-  min-width: 235px;
-  padding: 11px 14px;
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  background: rgba(255, 255, 255, 0.74);
-  border:
-    1px solid rgba(21, 71, 112, 0.09);
-  border-radius: 14px;
-}
-
-.meta-icon {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
+  min-height: 50px;
+  padding-right: 21px;
+  padding-left: 21px;
   border-radius: 13px;
-  font-size: 20px;
+  font-weight: 750;
 }
 
-.meta-green {
+.hero-trust {
+  margin-top: 30px;
+  padding-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  border-top: 1px solid rgba(34, 89, 44, 0.1);
+}
+
+.trust-item {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.trust-item > .q-icon {
+  margin-top: 1px;
   color: var(--green);
-  background: #e7f6e8;
+  font-size: 23px;
 }
 
-.meta-blue {
-  color: var(--green);
-  background: #e6f3e4;
-}
-
-.meta-item > div {
+.trust-item span {
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.meta-item small {
-  color: #819081;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+.trust-item strong {
+  color: #274d2d;
+  font-size: 13px;
 }
 
-.meta-item strong {
-  margin-top: 2px;
-  color: var(--navy);
-  font-size: 13px;
+.trust-item small {
+  margin-top: 4px;
+  color: #788579;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.hero-visual-wrap {
+  min-width: 0;
+}
+
+.mobility-card {
+  position: relative;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(37, 104, 49, 0.12);
+  border-radius: 30px;
+  box-shadow:
+    0 28px 70px rgba(29, 75, 36, 0.13),
+    0 6px 18px rgba(29, 75, 36, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+.visual-topbar {
+  padding: 0 2px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.city-badge,
+.live-badge {
+  min-height: 34px;
+  padding: 0 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.055em;
+}
+
+.city-badge {
+  color: white;
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  box-shadow: 0 9px 20px rgba(46, 125, 50, 0.2);
+}
+
+.live-badge {
+  color: #1c6e2c;
+  background: #edf8ec;
+  border: 1px solid rgba(46, 125, 50, 0.13);
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  background: #31a34a;
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px rgba(49, 163, 74, 0.1);
+}
+
+.map-surface {
+  position: relative;
+  height: 430px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(46, 125, 50, 0.09), transparent 30%),
+    linear-gradient(145deg, #ffffff, #f2f7f0);
+  border: 1px solid rgba(43, 99, 53, 0.1);
+  border-radius: 24px;
+}
+
+.road {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(65, 103, 71, 0.08);
+  box-shadow: 0 4px 10px rgba(54, 85, 58, 0.03);
+}
+
+.road::after {
+  content: "";
+  position: absolute;
+  inset: 46% 0 auto;
+  height: 1px;
+  background: rgba(76, 110, 81, 0.07);
+}
+
+.road-one {
+  width: 720px;
+  height: 72px;
+  top: 122px;
+  left: -84px;
+  transform: rotate(-17deg);
+}
+
+.road-two {
+  width: 650px;
+  height: 62px;
+  right: -230px;
+  bottom: 45px;
+  transform: rotate(23deg);
+}
+
+.road-three {
+  width: 600px;
+  height: 58px;
+  top: 180px;
+  left: 42px;
+  transform: rotate(77deg);
+}
+
+.route-svg {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.route-shadow,
+.route-path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.route-shadow {
+  stroke: rgba(255, 255, 255, 0.96);
+  stroke-width: 14;
+}
+
+.route-path {
+  stroke: #2f8e3f;
+  stroke-width: 6;
+  stroke-dasharray: 8 12;
+}
+
+.route-point {
+  position: absolute;
+  z-index: 5;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  color: white;
+  border: 5px solid white;
+  border-radius: 50%;
+  box-shadow: 0 10px 26px rgba(38, 73, 43, 0.2);
+}
+
+.route-point-origin {
+  left: 11%;
+  bottom: 22%;
+  background: var(--green);
+}
+
+.route-point-destination {
+  top: 14%;
+  right: 10%;
+  background: #df2b34;
+}
+
+.motrix-core {
+  position: absolute;
+  z-index: 10;
+  top: 50%;
+  left: 50%;
+  width: 190px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.motrix-core-ring {
+  width: 142px;
+  height: 142px;
+  display: grid;
+  place-items: center;
+  color: white;
+  font-size: 67px;
+  background: linear-gradient(145deg, #35a44a, #247c35);
+  border: 11px solid rgba(255, 255, 255, 0.96);
+  border-radius: 50%;
+  box-shadow:
+    0 24px 42px rgba(33, 110, 49, 0.22),
+    0 0 0 1px rgba(46, 125, 50, 0.08);
+}
+
+
+.floating-card,
+.status-card {
+  position: absolute;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(39, 93, 49, 0.1);
+  box-shadow: 0 16px 34px rgba(37, 73, 42, 0.12);
+  backdrop-filter: blur(10px);
+}
+
+.floating-card {
+  min-width: 205px;
+  padding: 13px 15px;
+  border-radius: 17px;
+}
+
+.floating-card div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.floating-card small,
+.status-card small {
+  color: #7b877d;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+
+.floating-card strong,
+.status-card strong {
+  margin-top: 3px;
+  color: #234b29;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.passenger-card {
+  top: 18px;
+  left: 18px;
+}
+
+.driver-card {
+  right: 18px;
+  bottom: 19px;
+}
+
+.status-card {
+  left: 20px;
+  bottom: 20px;
+  padding: 12px 14px;
+  border-radius: 16px;
+}
+
+.status-card > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  background: var(--green-soft);
+  border-radius: 12px;
+}
+
+.visual-footer {
+  padding: 16px 3px 1px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.visual-footer div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #5b705f;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.visual-footer .q-icon {
+  color: var(--green);
+  font-size: 18px;
 }
 
 .discover-button {
   position: absolute;
-  z-index: 5;
-  bottom: 23px;
+  z-index: 3;
   left: 50%;
+  bottom: 23px;
   transform: translateX(-50%);
-  padding: 6px 18px;
-  display: flex;
-  flex-direction: column;
+  padding: 6px 11px;
+  display: inline-flex;
   align-items: center;
-  color: #7a897a;
+  gap: 6px;
+  color: #58715d;
   background: transparent;
   border: 0;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 750;
   cursor: pointer;
 }
 
-.discover-button .q-icon {
-  margin-top: 2px;
-  font-size: 25px;
-}
-
-/* PILLARS */
-.pillar-strip {
+.value-strip {
   position: relative;
   z-index: 4;
-  margin: -1px 0 0;
-  padding: 30px 0;
-  background:
-    linear-gradient(
-      180deg,
-      #e8f3e5,
-      #f1f8e9
-    );
-}
-
-.pillar-grid {
-  width: min(1180px, calc(100% - 48px));
-  margin: 0 auto;
-  padding: 20px 28px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
   background: white;
-  border:
-    1px solid rgba(19, 69, 111, 0.09);
-  border-radius: 22px;
-  box-shadow:
-    0 18px 45px rgba(28, 67, 105, 0.09);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
-.pillar-item {
-  min-height: 76px;
-  padding: 0 22px;
+.value-grid {
+  width: min(1160px, calc(100% - 44px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.value-grid article {
+  min-width: 0;
+  padding: 25px 22px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  border-right:
-    1px solid #d8e6d4;
+  gap: 13px;
+  border-right: 1px solid var(--line);
 }
 
-.pillar-item:last-child {
+.value-grid article:last-child {
   border-right: 0;
 }
 
-.pillar-icon,
-.purpose-icon,
-.feature-icon {
+.value-icon {
   flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
-}
-
-.pillar-icon {
-  width: 48px;
-  height: 48px;
-  font-size: 22px;
-}
-
-.pillar-blue {
   color: var(--green);
-  background: #e6f3e4;
+  background: var(--green-soft);
+  border-radius: 13px;
+  font-size: 21px;
 }
 
-.pillar-orange {
-  color: #2e7d32;
-  background: #edf6eb;
-}
-
-.pillar-green {
-  color: var(--green);
-  background: #e6f3e4;
-}
-
-.pillar-purple {
-  color: #2e7d32;
-  background: #e6f3e4;
-}
-
-.pillar-item > div {
+.value-grid article > div {
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.pillar-item strong {
-  color: var(--navy);
+.value-grid strong {
+  color: #264c2c;
   font-size: 13px;
 }
 
-.pillar-item span:not(.pillar-icon) {
-  margin-top: 3px;
-  color: #768676;
+.value-grid span:not(.value-icon) {
+  margin-top: 4px;
+  color: #7a877c;
   font-size: 10px;
+  line-height: 1.35;
 }
 
-/* COMMON SECTION */
 .section {
-  position: relative;
-  padding: 100px 0;
+  padding: 94px 0;
 }
 
 .section-heading {
-  max-width: 780px;
-}
-
-.section-heading > span {
-  color: var(--blue);
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-}
-
-.section-heading h2 {
-  margin: 16px 0 18px;
-  color: var(--navy);
-  font-size: clamp(38px, 4.3vw, 61px);
-  font-weight: 950;
-  line-height: 1.02;
-  letter-spacing: -0.04em;
-}
-
-.section-heading h2 em {
-  color: var(--blue);
-  font-style: normal;
-}
-
-.section-heading p {
-  margin: 0;
-  color: #6f7f70;
-  font-size: 16px;
-  line-height: 1.75;
-}
-
-.centered-heading {
-  margin-right: auto;
-  margin-left: auto;
+  width: min(760px, calc(100% - 42px));
+  margin: 0 auto 46px;
   text-align: center;
 }
 
-.compact-heading {
-  max-width: 700px;
-}
-
-/* PURPOSE */
-.light-section {
-  background: #f4f8ef;
-}
-
-.purpose-grid {
-  width: min(1240px, calc(100% - 52px));
-  margin: 45px auto 0;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-}
-
-.purpose-card {
-  position: relative;
-  min-height: 295px;
-  padding: 29px 24px 26px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.94);
-  border:
-    1px solid rgba(25, 72, 113, 0.11);
-  border-radius: 20px;
-  box-shadow:
-    0 13px 30px rgba(27, 67, 104, 0.06);
-}
-
-.purpose-number {
-  position: absolute;
-  top: 14px;
-  right: 18px;
-  color: rgba(16, 47, 95, 0.08);
-  font-size: 46px;
-  font-weight: 950;
-}
-
-.purpose-icon {
-  width: 57px;
-  height: 57px;
-  font-size: 27px;
-}
-
-.purpose-blue {
-  color: var(--blue);
-  background: #e7f3e5;
-}
-
-.purpose-orange {
-  color: #2e7d32;
-  background: #edf6eb;
-}
-
-.purpose-green {
-  color: var(--green);
-  background: #e4f2e1;
-}
-
-.purpose-purple {
-  color: #2e7d32;
-  background: #e2f0df;
-}
-
-.purpose-card h3 {
-  margin: 24px 0 13px;
-  color: var(--navy);
-  font-size: 19px;
+.section-heading h2,
+.benefits-copy h2,
+.security-copy h2 {
+  margin: 13px 0 16px;
+  color: var(--green-deep);
+  font-size: clamp(31px, 4vw, 48px);
   font-weight: 850;
+  line-height: 1.08;
+  letter-spacing: -0.028em;
 }
 
-.purpose-card p {
+.section-heading h2 em,
+.benefits-copy h2 em,
+.security-copy h2 em {
+  color: var(--green);
+  font-style: normal;
+}
+
+.section-heading p,
+.benefits-copy > p,
+.security-copy > p {
   margin: 0;
-  color: #738173;
-  font-size: 13px;
+  color: #718074;
+  font-size: 15px;
   line-height: 1.7;
 }
 
-/* DARK FEATURES */
-.dark-section {
-  overflow: hidden;
-  background:
-    linear-gradient(
-      135deg,
-      #0a2e0a,
-      #1b5e20 100%
-    );
-}
-
-.dark-inner {
-  position: relative;
-  z-index: 3;
-  width: min(1240px, calc(100% - 52px));
-  margin: 0 auto;
-}
-
-.dark-heading > span {
-  color: #a5d6a7;
-}
-
-.dark-heading h2 {
-  color: white;
-}
-
-.dark-heading h2 em {
-  color: #a5d6a7;
-}
-
-.dark-heading p {
-  color: #cde1ca;
-}
-
-.dark-decoration {
-  position: absolute;
-  border:
-    1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-}
-
-.decoration-one {
-  width: 420px;
-  height: 420px;
-  top: -230px;
-  right: -110px;
-}
-
-.decoration-two {
-  width: 310px;
-  height: 310px;
-  top: -175px;
-  right: -55px;
-}
-
-.feature-grid {
-  margin-top: 48px;
-  display: grid;
-  grid-template-columns:
-    repeat(5, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.feature-card {
-  position: relative;
-  min-height: 310px;
-  padding: 27px 20px 24px;
-  overflow: hidden;
-  background:
-    rgba(255, 255, 255, 0.09);
-  border:
-    1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 19px;
-  backdrop-filter: blur(8px);
-}
-
-.feature-number {
-  display: block;
-  color: rgba(255, 255, 255, 0.23);
-  font-size: 35px;
-  font-weight: 950;
-}
-
-.feature-icon {
-  width: 56px;
-  height: 56px;
-  margin-top: 17px;
-  font-size: 26px;
-}
-
-.feature-green {
-  color: #2e7d32;
-  background: #dff0dc;
-}
-
-.feature-orange {
-  color: #2e7d32;
-  background: #e7f3e5;
-}
-
-.feature-blue {
-  color: #2e7d32;
-  background: #e0f0dd;
-}
-
-.feature-purple {
-  color: #2e7d32;
-  background: #dcebd9;
-}
-
-.feature-red {
-  color: #bf3434;
-  background: #ffd7d7;
-}
-
-.feature-card h3 {
-  margin: 22px 0 11px;
-  color: white;
-  font-size: 16px;
-  font-weight: 850;
-}
-
-.feature-card p {
-  margin: 0;
-  color: #d2e3cf;
-  font-size: 12px;
-  line-height: 1.65;
-}
-
-/* WORKFLOW */
 .workflow-section {
   background: #f7faf5;
 }
 
 .workflow-grid {
-  width: min(1180px, calc(100% - 52px));
-  margin: 48px auto 0;
+  width: min(1140px, calc(100% - 44px));
+  margin: 0 auto;
   display: grid;
   grid-template-columns:
-    1fr auto 1fr auto 1fr auto 1fr;
-  align-items: center;
-  gap: 13px;
+    minmax(0, 1fr) 38px
+    minmax(0, 1fr) 38px
+    minmax(0, 1fr) 38px
+    minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
 }
 
 .workflow-card {
   position: relative;
-  min-height: 232px;
-  padding: 29px 22px;
-  text-align: center;
+  min-height: 240px;
+  padding: 31px 25px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   background: white;
-  border:
-    1px solid #dbe7d8;
-  border-radius: 20px;
-  box-shadow:
-    0 12px 30px rgba(25, 68, 105, 0.06);
+  border: 1px solid rgba(42, 94, 50, 0.1);
+  border-radius: 22px;
+  box-shadow: 0 12px 28px rgba(35, 71, 40, 0.06);
 }
 
 .workflow-card > .q-icon {
-  margin-top: 15px;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
   color: var(--green);
-  font-size: 43px;
+  background: var(--green-soft);
+  border-radius: 16px;
+  font-size: 27px;
 }
 
 .workflow-step {
   position: absolute;
-  top: 13px;
-  left: 14px;
-  width: 31px;
-  height: 31px;
-  display: grid;
-  place-items: center;
-  color: white;
-  background: var(--navy);
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: 850;
+  top: 18px;
+  right: 18px;
+  color: rgba(46, 125, 50, 0.18);
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .workflow-card h3 {
-  margin: 15px 0 9px;
-  color: var(--navy);
-  font-size: 17px;
-  font-weight: 850;
+  margin: 22px 0 9px;
+  color: #244b2a;
+  font-size: 18px;
 }
 
 .workflow-card p {
   margin: 0;
-  color: #758575;
-  font-size: 12px;
-  line-height: 1.65;
+  color: #77847a;
+  font-size: 13px;
+  line-height: 1.62;
 }
 
 .workflow-arrow {
-  color: #9aaa98;
-  font-size: 27px;
+  display: grid;
+  place-items: center;
+  color: #95aa98;
+  font-size: 25px;
 }
 
-/* SECURITY */
-.security-section {
+.benefits-section {
   background:
-    linear-gradient(
-      145deg,
-      #f1f8e9,
-      #f7faf5
-    );
+    linear-gradient(135deg, #103a22, #092d1a);
 }
 
+.benefits-grid,
 .security-grid {
-  width: min(1180px, calc(100% - 52px));
+  width: min(1160px, calc(100% - 44px));
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 0.9fr;
+  grid-template-columns: minmax(0, 1fr) minmax(460px, 0.92fr);
   align-items: center;
-  gap: 85px;
+  gap: 72px;
 }
 
+.benefits-copy .section-kicker {
+  color: #9be9a8;
+}
+
+.benefits-copy h2 {
+  color: white;
+}
+
+.benefits-copy h2 em {
+  color: #8ee09c;
+}
+
+.benefits-copy > p {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.benefit-list,
 .security-list {
-  margin-top: 30px;
+  margin-top: 29px;
   display: grid;
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
   gap: 13px;
 }
 
+.benefit-list > div,
 .security-list > div {
-  min-height: 88px;
-  padding: 15px;
   display: flex;
-  gap: 12px;
-  background: white;
-  border:
-    1px solid #dce8db;
-  border-radius: 14px;
+  align-items: flex-start;
+  gap: 13px;
 }
 
-.security-list > div > .q-icon {
+.benefit-list .q-icon {
   flex: 0 0 auto;
-  color: var(--green);
-  font-size: 26px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: #9be9a8;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  font-size: 20px;
 }
 
+.benefit-list span,
 .security-list span {
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.security-list strong {
-  color: var(--navy);
+.benefit-list strong {
+  color: white;
   font-size: 13px;
 }
 
-.security-list small {
+.benefit-list small {
   margin-top: 4px;
-  color: #758575;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 11px;
-  line-height: 1.45;
+  line-height: 1.4;
+}
+
+.role-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.role-card {
+  padding: 22px;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 18px 34px rgba(3, 20, 9, 0.16);
+}
+
+.role-card:nth-child(2) {
+  transform: translateX(24px);
+}
+
+.role-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  background: var(--green-soft);
+  border-radius: 16px;
+  font-size: 28px;
+}
+
+.role-card small {
+  color: #7a897d;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.role-card h3 {
+  margin: 4px 0 7px;
+  color: #244b2a;
+  font-size: 17px;
+}
+
+.role-card p {
+  margin: 0;
+  color: #748078;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.security-section {
+  background: #f8fbf6;
+}
+
+.security-grid {
+  grid-template-columns: minmax(460px, 0.92fr) minmax(0, 1fr);
 }
 
 .security-panel {
   position: relative;
-  min-height: 430px;
-  overflow: hidden;
-  background:
-    linear-gradient(
-      145deg,
-      var(--navy),
-      #1b5e20
-    );
-  border-radius: 32px;
-  box-shadow:
-    0 28px 60px rgba(11, 54, 97, 0.2);
+  min-height: 480px;
+  display: grid;
+  place-items: center;
 }
 
-.security-orbit {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  border:
-    1px solid rgba(255, 255, 255, 0.17);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.orbit-one {
-  width: 270px;
-  height: 270px;
-}
-
-.orbit-two {
-  width: 390px;
-  height: 390px;
-}
-
-.shield-main {
-  position: absolute;
-  z-index: 4;
-  top: 50%;
-  left: 50%;
-  width: 120px;
-  height: 120px;
+.shield-core {
+  position: relative;
+  z-index: 5;
+  width: 145px;
+  height: 145px;
   display: grid;
   place-items: center;
   color: white;
-  background:
-    linear-gradient(
-      145deg,
-      #2fb353,
-      #1a7b34
-    );
-  border:
-    10px solid rgba(255, 255, 255, 0.13);
-  border-radius: 31px;
-  transform: translate(-50%, -50%);
+  background: linear-gradient(145deg, #3ca34e, #247a35);
+  border: 10px solid white;
+  border-radius: 50%;
   box-shadow:
-    0 22px 38px rgba(0, 0, 0, 0.18);
+    0 24px 48px rgba(42, 119, 56, 0.22),
+    0 0 0 1px rgba(46, 125, 50, 0.1);
+  font-size: 67px;
 }
 
-.shield-main .q-icon {
-  font-size: 64px;
+.shield-orbit {
+  position: absolute;
+  border: 1px dashed rgba(46, 125, 50, 0.2);
+  border-radius: 50%;
+}
+
+.orbit-one {
+  width: 300px;
+  height: 300px;
+}
+
+.orbit-two {
+  width: 430px;
+  height: 430px;
 }
 
 .security-bubble {
   position: absolute;
-  z-index: 5;
-  padding: 10px 13px;
-  display: flex;
+  z-index: 6;
+  padding: 11px 14px;
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  color: var(--navy);
+  gap: 8px;
+  color: #315338;
   background: white;
-  border-radius: 12px;
+  border: 1px solid rgba(46, 125, 50, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 11px 25px rgba(34, 74, 42, 0.09);
   font-size: 11px;
-  font-weight: 800;
-  box-shadow:
-    0 10px 25px rgba(0, 0, 0, 0.16);
+  font-weight: 750;
 }
 
 .security-bubble .q-icon {
@@ -1882,449 +1603,509 @@ function irA(id) {
   font-size: 19px;
 }
 
-.bubble-one {
-  top: 50px;
-  left: 46px;
+.bubble-passenger {
+  top: 52px;
+  left: 26px;
 }
 
-.bubble-two {
-  top: 70px;
-  right: 35px;
+.bubble-driver {
+  top: 72px;
+  right: 17px;
 }
 
-.bubble-three {
-  right: 30px;
-  bottom: 62px;
+.bubble-admin {
+  bottom: 61px;
+  left: 12px;
 }
 
-.bubble-four {
-  bottom: 55px;
-  left: 50px;
+.bubble-sos {
+  right: 31px;
+  bottom: 70px;
+  color: #9a3030;
 }
 
-/* CTA */
+.bubble-sos .q-icon {
+  color: var(--danger);
+}
+
+.security-copy .section-kicker {
+  color: var(--green);
+}
+
+.security-list .q-icon {
+  flex: 0 0 auto;
+  width: 39px;
+  height: 39px;
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  background: var(--green-soft);
+  border-radius: 12px;
+  font-size: 21px;
+}
+
+.security-list strong {
+  color: #2d5133;
+  font-size: 13px;
+}
+
+.security-list small {
+  margin-top: 4px;
+  color: #78847a;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .final-cta {
   position: relative;
-  min-height: 465px;
-  padding: 78px 20px;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  padding: 88px 24px;
   text-align: center;
   color: white;
-  background:
-    linear-gradient(
-      135deg,
-      #0a2e0a,
-      #2e7d32
-    );
+  background: linear-gradient(135deg, #2f8f40, #1f6f30 55%, #164f24);
 }
 
 .cta-pattern {
   position: absolute;
   inset: 0;
-  opacity: 0.18;
+  opacity: 0.16;
   background-image:
-    radial-gradient(
-      circle,
-      #ffffff 1.8px,
-      transparent 1.8px
-    );
-  background-size: 42px 42px;
+    radial-gradient(circle at 25% 30%, white 0 1px, transparent 1.5px),
+    radial-gradient(circle at 75% 70%, white 0 1px, transparent 1.5px);
+  background-size: 28px 28px;
+}
+
+.cta-icon,
+.cta-kicker,
+.final-cta h2,
+.final-cta p,
+.cta-actions {
+  position: relative;
+  z-index: 2;
 }
 
 .cta-icon {
-  position: relative;
-  z-index: 2;
-  width: 78px;
-  height: 78px;
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 17px;
   display: grid;
   place-items: center;
-  color: white;
-  background: rgba(255, 255, 255, 0.14);
-  border:
-    1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 24px;
-  font-size: 44px;
+  color: #257c36;
+  background: white;
+  border-radius: 19px;
+  box-shadow: 0 15px 30px rgba(9, 49, 17, 0.2);
+  font-size: 34px;
+}
+
+.cta-kicker {
+  color: rgba(255, 255, 255, 0.76);
 }
 
 .final-cta h2 {
-  position: relative;
-  z-index: 2;
-  max-width: 900px;
-  margin: 24px 0 12px;
-  font-size: clamp(42px, 5vw, 68px);
-  font-weight: 950;
-  line-height: 1.04;
-  letter-spacing: -0.04em;
+  max-width: 760px;
+  margin: 13px auto 14px;
+  font-size: clamp(32px, 4.6vw, 52px);
+  font-weight: 850;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
 }
 
 .final-cta h2 span {
-  color: #c8e6c9;
+  display: block;
+  color: #d9ffdf;
 }
 
 .final-cta p {
-  position: relative;
-  z-index: 2;
-  max-width: 720px;
-  margin: 0;
-  color: #d9ead6;
-  font-size: 16px;
+  max-width: 620px;
+  margin: 0 auto;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 15px;
   line-height: 1.65;
 }
 
 .cta-actions {
-  position: relative;
-  z-index: 2;
-  margin-top: 30px;
+  margin-top: 27px;
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 13px;
+  flex-wrap: wrap;
+  gap: 11px;
 }
 
 .cta-login {
-  min-height: 54px;
-  padding: 0 25px;
-  border-radius: 14px;
-  font-weight: 850;
+  border-radius: 12px;
+  font-weight: 750;
 }
 
-/* FOOTER */
 .public-footer {
-  min-height: 120px;
-  padding: 28px max(40px, calc((100% - 1200px) / 2));
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  min-height: 92px;
+  padding: 20px max(28px, calc((100vw - 1160px) / 2));
+  display: flex;
   align-items: center;
-  gap: 25px;
-  color: #c8d8e9;
-  background: var(--navy-dark);
-  font-size: 11px;
+  justify-content: space-between;
+  gap: 20px;
+  color: #657467;
+  background: #f4f8f2;
+  border-top: 1px solid var(--line);
 }
 
-.public-footer > div:first-child {
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.footer-mark {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: var(--green);
+  border-radius: 12px;
+  font-size: 20px;
+}
+
+.footer-brand > span:last-child {
   display: flex;
   flex-direction: column;
 }
 
-.public-footer strong {
-  color: white;
-  font-size: 14px;
+.footer-brand strong {
+  color: var(--green-deep);
+  font-size: 15px;
 }
 
-.public-footer span {
-  margin-top: 3px;
+.footer-brand small {
+  margin-top: 2px;
+  font-size: 10px;
 }
 
-.footer-center {
-  text-align: center;
-}
-
-.public-footer > div:last-child {
-  justify-self: end;
+.footer-location {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 11px;
+  font-weight: 650;
 }
 
-/* RESPONSIVE */
-@media (max-width: 1100px) {
-  .desktop-nav {
-    display: none;
-  }
-
+@media (max-width: 1080px) {
   .hero-grid {
-    grid-template-columns: 0.9fr 1.1fr;
-    gap: 38px;
-  }
-
-  .feature-grid {
-    grid-template-columns:
-      repeat(3, 1fr);
-  }
-
-  .feature-card:nth-child(4),
-  .feature-card:nth-child(5) {
-    min-height: 270px;
-  }
-}
-
-@media (max-width: 900px) {
-  .hero-section {
-    padding-top: 38px;
-  }
-
-  .hero-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 44px;
   }
 
   .hero-copy {
-    order: 1;
+    max-width: 780px;
+    margin: 0 auto;
     text-align: center;
   }
 
-  .hero-visual-wrap {
-    order: 2;
-    width: min(580px, 100%);
-    margin: 0 auto;
-  }
-
-  .hero-actions,
-  .hero-meta {
-    justify-content: center;
-  }
-
-  .eyebrow {
-    justify-content: center;
-  }
-
-  .hero-description,
-  .hero-title {
+  .hero-description {
     margin-right: auto;
     margin-left: auto;
   }
 
-  .pillar-grid,
-  .purpose-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .hero-actions,
+  .hero-trust {
+    justify-content: center;
   }
 
-  .pillar-item:nth-child(2) {
-    border-right: 0;
+  .hero-trust {
+    max-width: 650px;
+    margin-right: auto;
+    margin-left: auto;
+    text-align: left;
   }
 
-  .pillar-item:nth-child(-n + 2) {
-    padding-bottom: 14px;
-    border-bottom: 1px solid #d8e6d4;
+  .hero-visual-wrap {
+    width: min(680px, 100%);
+    margin: 0 auto;
   }
 
-  .pillar-item:nth-child(n + 3) {
-    padding-top: 14px;
+  .benefits-grid,
+  .security-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 48px;
+  }
+
+  .benefits-copy,
+  .security-copy {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .role-stack {
+    width: min(720px, 100%);
+    margin: 0 auto;
+  }
+
+  .security-panel {
+    width: min(620px, 100%);
+    margin: 0 auto;
+    order: 2;
+  }
+
+  .security-copy {
+    order: 1;
   }
 
   .workflow-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
 
   .workflow-arrow {
     display: none;
   }
 
-  .security-grid {
-    grid-template-columns: 1fr;
-    gap: 45px;
+  .value-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .security-panel {
-    min-height: 410px;
+  .value-grid article:nth-child(2) {
+    border-right: 0;
+  }
+
+  .value-grid article:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
   }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 760px) {
   .public-header {
     height: 68px;
   }
 
   .header-inner {
-    width: calc(100% - 22px);
-    gap: 10px;
+    width: calc(100% - 26px);
+    gap: 12px;
   }
 
   .brand-mark {
-    width: 39px;
-    height: 39px;
-    font-size: 22px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 23px;
   }
 
-  .brand-text strong {
-    font-size: 19px;
-  }
-
-  .brand-text small {
+  .brand-copy small,
+  .desktop-nav {
     display: none;
+  }
+
+  .brand-copy strong {
+    font-size: 19px;
   }
 
   .header-login {
     margin-left: auto;
     min-height: 39px;
+    padding-right: 13px;
+    padding-left: 13px;
   }
 
   .hero-section {
     min-height: auto;
-    padding: 44px 0 86px;
+    padding: 54px 0 78px;
   }
 
-  .hero-grid,
-  .purpose-grid,
-  .dark-inner,
-  .workflow-grid,
-  .security-grid {
+  .hero-grid {
     width: calc(100% - 28px);
   }
 
   .hero-brand {
-    font-size: 49px;
+    font-size: 45px;
   }
 
   .hero-title {
-    font-size: 25px;
+    font-size: 31px;
   }
 
   .hero-description {
     font-size: 15px;
+    line-height: 1.62;
   }
 
-  .hero-actions > * {
-    width: 100%;
-  }
-
-  .hero-meta {
+  .hero-actions {
     flex-direction: column;
   }
 
-  .meta-item {
-    min-width: 0;
+  .primary-action,
+  .secondary-action {
     width: 100%;
   }
 
-  .hero-visual {
-    min-height: 475px;
-    padding: 16px;
+  .hero-trust {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mobility-card {
+    padding: 13px;
     border-radius: 24px;
   }
 
-  .visual-map {
-    inset: 82px 16px 66px;
+  .visual-topbar {
+    padding-bottom: 12px;
   }
 
-  .moto-ring {
-    width: 116px;
-    height: 116px;
+  .city-badge,
+  .live-badge {
+    padding: 0 10px;
+    font-size: 9px;
+  }
+
+  .map-surface {
+    height: 380px;
+    border-radius: 19px;
+  }
+
+  .motrix-core {
+    width: 165px;
+  }
+
+  .motrix-core-ring {
+    width: 122px;
+    height: 122px;
     font-size: 58px;
   }
 
-  .mini-card {
-    min-width: 157px;
-    padding: 8px 9px;
-  }
-
-  .mini-card strong {
-    font-size: 10px;
+  .floating-card {
+    min-width: 175px;
+    padding: 10px 12px;
   }
 
   .passenger-card {
-    top: 12px;
-    right: 8px;
+    top: 14px;
+    left: 12px;
   }
 
   .driver-card {
-    bottom: 12px;
-    left: 8px;
+    right: 12px;
+    bottom: 14px;
   }
 
-  .pillar-grid {
-    width: calc(100% - 28px);
-    padding: 15px;
-    grid-template-columns: 1fr;
+  .status-card {
+    display: none;
   }
 
-  .pillar-item {
-    padding: 13px 7px;
-    border-right: 0;
-    border-bottom: 1px solid #d8e6d4;
-  }
-
-  .pillar-item:last-child {
-    border-bottom: 0;
+  .visual-footer {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
   }
 
   .section {
-    padding: 74px 0;
+    padding: 72px 0;
   }
 
-  .section-heading {
-    padding-right: 14px;
-    padding-left: 14px;
+  .workflow-grid,
+  .value-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .section-heading h2 {
-    font-size: 39px;
+  .value-grid article {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
   }
 
-  .purpose-grid,
-  .feature-grid,
-  .workflow-grid {
-    grid-template-columns: 1fr;
+  .value-grid article:last-child {
+    border-bottom: 0;
   }
 
-  .purpose-card,
-  .feature-card {
-    min-height: auto;
+  .role-card:nth-child(2) {
+    transform: none;
   }
 
-  .security-list {
-    grid-template-columns: 1fr;
+  .security-panel {
+    min-height: 390px;
+  }
+
+  .orbit-one {
+    width: 245px;
+    height: 245px;
+  }
+
+  .orbit-two {
+    width: 340px;
+    height: 340px;
+  }
+
+  .shield-core {
+    width: 122px;
+    height: 122px;
+    font-size: 57px;
+  }
+
+  .security-bubble {
+    padding: 9px 11px;
+    font-size: 9px;
+  }
+
+  .public-footer {
+    padding: 24px 18px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-kicker {
+    font-size: 10px;
+  }
+
+  .hero-title {
+    font-size: 28px;
+  }
+
+  .map-surface {
+    height: 350px;
+  }
+
+  .floating-card {
+    min-width: 152px;
+    max-width: 164px;
+  }
+
+  .floating-card strong {
+    font-size: 10px;
+  }
+
+  .floating-card small {
+    font-size: 8px;
+  }
+
+  .motrix-core-ring {
+    width: 108px;
+    height: 108px;
+    font-size: 50px;
   }
 
   .security-panel {
     min-height: 350px;
   }
 
-  .orbit-one {
-    width: 210px;
-    height: 210px;
-  }
-
   .orbit-two {
-    width: 310px;
-    height: 310px;
+    width: 300px;
+    height: 300px;
   }
 
-  .shield-main {
-    width: 96px;
-    height: 96px;
+  .bubble-passenger {
+    top: 42px;
+    left: 0;
   }
 
-  .shield-main .q-icon {
-    font-size: 49px;
+  .bubble-driver {
+    top: 55px;
+    right: 0;
   }
 
-  .security-bubble {
-    padding: 8px 9px;
-    font-size: 9px;
+  .bubble-admin {
+    bottom: 48px;
+    left: 0;
   }
 
-  .bubble-one {
-    top: 35px;
-    left: 20px;
-  }
-
-  .bubble-two {
-    top: 45px;
-    right: 17px;
-  }
-
-  .bubble-three {
-    right: 17px;
-    bottom: 45px;
-  }
-
-  .bubble-four {
-    bottom: 40px;
-    left: 20px;
-  }
-
-  .public-footer {
-    padding: 30px 18px;
-    grid-template-columns: 1fr;
-    text-align: center;
-  }
-
-  .public-footer > div:last-child {
-    justify-self: center;
+  .bubble-sos {
+    right: 0;
+    bottom: 56px;
   }
 }
 </style>

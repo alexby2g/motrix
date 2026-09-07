@@ -11,7 +11,7 @@
                   Eliminación de cuenta MOTRIX
                 </div>
                 <div class="text-grey-7 q-mt-xs">
-                  Disponible para cuentas de pasajero creadas con correo o Google.
+                  Disponible para cuentas de pasajero creadas con celular, correo o Google.
                 </div>
               </div>
             </div>

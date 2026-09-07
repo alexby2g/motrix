@@ -49,10 +49,18 @@ class AuthController extends Controller
         ));
 
         $identificadorNormalizado = mb_strtolower($identificador);
+        $telefonoNormalizado = $this->normalizarTelefono(
+            $identificador
+        );
+
+        if (strlen($telefonoNormalizado) < 7) {
+            $telefonoNormalizado = '';
+        }
 
         $user = User::query()
             ->where(function ($query) use (
-                $identificadorNormalizado
+                $identificadorNormalizado,
+                $telefonoNormalizado
             ) {
                 $query
                     ->whereRaw(
@@ -63,6 +71,13 @@ class AuthController extends Controller
                         'LOWER(nickname) = ?',
                         [$identificadorNormalizado]
                     );
+
+                if ($telefonoNormalizado !== '') {
+                    $query->orWhere(
+                        'nickname',
+                        $telefonoNormalizado
+                    );
+                }
             })
             ->first();
 
@@ -75,7 +90,7 @@ class AuthController extends Controller
         ) {
             throw ValidationException::withMessages([
                 'login' => [
-                    'El correo, nickname o la contraseña son incorrectos.',
+                    'El celular, correo, usuario o la contraseña son incorrectos.',
                 ],
             ]);
         }
@@ -134,6 +149,25 @@ class AuthController extends Controller
         ]);
     }
 
+    private function normalizarTelefono(mixed $telefono): string
+    {
+        $numero = preg_replace(
+            '/\D+/u',
+            '',
+            trim((string) $telefono)
+        ) ?? '';
+
+        if (str_starts_with($numero, '00591') && strlen($numero) === 13) {
+            return substr($numero, 5);
+        }
+
+        if (str_starts_with($numero, '591') && strlen($numero) === 11) {
+            return substr($numero, 3);
+        }
+
+        return $numero;
+    }
+
     private function datosUsuario(User $user): array
     {
         $user->loadMissing([
@@ -168,7 +202,17 @@ class AuthController extends Controller
                         : ''
                 )
             ),
-            'email' => $user->email,
+            'email' => str_ends_with(
+                mb_strtolower((string) $user->email),
+                '@motrix.invalid'
+            ) ? null : $user->email,
+            'telefono' => $user->persona?->telefono
+                ?? $user->mototaxista?->telefono
+                ?? $user->mototaxista?->persona?->telefono
+                ?? $user->pasajero?->persona?->telefono
+                ?? (preg_match('/^[0-9]{7,15}$/', (string) $user->nickname)
+                    ? $user->nickname
+                    : null),
             'role' => $user->role,
             'mototaxista_id' => $user->mototaxista_id,
             'pasajero_id' => $user->pasajero_id,

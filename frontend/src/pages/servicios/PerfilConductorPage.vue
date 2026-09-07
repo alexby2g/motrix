@@ -245,28 +245,28 @@
             <div class="data-grid">
               <div class="data-card">
                 <q-icon
-                  name="email"
+                  name="phone_android"
                   color="green-8"
                 />
 
                 <div>
-                  <span>Correo</span>
+                  <span>Celular / usuario</span>
                   <strong>
-                    {{ valor(usuario?.email) }}
+                    {{ valor(usuario?.telefono || usuario?.nickname || perfil?.telefono || perfil?.persona?.telefono) }}
                   </strong>
                 </div>
               </div>
 
               <div class="data-card">
                 <q-icon
-                  name="alternate_email"
+                  name="email"
                   color="green-8"
                 />
 
                 <div>
-                  <span>Nickname</span>
+                  <span>Correo (opcional)</span>
                   <strong>
-                    {{ valor(usuario?.nickname) }}
+                    {{ valor(usuario?.email) }}
                   </strong>
                 </div>
               </div>
@@ -328,6 +328,17 @@
             </q-banner>
 
             <div class="row q-col-gutter-sm q-mt-md">
+              <div class="col-12">
+                <q-btn
+                  outline
+                  color="green-8"
+                  icon="lock_reset"
+                  label="Cambiar contraseña"
+                  class="full-width"
+                  no-caps
+                  @click="router.push('/cuenta/cambiar-contrasena')"
+                />
+              </div>
               <div class="col-12 col-sm-6">
                 <q-btn
                   outline
@@ -352,7 +363,9 @@
                 />
               </div>
             </div>
-          </q-card-section>
+
+            <ConductorAccountDelete />
+</q-card-section>
         </q-card>
       </div>
     </div>
@@ -360,6 +373,9 @@
 </template>
 
 <script setup>
+import { fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+
+import ConductorAccountDelete from 'src/components/ConductorAccountDelete.vue'
 import {
   computed,
   onMounted,
@@ -374,10 +390,7 @@ import {
   useRouter
 } from 'vue-router'
 
-import {
-  api
-} from 'src/boot/axios.js'
-
+import { api } from 'src/boot/axios.js'
 const $q = useQuasar()
 const router = useRouter()
 
@@ -570,27 +583,7 @@ function valor(dato) {
 }
 
 function formatearFechaHora(valorFecha) {
-  if (!valorFecha) {
-    return 'No registrada'
-  }
-
-  const fecha =
-    new Date(valorFecha)
-
-  if (Number.isNaN(fecha.getTime())) {
-    return String(valorFecha)
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }
-  ).format(fecha)
+  return fechaHoraDDMMYYYY(valorFecha)
 }
 
 function volver() {

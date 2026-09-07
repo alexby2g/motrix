@@ -214,7 +214,7 @@
               rounded
               class="bg-green-1 text-green-10 q-mb-md"
             >
-              Cuota del periodo {{ pagoSeleccionado?.periodo }}:
+              Cuota del periodo {{ periodoMMYYYY(pagoSeleccionado?.periodo) }}:
               <strong>{{ dinero(pagoSeleccionado?.monto_esperado) }}</strong>
             </q-banner>
 
@@ -331,6 +331,8 @@
 </template>
 
 <script setup>
+import { fechaHoraDDMMYYYY, motrixDateV57, periodoActualBolivia, periodoMMYYYY } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   onMounted,
@@ -340,10 +342,7 @@ import {
   useQuasar
 } from 'quasar'
 
-import {
-  api
-} from 'src/boot/axios.js'
-
+import { api } from 'src/boot/axios.js'
 const $q = useQuasar()
 
 const loading = ref(false)
@@ -429,6 +428,7 @@ const columnas = [
     name: 'fecha',
     label: 'Vencimiento / pago',
     field: 'fecha_vencimiento',
+    format: value => motrixDateV57(value),
     align: 'left'
   },
   {
@@ -470,12 +470,7 @@ const opcionesSindicato = computed(() =>
 )
 
 function periodoActual() {
-  const hoy = new Date()
-  const mes = String(
-    hoy.getMonth() + 1
-  ).padStart(2, '0')
-
-  return `${hoy.getFullYear()}-${mes}`
+  return periodoActualBolivia()
 }
 
 function formVacio() {
@@ -745,21 +740,7 @@ function fecha(valor) {
 }
 
 function fechaHora(valor) {
-  if (!valor) return '—'
-
-  const fechaValor = new Date(valor)
-
-  if (Number.isNaN(fechaValor.getTime())) {
-    return String(valor)
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      dateStyle: 'short',
-      timeStyle: 'short'
-    }
-  ).format(fechaValor)
+  return fechaHoraDDMMYYYY(valor)
 }
 
 function requerido(valor) {

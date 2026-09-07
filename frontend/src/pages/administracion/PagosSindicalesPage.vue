@@ -598,6 +598,8 @@
 </template>
 
 <script setup>
+import { motrixDateV57 } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   onMounted,
@@ -811,6 +813,7 @@ const columnas = [
     name: 'fecha',
     label: 'Fecha',
     field: 'fecha',
+    format: value => motrixDateV57(value),
     align: 'left',
     sortable: true
   },

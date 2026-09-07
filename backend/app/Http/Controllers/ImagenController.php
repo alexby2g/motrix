@@ -235,10 +235,7 @@ class ImagenController extends Controller
         $archivo,
         string $carpeta
     ): array {
-        $cloudinaryUrl = (string) env(
-            'CLOUDINARY_URL',
-            ''
-        );
+        $cloudinaryUrl = (string) config('cloudinary.url', '');
 
         if (trim($cloudinaryUrl) === '') {
             abort(
@@ -322,10 +319,7 @@ class ImagenController extends Controller
             return;
         }
 
-        $cloudinaryUrl = (string) env(
-            'CLOUDINARY_URL',
-            ''
-        );
+        $cloudinaryUrl = (string) config('cloudinary.url', '');
 
         if (trim($cloudinaryUrl) === '') {
             return;

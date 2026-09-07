@@ -178,7 +178,10 @@
         <q-item
           v-for="persona in personasFiltradas"
           :key="persona.id"
+          clickable
+          v-ripple
           class="persona-item"
+          @click="abrirDetallePersona(persona)"
         >
           <q-item-section avatar>
             <q-avatar
@@ -240,6 +243,7 @@
               round
               icon="more_vert"
               color="grey-7"
+              @click.stop
             >
               <q-menu>
                 <q-list style="min-width: 190px">
@@ -332,6 +336,92 @@
         />
       </div>
     </q-card>
+
+    <!-- DETALLE EN UN PASO -->
+    <q-dialog v-model="detalleDialogOpen">
+      <q-card class="detalle-persona-dialog">
+        <q-card-section class="bg-green-8 text-white row items-center">
+          <q-avatar size="54px" color="white" text-color="green-9" class="q-mr-md">
+            <img
+              v-if="fotoPersona(personaDetalle)"
+              :src="fotoPersona(personaDetalle)"
+              alt="Fotografía de la persona"
+              @error="ocultarImagen($event)"
+            >
+            <span v-else>{{ iniciales(personaDetalle) }}</span>
+          </q-avatar>
+
+          <div class="col min-width-zero">
+            <div class="text-h6 text-weight-bold ellipsis">
+              {{ nombreCompleto(personaDetalle) }}
+            </div>
+            <div class="text-caption text-green-1">
+              Detalle del registro personal
+            </div>
+          </div>
+
+          <q-btn flat round dense icon="close" v-close-popup />
+        </q-card-section>
+
+        <q-card-section v-if="personaDetalle" class="q-pa-lg">
+          <q-list bordered separator class="rounded-borders">
+            <q-item>
+              <q-item-section avatar><q-icon name="fingerprint" color="green-8" /></q-item-section>
+              <q-item-section>
+                <q-item-label caption>Cédula de identidad</q-item-label>
+                <q-item-label class="text-weight-medium">{{ personaDetalle.ci || 'No registrada' }}</q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section avatar><q-icon name="phone" color="green-8" /></q-item-section>
+              <q-item-section>
+                <q-item-label caption>Teléfono / celular</q-item-label>
+                <q-item-label class="text-weight-medium">{{ personaDetalle.telefono || 'No registrado' }}</q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section avatar><q-icon name="home" color="green-8" /></q-item-section>
+              <q-item-section>
+                <q-item-label caption>Dirección</q-item-label>
+                <q-item-label class="text-weight-medium">{{ personaDetalle.direccion || 'No registrada' }}</q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section avatar><q-icon name="photo_camera" color="green-8" /></q-item-section>
+              <q-item-section>
+                <q-item-label caption>Fotografías</q-item-label>
+                <q-item-label class="text-weight-medium">
+                  {{ Array.isArray(personaDetalle.imagenes) ? personaDetalle.imagenes.length : 0 }} registrada(s)
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md bg-grey-1">
+          <q-btn flat color="grey-7" label="Cerrar" v-close-popup />
+          <q-btn
+            outline
+            color="blue-8"
+            icon="photo_camera"
+            label="Fotografías"
+            no-caps
+            @click="fotografiasDesdeDetalle"
+          />
+          <q-btn
+            color="green-8"
+            icon="edit"
+            label="Editar"
+            unelevated
+            no-caps
+            @click="editarDesdeDetallePersona"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <!-- FORMULARIO -->
     <q-dialog
@@ -652,6 +742,8 @@ const estadisticas = ref({
 let temporizadorBusqueda = null
 
 const dialogOpen = ref(false)
+const detalleDialogOpen = ref(false)
+const personaDetalle = ref(null)
 const isEditing = ref(false)
 const formRef = ref(null)
 const archivoImagen = ref(null)
@@ -764,6 +856,25 @@ function ocultarImagen(evento) {
   if (imagen) {
     imagen.style.display = 'none'
   }
+}
+
+function abrirDetallePersona(persona) {
+  personaDetalle.value = persona
+  detalleDialogOpen.value = true
+}
+
+function editarDesdeDetallePersona() {
+  if (!personaDetalle.value) return
+  const persona = personaDetalle.value
+  detalleDialogOpen.value = false
+  abrirFormulario(persona)
+}
+
+function fotografiasDesdeDetalle() {
+  if (!personaDetalle.value) return
+  const persona = personaDetalle.value
+  detalleDialogOpen.value = false
+  abrirFotografias(persona)
 }
 
 function extraerMensaje(error) {
@@ -1219,6 +1330,13 @@ onMounted(
   background: #f7fbf5;
 }
 
+.detalle-persona-dialog {
+  width: 680px;
+  max-width: 94vw;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
 .persona-dialog {
   width: 700px;
   max-width: 94vw;
@@ -1237,6 +1355,7 @@ onMounted(
 }
 
 @media (max-width: 599px) {
+  .detalle-persona-dialog,
   .persona-dialog,
   .fotos-dialog {
     width: 100vw;

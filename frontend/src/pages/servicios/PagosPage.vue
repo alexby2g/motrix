@@ -80,6 +80,7 @@
           flat
           binary-state-sort
           @request="onRequestPagos"
+          @row-click="(_, row) => openDetail(row)"
         >
           <template #top>
             <div class="row items-center full-width q-col-gutter-sm q-pa-sm">
@@ -158,7 +159,7 @@
           </template>
 
           <template #body-cell-actions="props">
-            <q-td :props="props" class="text-center">
+            <q-td :props="props" class="text-center" @click.stop>
               <q-btn flat round dense icon="more_vert" color="grey-8" aria-label="Acciones del pago">
                 <q-menu auto-close anchor="bottom right" self="top right">
                   <q-list style="min-width: 210px">
@@ -184,7 +185,7 @@
           <!-- TARJETAS RESPONSIVAS -->
           <template #item="props">
             <div class="q-pa-sm col-12 col-md-6">
-              <q-card class="payment-card border-radius-md shadow-1 full-height">
+              <q-card class="payment-card border-radius-md shadow-1 full-height cursor-pointer" @click="openDetail(props.row)">
                 <q-card-section class="q-pb-sm">
                   <div class="row items-start no-wrap">
                     <q-avatar
@@ -204,7 +205,7 @@
                       </div>
                     </div>
 
-                    <q-btn flat round dense icon="more_vert" color="grey-8">
+                    <q-btn flat round dense icon="more_vert" color="grey-8" @click.stop>
                       <q-menu auto-close anchor="bottom right" self="top right">
                         <q-list style="min-width: 210px">
                           <q-item clickable @click="openDetail(props.row)">

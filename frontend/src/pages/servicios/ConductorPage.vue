@@ -1662,6 +1662,8 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY, fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   nextTick,
@@ -1680,7 +1682,6 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../../boot/axios.js'
 import { BROADCAST_AUTH_URL, echoOptions } from '../../config/runtime.js'
-
 window.Pusher = Pusher
 
 const $q = useQuasar()
@@ -2112,62 +2113,11 @@ const formatearDistancia = (distancia) => {
  * CORRECCIÓN: las fechas tipo YYYY-MM-DD se muestran directamente,
  * sin convertirlas a UTC ni restar un día en Bolivia.
  */
-const formatearFecha = (fecha) => {
-  if (!fecha) {
-    return 'Sin fecha'
-  }
+const formatearFecha = (fecha) =>
+  fechaDDMMYYYY(fecha, 'Sin fecha')
 
-  const fechaLimpia = String(fecha).slice(0, 10)
-  const partes = fechaLimpia.split('-')
-
-  if (partes.length !== 3) {
-    return String(fecha)
-  }
-
-  const [anio, mes, dia] = partes
-  const numeroMes = Number(mes)
-
-  const meses = [
-    'ene',
-    'feb',
-    'mar',
-    'abr',
-    'may',
-    'jun',
-    'jul',
-    'ago',
-    'sep',
-    'oct',
-    'nov',
-    'dic'
-  ]
-
-  if (
-    !/^\d{4}$/.test(anio)
-    || !/^\d{2}$/.test(mes)
-    || !/^\d{2}$/.test(dia)
-    || numeroMes < 1
-    || numeroMes > 12
-  ) {
-    return String(fecha)
-  }
-
-  return `${dia} ${meses[numeroMes - 1]} ${anio}`
-}
-
-const formatearFechaHora = (fecha) => {
-  if (!fecha) return 'Sin registro'
-
-  const objetoFecha = convertirFechaJavaScript(fecha)
-  if (!objetoFecha) return String(fecha)
-
-  return new Intl.DateTimeFormat('es-BO', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(objetoFecha)
-}
+const formatearFechaHora = (fecha) =>
+  fechaHoraDDMMYYYY(fecha, 'Sin registro')
 
 const getMetodoPagoIcono = (metodo) => {
   if (!metodo) return 'account_balance_wallet'

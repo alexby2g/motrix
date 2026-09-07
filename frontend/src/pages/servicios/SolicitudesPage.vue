@@ -1409,6 +1409,8 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY, fechaHoraDDMMYYYY, fechaISOHoyBolivia, motrixDateV57 } from 'src/utils/motrixDate.js'
+
 import {
   ref,
   onMounted,
@@ -1429,7 +1431,6 @@ import { BROADCAST_AUTH_URL, echoOptions } from 'src/config/runtime.js'
 
 import solicitudService from 'src/services/solicitudService'
 import pasajeroService from 'src/services/pasajeroService'
-
 window.Pusher = Pusher
 
 const $q = useQuasar()
@@ -1530,15 +1531,7 @@ const distanciaKm = ref(0)
    FORMULARIO
 ========================================================= */
 
-const obtenerFechaActual = () => {
-  const fecha = new Date()
-
-  const year = fecha.getFullYear()
-  const month = String(fecha.getMonth() + 1).padStart(2, '0')
-  const day = String(fecha.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
-}
+const obtenerFechaActual = () => fechaISOHoyBolivia()
 
 const crearFormularioDefault = () => ({
   id: null,
@@ -1643,25 +1636,8 @@ const formatearPrecio = (precio) => {
   }`
 }
 
-const formatearFecha = (fecha) => {
-  if (!fecha) {
-    return 'Fecha no registrada'
-  }
-
-  const fechaNormalizada = String(fecha).includes('T')
-    ? new Date(fecha)
-    : new Date(`${fecha}T00:00:00`)
-
-  if (Number.isNaN(fechaNormalizada.getTime())) {
-    return String(fecha)
-  }
-
-  return new Intl.DateTimeFormat('es-BO', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  }).format(fechaNormalizada)
-}
+const formatearFecha = (fecha) =>
+  fechaDDMMYYYY(fecha, 'Fecha no registrada')
 
 /* =========================================================
    COLUMNAS DE LA TABLA
@@ -1717,6 +1693,7 @@ const columns = [
     label: 'Fecha',
     align: 'left',
     field: 'fecha',
+    format: value => motrixDateV57(value),
     sortable: true
   },
   {
@@ -1874,27 +1851,8 @@ const claseBurbujaMensajeConversacion = (mensaje) => {
   return 'conversacion-burbuja-pasajero'
 }
 
-const formatearFechaHoraConversacion = (fecha) => {
-  if (!fecha) return 'Hora no registrada'
-
-  const valorTexto = String(fecha)
-  const normalizada = valorTexto.includes('T')
-    ? valorTexto
-    : valorTexto.replace(' ', 'T')
-
-  const valor = new Date(normalizada)
-
-  if (Number.isNaN(valor.getTime())) {
-    return valorTexto
-  }
-
-  return new Intl.DateTimeFormat('es-BO', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(valor)
-}
+const formatearFechaHoraConversacion = (fecha) =>
+  fechaHoraDDMMYYYY(fecha, 'Hora no registrada')
 
 const desplazarConversacionAlFinal = async () => {
   await nextTick()

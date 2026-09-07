@@ -28,6 +28,8 @@
           no-data-label="No hay pasajeros registrados"
           rows-per-page-label="Registros por página:"
           @request="onRequestPasajeros"
+          @row-click="(_, row) => abrirExpediente(row)"
+          class="cursor-pointer"
         >
           <template v-slot:body-cell-cuenta="props">
             <q-td :props="props" class="text-center">
@@ -49,7 +51,7 @@
           </template>
 
           <template v-slot:body-cell-acciones="props">
-            <q-td :props="props" class="q-gutter-xs text-center">
+            <q-td :props="props" class="q-gutter-xs text-center" @click.stop>
               
               <q-btn 
                 flat 
@@ -297,37 +299,22 @@
               />
             </template>
 
-            Esta cuenta permitirá al pasajero iniciar sesión en MOTRIX
-            desde la aplicación móvil o la plataforma web.
+            Esta cuenta permitirá al pasajero iniciar sesión en MOTRIX con su número de celular desde la aplicación móvil o la plataforma web.
           </q-banner>
 
           <q-input
-            v-model.trim="cuentaPasajero.email"
+            v-model.trim="cuentaPasajero.telefono"
             outlined
-            type="email"
-            label="Correo electrónico *"
+            type="tel"
+            label="Número de celular *"
+            hint="Este número será el usuario de acceso del pasajero."
             :rules="[
-              val => !!val || 'Ingrese el correo electrónico',
-              val => /.+@.+\..+/.test(val) || 'Ingrese un correo válido'
+              val => String(val || '').replace(/\D+/g, '').length >= 7 || 'Ingrese un celular válido'
             ]"
           >
             <template #prepend>
               <q-icon
-                name="email"
-                color="deep-purple-7"
-              />
-            </template>
-          </q-input>
-
-          <q-input
-            v-model.trim="cuentaPasajero.nickname"
-            outlined
-            label="Nickname (opcional)"
-            hint="También podrá iniciar sesión con este nickname."
-          >
-            <template #prepend>
-              <q-icon
-                name="alternate_email"
+                name="phone_android"
                 color="deep-purple-7"
               />
             </template>
@@ -472,11 +459,12 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import { computed, ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { api } from 'src/boot/axios.js'
-
 const $q = useQuasar()
 const router = useRouter()
 
@@ -520,8 +508,7 @@ const pasajeroCuentaSeleccionado = ref(null)
 const mostrarPasswordCuenta = ref(false)
 
 const cuentaPasajero = ref({
-  email: '',
-  nickname: '',
+  telefono: '',
   password: ''
 })
 
@@ -555,13 +542,20 @@ const formulario = ref({
   email: ''
 })
 
+function correoVisible(valor) {
+  const correo = String(valor || '').trim()
+  return correo && !correo.toLowerCase().endsWith('@motrix.invalid')
+    ? correo
+    : '—'
+}
+
 // Columnas de la tabla principal
 const columnas = [
   { name: 'id', align: 'left', label: 'ID', field: 'id' },
   { name: 'nombre', align: 'left', label: 'Nombre Completo', field: row => row.persona?.nombre || 'Sin nombre' },
   { name: 'ci', align: 'left', label: 'Cédula de Identidad', field: row => row.persona?.ci || 'Sin CI' },
   { name: 'telefono', align: 'left', label: 'Teléfono', field: row => row.persona?.telefono || 'Sin teléfono' },
-  { name: 'email', align: 'left', label: 'Correo Electrónico', field: 'email' },
+  { name: 'email', align: 'left', label: 'Correo (opcional)', field: row => correoVisible(row.email) },
   { name: 'cuenta', align: 'center', label: 'Cuenta', field: row => row.usuario_pasajero },
   { name: 'acciones', align: 'center', label: 'Acciones' }
 ]
@@ -571,7 +565,7 @@ const columnasHistorial = [
   { name: 'id', align: 'left', label: 'ID Viaje', field: 'id' },
   { name: 'origen', align: 'left', label: 'Origen', field: 'origen' },
   { name: 'destino', align: 'left', label: 'Destino', field: 'destino' },
-  { name: 'fecha', align: 'center', label: 'Fecha', field: 'fecha' },
+  { name: 'fecha', align: 'center', label: 'Fecha', field: 'fecha', format: val => fechaDDMMYYYY(val) },
   { name: 'precio', align: 'right', label: 'Tarifa', field: 'precio' },
   { name: 'estado', align: 'center', label: 'Estado', field: 'estado' }
 ]
@@ -820,9 +814,7 @@ const abrirCuentaPasajero = (pasajero) => {
     pasajero
 
   cuentaPasajero.value = {
-    email:
-      pasajero.email || '',
-    nickname: '',
+    telefono: pasajero.persona?.telefono || '',
     password: ''
   }
 
@@ -839,8 +831,7 @@ const cerrarCuentaPasajero = () => {
   pasajeroCuentaSeleccionado.value = null
 
   cuentaPasajero.value = {
-    email: '',
-    nickname: '',
+    telefono: '',
     password: ''
   }
 
@@ -855,10 +846,10 @@ const crearCuentaPasajero = async () => {
     return
   }
 
-  if (!cuentaPasajero.value.email) {
+  if (String(cuentaPasajero.value.telefono || '').replace(/\D+/g, '').length < 7) {
     $q.notify({
       type: 'negative',
-      message: 'Ingrese el correo electrónico.'
+      message: 'Ingrese un número de celular válido.'
     })
 
     return
@@ -881,15 +872,10 @@ const crearCuentaPasajero = async () => {
 
   try {
     await api.post(
-      `/pasajeros/${pasajeroId}/cuenta-pasajero`,
+      `/pasajeros/${pasajeroId}/cuenta-pasajero-celular`,
       {
-        email:
-          cuentaPasajero.value.email,
-        nickname:
-          cuentaPasajero.value.nickname
-          || null,
-        password:
-          cuentaPasajero.value.password
+        telefono: cuentaPasajero.value.telefono,
+        password: cuentaPasajero.value.password
       }
     )
 
@@ -898,7 +884,7 @@ const crearCuentaPasajero = async () => {
       position: 'top',
       icon: 'verified_user',
       message:
-        'Cuenta de pasajero creada correctamente.'
+        'Cuenta creada. El celular es el usuario de acceso.'
     })
 
     creandoCuentaPasajero.value = false

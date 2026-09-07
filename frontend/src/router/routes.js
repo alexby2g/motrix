@@ -196,6 +196,11 @@ const routes = [
         meta: { roles: ['conductor'] }
       },
       {
+        path: 'cuenta/cambiar-contrasena',
+        component: () => import('pages/CambiarContrasenaPage.vue'),
+        meta: { roles: ['conductor', 'pasajero'] }
+      },
+      {
         path: 'pasajero',
         component: () => import('pages/pasajeros/PanelPasajeroPage.vue'),
         meta: { roles: ['pasajero'] }

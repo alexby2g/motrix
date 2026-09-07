@@ -154,10 +154,11 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios.js'
-
 const $q = useQuasar()
 const cargando = ref(false)
 const sindicatos = ref([])
@@ -180,12 +181,7 @@ const nombreUsuario = computed(() => (
   || 'Administrador de registro'
 ))
 
-const fechaHoy = computed(() => new Date().toLocaleDateString('es-BO', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric'
-}))
+const fechaHoy = computed(() => fechaDDMMYYYY(new Date()))
 
 const mototaxistasActivos = computed(() => (
   mototaxistas.value.filter(m => String(m.estado || '').toLowerCase() === 'activo').length
@@ -213,14 +209,7 @@ function inicialesPago(pago) {
 }
 
 function formatearFecha(fecha) {
-  if (!fecha) return 'Sin fecha'
-  const valor = new Date(`${fecha}T00:00:00`)
-  if (Number.isNaN(valor.getTime())) return fecha
-  return valor.toLocaleDateString('es-BO', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  })
+  return fechaDDMMYYYY(fecha, 'Sin fecha')
 }
 
 async function cargarDatos() {
