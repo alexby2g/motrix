@@ -13,8 +13,17 @@ class Mototaxista extends Model
     protected $fillable = [
         'nro_chaleco',
         'codigo_qr',
+        'qr_pago_ruta',
+        'qr_pago_metodo',
+        'qr_pago_titular',
+        'qr_pago_actualizado_en',
         'telefono',
         'estado',
+        'documentacion_en_regla',
+        'aportes_al_dia',
+        'estado_sindical',
+        'motivo_estado_sindical',
+        'estado_sindical_actualizado_en',
         'disponible',
         'latitud',
         'longitud',
@@ -24,6 +33,10 @@ class Mototaxista extends Model
     ];
 
     protected $casts = [
+        'documentacion_en_regla' => 'boolean',
+        'aportes_al_dia' => 'boolean',
+        'estado_sindical_actualizado_en' => 'datetime',
+        'qr_pago_actualizado_en' => 'datetime',
         'disponible' => 'boolean',
         'latitud' => 'float',
         'longitud' => 'float',
@@ -78,5 +91,52 @@ class Mototaxista extends Model
             User::class,
             'mototaxista_id'
         )->where('role', 'conductor');
+    }
+
+    public function calificaciones()
+    {
+        return $this->hasMany(
+            Solicitud::class,
+            'mototaxista_id'
+        )->whereNotNull('calificacion');
+    }
+
+    public function habilitadoSindicalmente(): bool
+    {
+        return $this->estado === 'Activo'
+            && (bool) $this->documentacion_en_regla
+            && (bool) $this->aportes_al_dia
+            && $this->estado_sindical === 'Habilitado';
+    }
+
+    public function motivoInhabilitacionSindical(): ?string
+    {
+        if ($this->estado !== 'Activo') {
+            return 'Registro administrativo no activo';
+        }
+
+        if ($this->estado_sindical === 'Expulsado') {
+            return $this->motivo_estado_sindical ?: 'Afiliación sindical expulsada';
+        }
+
+        $motivos = [];
+
+        if (! (bool) $this->documentacion_en_regla) {
+            $motivos[] = 'documentación incompleta';
+        }
+
+        if (! (bool) $this->aportes_al_dia) {
+            $motivos[] = 'aportes pendientes';
+        }
+
+        if ($motivos !== []) {
+            return implode(' y ', $motivos);
+        }
+
+        if ($this->estado_sindical !== 'Habilitado') {
+            return $this->motivo_estado_sindical ?: 'Afiliación sindical no habilitada';
+        }
+
+        return null;
     }
 }

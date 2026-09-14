@@ -252,3 +252,19 @@ html body #q-app .q-drawer.motrix-drawer .menu-item.q-router-link--exact-active 
   background: rgba(84, 151, 96, 0.34) !important;
   box-shadow: inset 3px 0 0 #6bc778 !important;
 }
+
+/* =========================================================
+   ACCESIBILIDAD TÁCTIL MOTRIX
+   Botones de acción más cómodos sin agrandar iconos, tablas
+   ni controles densos/round.
+========================================================= */
+.q-btn:not(.q-btn--round):not(.q-btn--dense) {
+  min-height: 44px;
+}
+
+.q-card__actions .q-btn:not(.q-btn--round):not(.q-btn--dense),
+.motrix-action-btn {
+  min-height: 44px;
+  padding-right: 16px;
+  padding-left: 16px;
+}

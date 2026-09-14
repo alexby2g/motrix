@@ -16,10 +16,13 @@ use App\Http\Controllers\PagoController;
 use App\Http\Controllers\PagoSindicalController;
 use App\Http\Controllers\ImagenController;
 use App\Http\Controllers\ReporteController;
-use App\Http\Controllers\MensajeViajeController;
 use App\Http\Controllers\IncidenciaViajeController;
 use App\Http\Controllers\FederacionController;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\PasswordRecoveryController;
+use App\Http\Controllers\PushDeviceController;
+use App\Http\Controllers\ViajeCompartidoController;
+use App\Http\Controllers\HabilitacionSindicalController;
 
 /* Evita que rutas fijas sean interpretadas como parámetros {id}. */
 Route::pattern('id', '[0-9]+');
@@ -72,6 +75,26 @@ Route::post(
     '/auth/registro-pasajero',
     [PasajeroController::class, 'registroPublico']
 )->middleware('throttle:motrix-registro-publico');
+
+Route::post(
+    '/auth/recuperacion/solicitar',
+    [PasswordRecoveryController::class, 'requestCode']
+)->middleware('throttle:motrix-password-recovery');
+
+Route::post(
+    '/auth/recuperacion/verificar',
+    [PasswordRecoveryController::class, 'verifyCode']
+)->middleware('throttle:motrix-password-recovery');
+
+Route::post(
+    '/auth/recuperacion/restablecer',
+    [PasswordRecoveryController::class, 'resetPassword']
+)->middleware('throttle:motrix-password-recovery');
+
+Route::get(
+    '/viaje-compartido/{token}',
+    [ViajeCompartidoController::class, 'show']
+)->middleware('throttle:60,1');
 
 /*
 |--------------------------------------------------------------------------
@@ -137,6 +160,16 @@ Route::middleware([
         ]
     );
 
+    Route::post(
+        '/push/devices',
+        [PushDeviceController::class, 'store']
+    )->middleware('throttle:30,1');
+
+    Route::delete(
+        '/push/devices',
+        [PushDeviceController::class, 'destroy']
+    )->middleware('throttle:30,1');
+
     /*
     |--------------------------------------------------------------------------
     | CONDUCTOR
@@ -154,6 +187,26 @@ Route::middleware([
                     MototaxistaController::class,
                     'perfilConductor',
                 ]
+            );
+
+            Route::post(
+                '/qr-pago',
+                [
+                    ImagenController::class,
+                    'guardarQrPagoConductor',
+                ]
+            )->middleware(
+                'throttle:10,1'
+            );
+
+            Route::delete(
+                '/qr-pago',
+                [
+                    ImagenController::class,
+                    'eliminarQrPagoConductor',
+                ]
+            )->middleware(
+                'throttle:10,1'
             );
 
             Route::patch(
@@ -221,36 +274,6 @@ Route::middleware([
                 [
                     SolicitudController::class,
                     'actualizarEstado',
-                ]
-            );
-
-            /*
-             * Chat conservado en backend, pero oculto
-             * temporalmente en la interfaz.
-             */
-            Route::get(
-                '/solicitudes/{id}/mensajes',
-                [
-                    MensajeViajeController::class,
-                    'index',
-                ]
-            );
-
-            Route::post(
-                '/solicitudes/{id}/mensajes',
-                [
-                    MensajeViajeController::class,
-                    'store',
-                ]
-            )->middleware(
-                'throttle:30,1'
-            );
-
-            Route::post(
-                '/solicitudes/{id}/mensajes/leidos',
-                [
-                    MensajeViajeController::class,
-                    'marcarLeidos',
                 ]
             );
 
@@ -342,6 +365,11 @@ Route::middleware([
                 ]
             );
 
+            Route::post(
+                '/solicitudes/{id}/compartir',
+                [ViajeCompartidoController::class, 'create']
+            )->middleware('throttle:12,1');
+
             /*
              * Eliminación de cuenta solicitada por el propio pasajero.
              * Conserva únicamente historial anonimizado cuando corresponde.
@@ -354,36 +382,6 @@ Route::middleware([
                 ]
             )->middleware(
                 'throttle:motrix-eliminar-cuenta'
-            );
-
-            /*
-             * Chat conservado en backend, pero oculto
-             * temporalmente en la interfaz.
-             */
-            Route::get(
-                '/solicitudes/{id}/mensajes',
-                [
-                    MensajeViajeController::class,
-                    'index',
-                ]
-            );
-
-            Route::post(
-                '/solicitudes/{id}/mensajes',
-                [
-                    MensajeViajeController::class,
-                    'store',
-                ]
-            )->middleware(
-                'throttle:30,1'
-            );
-
-            Route::post(
-                '/solicitudes/{id}/mensajes/leidos',
-                [
-                    MensajeViajeController::class,
-                    'marcarLeidos',
-                ]
             );
 
             Route::get(
@@ -771,6 +769,15 @@ Route::middleware([
                 FederacionController::class,
                 'show',
             ]
+        );
+    });
+
+    Route::middleware(
+        'role:admin_general,secretario'
+    )->group(function () {
+        Route::patch(
+            '/mototaxistas/{id}/habilitacion-sindical',
+            [HabilitacionSindicalController::class, 'update']
         );
     });
 

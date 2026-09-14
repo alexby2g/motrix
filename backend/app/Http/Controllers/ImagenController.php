@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\ImagenPersona;
+use App\Models\Mototaxista;
 use App\Models\Persona;
 use Cloudinary\Cloudinary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class ImagenController extends Controller
@@ -194,6 +196,185 @@ class ImagenController extends Controller
                 'Fotografía agregada correctamente.',
             'imagen' => $imagen,
         ], 201);
+    }
+
+
+    public function guardarQrPagoConductor(
+        Request $request
+    ) {
+        $datos = $request->validate([
+            'imagen' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:4096',
+            ],
+            'metodo' => [
+                'nullable',
+                'string',
+                'max:80',
+            ],
+            'titular' => [
+                'nullable',
+                'string',
+                'max:120',
+            ],
+        ]);
+
+        $mototaxista =
+            $this->resolverMototaxistaConductor(
+                $request
+            );
+
+        if (
+            ! $request->hasFile('imagen')
+            && ! $mototaxista->qr_pago_ruta
+        ) {
+            return response()->json([
+                'message' =>
+                    'Selecciona una imagen QR para registrar el cobro digital.',
+            ], 422);
+        }
+
+        $rutaAnterior =
+            $mototaxista->qr_pago_ruta;
+
+        $rutaNueva = null;
+
+        if ($request->hasFile('imagen')) {
+            $subida =
+                $this->subirImagenCloudinary(
+                    $request->file('imagen'),
+                    'motrix/qr-pagos'
+                );
+
+            $rutaNueva =
+                $subida['ruta'];
+        }
+
+        $metodo = trim(
+            (string) (
+                $datos['metodo']
+                ?? $mototaxista->qr_pago_metodo
+                ?? ''
+            )
+        );
+
+        $titular = trim(
+            (string) (
+                $datos['titular']
+                ?? $mototaxista->qr_pago_titular
+                ?? ''
+            )
+        );
+
+        if ($titular === '') {
+            $mototaxista->loadMissing('persona');
+
+            $titular = trim(
+                (string) (
+                    ($mototaxista->persona?->nombre ?? '')
+                    . ' '
+                    . ($mototaxista->persona?->apellidos ?? '')
+                )
+            );
+        }
+
+        $mototaxista->qr_pago_ruta =
+            $rutaNueva ?: $rutaAnterior;
+
+        $mototaxista->qr_pago_metodo =
+            $metodo !== ''
+                ? $metodo
+                : 'QR / billetera móvil';
+
+        $mototaxista->qr_pago_titular =
+            $titular !== ''
+                ? $titular
+                : null;
+
+        $mototaxista->qr_pago_actualizado_en =
+            now();
+
+        $mototaxista->save();
+
+        if (
+            $rutaNueva
+            && $rutaAnterior
+            && $rutaAnterior !== $rutaNueva
+        ) {
+            try {
+                $this->eliminarArchivoImagen(
+                    $rutaAnterior
+                );
+            } catch (\Throwable $error) {
+                Log::warning(
+                    'No se pudo eliminar el QR de cobro anterior del conductor.',
+                    [
+                        'mototaxista_id' =>
+                            $mototaxista->id,
+                        'error' =>
+                            $error->getMessage(),
+                    ]
+                );
+            }
+        }
+
+        return response()->json([
+            'message' =>
+                'QR de cobro actualizado correctamente.',
+            'data' => [
+                'ruta' =>
+                    $mototaxista->qr_pago_ruta,
+                'metodo' =>
+                    $mototaxista->qr_pago_metodo,
+                'titular' =>
+                    $mototaxista->qr_pago_titular,
+                'actualizado_en' =>
+                    $mototaxista->qr_pago_actualizado_en,
+            ],
+        ], 200);
+    }
+
+    public function eliminarQrPagoConductor(
+        Request $request
+    ) {
+        $mototaxista =
+            $this->resolverMototaxistaConductor(
+                $request
+            );
+
+        $ruta =
+            $mototaxista->qr_pago_ruta;
+
+        $mototaxista->qr_pago_ruta = null;
+        $mototaxista->qr_pago_metodo = null;
+        $mototaxista->qr_pago_titular = null;
+        $mototaxista->qr_pago_actualizado_en = null;
+        $mototaxista->save();
+
+        if ($ruta) {
+            try {
+                $this->eliminarArchivoImagen(
+                    $ruta
+                );
+            } catch (\Throwable $error) {
+                Log::warning(
+                    'No se pudo eliminar el archivo QR de cobro del conductor.',
+                    [
+                        'mototaxista_id' =>
+                            $mototaxista->id,
+                        'error' =>
+                            $error->getMessage(),
+                    ]
+                );
+            }
+        }
+
+        return response()->json([
+            'message' =>
+                'QR de cobro eliminado correctamente.',
+        ], 200);
     }
 
     public function destroy(
@@ -420,6 +601,37 @@ class ImagenController extends Controller
             '/',
             $publicIdSegmentos
         );
+    }
+
+
+    private function resolverMototaxistaConductor(
+        Request $request
+    ): Mototaxista {
+        if ($this->rol($request) !== 'conductor') {
+            abort(
+                403,
+                'Esta acción corresponde a una cuenta de conductor.'
+            );
+        }
+
+        $mototaxistaId = (int) (
+            $request->user()
+                ?->mototaxista_id
+            ?? 0
+        );
+
+        if ($mototaxistaId <= 0) {
+            abort(
+                403,
+                'La cuenta no está vinculada a un mototaxista.'
+            );
+        }
+
+        return Mototaxista::query()
+            ->with('persona')
+            ->findOrFail(
+                $mototaxistaId
+            );
     }
 
     private function resolverPersona(

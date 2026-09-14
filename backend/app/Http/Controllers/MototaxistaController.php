@@ -8,6 +8,7 @@ use App\Models\Mototaxista;
 use App\Models\Solicitud;
 use App\Models\User;
 use App\Services\AsignacionConductorService;
+use App\Services\FcmPushService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +19,8 @@ use Illuminate\Validation\Rule;
 class MototaxistaController extends Controller
 {
     public function __construct(
-        private readonly AsignacionConductorService $asignacionService
+        private readonly AsignacionConductorService $asignacionService,
+        private readonly FcmPushService $pushService
     ) {
     }
 
@@ -179,7 +181,9 @@ class MototaxistaController extends Controller
             ->orderByDesc('id');
 
         if (! $request->boolean('paginated')) {
-            return $consulta->get();
+            $items = $consulta->get();
+            $this->adjuntarMetadatosOperativos($items);
+            return $items;
         }
 
         $estadisticas = [
@@ -202,6 +206,10 @@ class MototaxistaController extends Controller
 
         $paginador = $consulta->paginate(
             $porPagina
+        );
+
+        $this->adjuntarMetadatosOperativos(
+            collect($paginador->items())
         );
 
         return response()->json([
@@ -580,6 +588,12 @@ class MototaxistaController extends Controller
          * disponibilidad para recibir viajes.
          */
         $datos['disponible'] = 0;
+        $datos['documentacion_en_regla'] = false;
+        $datos['aportes_al_dia'] = false;
+        $datos['estado_sindical'] = 'No habilitado';
+        $datos['motivo_estado_sindical'] = 'Pendiente de revisión sindical';
+        $datos['estado_sindical_actualizado_en'] = Carbon::now('UTC')
+            ->format('Y-m-d H:i:s');
 
         $mototaxista = Mototaxista::create(
             $datos
@@ -1047,6 +1061,10 @@ class MototaxistaController extends Controller
                 'm.nro_chaleco',
                 'm.codigo_qr',
                 'm.estado',
+                'm.documentacion_en_regla',
+                'm.aportes_al_dia',
+                'm.estado_sindical',
+                'm.motivo_estado_sindical',
                 'm.id_persona',
                 'm.id_sindicato',
 
@@ -1205,12 +1223,50 @@ class MototaxistaController extends Controller
         $estadoActivo =
             $registro->estado === 'Activo';
 
+        $documentacionEnRegla = (bool) $registro->documentacion_en_regla;
+        $aportesAlDia = (bool) $registro->aportes_al_dia;
+        $estadoSindical = (string) ($registro->estado_sindical ?? 'No habilitado');
+
+        $habilitado = $estadoActivo
+            && $tieneCuentaConductor
+            && $documentacionEnRegla
+            && $aportesAlDia
+            && $estadoSindical === 'Habilitado';
+
+        $motivos = [];
+        if (! $estadoActivo) {
+            $motivos[] = 'registro administrativo inactivo';
+        }
+        if (! $tieneCuentaConductor) {
+            $motivos[] = 'sin cuenta MOTRIX de conductor';
+        }
+        if ($estadoSindical === 'Expulsado') {
+            $motivos[] = $registro->motivo_estado_sindical ?: 'afiliación expulsada';
+        } else {
+            if (! $documentacionEnRegla) {
+                $motivos[] = 'documentación incompleta';
+            }
+            if (! $aportesAlDia) {
+                $motivos[] = 'aportes pendientes';
+            }
+            if ($estadoSindical !== 'Habilitado' && $documentacionEnRegla && $aportesAlDia) {
+                $motivos[] = $registro->motivo_estado_sindical ?: 'afiliación sindical no habilitada';
+            }
+        }
+
+        $statsCalificacion = DB::table('solicitudes')
+            ->where('mototaxista_id', $registro->mototaxista_id)
+            ->where('estado', 'Finalizado')
+            ->whereNotNull('calificacion')
+            ->selectRaw('COUNT(calificacion) as total, AVG(calificacion) as promedio')
+            ->first();
+
         return response()->json([
             'verificado' => true,
-            'habilitado' => (
-                $estadoActivo
-                && $tieneCuentaConductor
-            ),
+            'habilitado' => $habilitado,
+            'motivo_inhabilitacion' => $habilitado
+                ? null
+                : implode(', ', array_values(array_unique($motivos))),
 
             'mototaxista' => [
                 'id' =>
@@ -1236,6 +1292,24 @@ class MototaxistaController extends Controller
 
                 'estado' =>
                     $registro->estado,
+
+                'documentacion_en_regla' =>
+                    $documentacionEnRegla,
+
+                'aportes_al_dia' =>
+                    $aportesAlDia,
+
+                'estado_sindical' =>
+                    $estadoSindical,
+
+                'motivo_estado_sindical' =>
+                    $registro->motivo_estado_sindical,
+
+                'promedio_calificacion' =>
+                    round((float) ($statsCalificacion?->promedio ?? 0), 2),
+
+                'total_calificaciones' =>
+                    (int) ($statsCalificacion?->total ?? 0),
 
                 'sindicato' =>
                     $registro->sindicato,
@@ -1337,21 +1411,28 @@ class MototaxistaController extends Controller
             );
 
         /*
-         * En esta fase NO exigimos todavía el QR para ponerse en línea,
-         * porque primero debemos generar/verificar los códigos de todos
-         * los conductores existentes sin romper las pruebas actuales.
-         *
-         * Sí se respeta el estado administrativo.
+         * Para recibir viajes se exige el registro administrativo Activo,
+         * la habilitación sindical vigente y una cuenta de conductor.
+         * La disponibilidad ya no puede reactivar por sí sola a un afiliado
+         * con documentación o aportes pendientes.
          */
-        if (
-            (bool) $datos['disponible']
-            && $mototaxista->estado !== 'Activo'
-        ) {
-            return response()->json([
-                'mensaje' =>
-                    'Tu registro de mototaxista está Inactivo. '
-                    . 'Un administrador debe habilitarlo.',
-            ], 409);
+        if ((bool) $datos['disponible']) {
+            $mototaxista->loadMissing('usuarioConductor');
+
+            if (
+                ! $mototaxista->habilitadoSindicalmente()
+                || $mototaxista->usuarioConductor === null
+            ) {
+                $motivo = $mototaxista->usuarioConductor === null
+                    ? 'No existe una cuenta MOTRIX de conductor vinculada.'
+                    : ($mototaxista->motivoInhabilitacionSindical()
+                        ?: 'La afiliación sindical no está habilitada.');
+
+                return response()->json([
+                    'mensaje' => 'No puedes ponerte en línea: ' . $motivo,
+                    'motivo_inhabilitacion' => $motivo,
+                ], 409);
+            }
         }
 
         $tieneViajeActivo =
@@ -1488,10 +1569,17 @@ class MototaxistaController extends Controller
                 $id
             );
 
+        $mototaxista->loadMissing('usuarioConductor');
+
         if (
-            $mototaxista->estado !== 'Activo'
+            ! $mototaxista->habilitadoSindicalmente()
+            || $mototaxista->usuarioConductor === null
             || !(bool) $mototaxista->disponible
         ) {
+            if ((bool) $mototaxista->disponible) {
+                $mototaxista->disponible = false;
+                $mototaxista->save();
+            }
             return response()->json(
                 [],
                 200
@@ -1524,6 +1612,62 @@ class MototaxistaController extends Controller
         $ahoraUtc =
             Carbon::now('UTC')
                 ->format('Y-m-d H:i:s');
+
+        /*
+         * Este mismo endpoint controla el turno individual de 30 segundos.
+         * Así la reasignación no depende de que el pasajero mantenga abierta
+         * su pantalla o haga polling en ese momento.
+         */
+        $solicitudAsignada =
+            Solicitud::query()
+                ->where(
+                    'mototaxista_id',
+                    $mototaxista->id
+                )
+                ->whereIn(
+                    'estado',
+                    [
+                        'Pendiente',
+                        'Buscando conductor',
+                    ]
+                )
+                ->where(
+                    function (
+                        $query
+                    ) use ($ahoraUtc) {
+                        $query
+                            ->whereNull(
+                                'expira_en'
+                            )
+                            ->orWhere(
+                                'expira_en',
+                                '>',
+                                $ahoraUtc
+                            );
+                    }
+                )
+                ->orderByDesc('id')
+                ->first();
+
+        if ($solicitudAsignada) {
+            $resultadoAsignacion = $this->asignacionService
+                ->revisarAsignacionPendiente(
+                    (int) $solicitudAsignada->id
+                );
+
+            if (
+                ($resultadoAsignacion['cambio'] ?? false)
+                && ($resultadoAsignacion['conductor'] ?? null) !== null
+            ) {
+                $reasignada = Solicitud::query()
+                    ->find($solicitudAsignada->id);
+
+                $this->notificarAsignacionAutomatica(
+                    $reasignada,
+                    'conductor_reasignado'
+                );
+            }
+        }
 
         $existeAsignada =
             Solicitud::query()
@@ -1627,6 +1771,29 @@ class MototaxistaController extends Controller
                     'distancia_recogida_km',
                     $distancia
                 );
+
+                $tiempoRespuesta = $this->asignacionService
+                    ->obtenerTiempoRespuestaAsignacion(
+                        (int) $solicitud->id,
+                        (int) $mototaxista->id
+                    );
+
+                $solicitud->setAttribute(
+                    'respuesta_asignada_en',
+                    $tiempoRespuesta['asignado_en'] ?? null
+                );
+                $solicitud->setAttribute(
+                    'respuesta_expira_en',
+                    $tiempoRespuesta['expira_en'] ?? null
+                );
+                $solicitud->setAttribute(
+                    'segundos_respuesta_total',
+                    $tiempoRespuesta['segundos_totales'] ?? 30
+                );
+                $solicitud->setAttribute(
+                    'segundos_respuesta_restantes',
+                    $tiempoRespuesta['segundos_restantes'] ?? 0
+                );
             }
         );
 
@@ -1675,7 +1842,8 @@ class MototaxistaController extends Controller
 
 
     private function notificarAsignacionAutomatica(
-        ?Solicitud $solicitud
+        ?Solicitud $solicitud,
+        string $tipoEvento = 'conductor_asignado'
     ): void {
         if (! $solicitud) {
             return;
@@ -1687,12 +1855,34 @@ class MototaxistaController extends Controller
             'mototaxista.sindicato',
         ]);
 
+        if ($solicitud->mototaxista) {
+            $this->adjuntarMetadatosOperativos(
+                collect([$solicitud->mototaxista])
+            );
+        }
+
         broadcast(
             new SolicitudActualizada(
                 $solicitud,
-                'conductor_asignado'
+                $tipoEvento
             )
         )->toOthers();
+
+        $userId = User::query()
+            ->where('mototaxista_id', $solicitud->mototaxista_id)
+            ->where('role', 'conductor')
+            ->value('id');
+
+        $this->pushService->sendToUser(
+            $userId ? (int) $userId : null,
+            'Nueva solicitud de viaje',
+            'Tienes 30 segundos para aceptar la solicitud #' . $solicitud->id . '.',
+            [
+                'tipo' => $tipoEvento,
+                'solicitud_id' => $solicitud->id,
+                'route' => '/conductor',
+            ]
+        );
     }
 
     /*
@@ -1704,12 +1894,71 @@ class MototaxistaController extends Controller
     private function cargarDetalle(
         Mototaxista $mototaxista
     ): Mototaxista {
-        return $mototaxista->load([
+        $mototaxista->load([
             'persona.imagenes',
             'sindicato.federacionRelacion',
             'motocicletas.imagenes',
             'usuarioConductor',
         ]);
+
+        $this->adjuntarMetadatosOperativos(collect([$mototaxista]));
+
+        return $mototaxista;
+    }
+
+    private function adjuntarMetadatosOperativos($mototaxistas): void
+    {
+        $ids = collect($mototaxistas)
+            ->pluck('id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $reputacion = Solicitud::query()
+            ->selectRaw(
+                'mototaxista_id, COUNT(calificacion) as total_calificaciones, AVG(calificacion) as promedio_calificacion'
+            )
+            ->whereIn('mototaxista_id', $ids)
+            ->where('estado', 'Finalizado')
+            ->whereNotNull('calificacion')
+            ->groupBy('mototaxista_id')
+            ->get()
+            ->keyBy('mototaxista_id');
+
+        foreach ($mototaxistas as $mototaxista) {
+            $stats = $reputacion->get($mototaxista->id);
+
+            $mototaxista->setAttribute(
+                'promedio_calificacion',
+                round((float) ($stats?->promedio_calificacion ?? 0), 2)
+            );
+            $mototaxista->setAttribute(
+                'total_calificaciones',
+                (int) ($stats?->total_calificaciones ?? 0)
+            );
+            $motivoInhabilitacion = $mototaxista->motivoInhabilitacionSindical();
+
+            if ($mototaxista->usuarioConductor === null) {
+                $motivoCuenta = 'sin cuenta MOTRIX de conductor';
+                $motivoInhabilitacion = $motivoInhabilitacion
+                    ? $motivoInhabilitacion . '; ' . $motivoCuenta
+                    : $motivoCuenta;
+            }
+
+            $mototaxista->setAttribute(
+                'motivo_inhabilitacion',
+                $motivoInhabilitacion
+            );
+            $mototaxista->setAttribute(
+                'habilitado_para_operar',
+                $mototaxista->habilitadoSindicalmente()
+                    && $mototaxista->usuarioConductor !== null
+            );
+        }
     }
 
     private function resolverMototaxista(

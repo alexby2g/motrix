@@ -50,5 +50,18 @@ class AppServiceProvider extends ServiceProvider
             fn (Request $request) => Limit::perHour(3)
                 ->by((string) ($request->user()?->id ?? $request->ip()))
         );
+
+
+        RateLimiter::for(
+            'motrix-password-recovery',
+            function (Request $request) {
+                $login = mb_strtolower(trim((string) $request->input('login', '')));
+
+                return [
+                    Limit::perHour(30)->by((string) $request->ip()),
+                    Limit::perHour(12)->by((string) $request->ip() . '|' . hash('sha256', $login)),
+                ];
+            }
+        );
     }
 }

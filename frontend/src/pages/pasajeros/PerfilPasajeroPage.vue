@@ -71,8 +71,16 @@
                 color="green-1"
                 text-color="green-9"
                 class="profile-avatar"
+                :class="{ 'cursor-pointer': Boolean(fotoPerfilUrl) }"
+                @click="abrirVisorFoto"
               >
-                {{ iniciales }}
+                <img
+                  v-if="fotoPerfilUrl && !fotoPerfilError"
+                  :src="fotoPerfilUrl"
+                  :alt="`Foto de ${nombreUsuario}`"
+                  @error="fotoPerfilError = true"
+                >
+                <span v-else>{{ iniciales }}</span>
               </q-avatar>
 
               <div class="text-center">
@@ -297,6 +305,12 @@
         </q-card>
       </div>
     </div>
+
+    <PhotoViewerDialog
+      v-model="visorFoto"
+      :src="fotoPerfilUrl"
+      :title="nombreUsuario"
+    />
   </q-page>
 </template>
 
@@ -319,12 +333,15 @@ import {
 import {
   api
 } from 'src/boot/axios.js'
+import PhotoViewerDialog from 'src/components/PhotoViewerDialog.vue'
 
 const $q = useQuasar()
 const router = useRouter()
 const route = useRoute()
 
 const cargando = ref(false)
+const visorFoto = ref(false)
+const fotoPerfilError = ref(false)
 const dialogEliminarCuenta = ref(false)
 const eliminandoCuenta = ref(false)
 const passwordActual = ref('')
@@ -353,6 +370,24 @@ const nombreUsuario = computed(() => {
     || 'Pasajero MOTRIX'
   )
 })
+
+const fotoPerfilUrl = computed(() => {
+  if (fotoPerfilError.value) return ''
+  const ruta = String(usuario.value?.foto_ruta || '').trim()
+  if (!ruta) return ''
+  if (/^https?:\/\//i.test(ruta)) return ruta
+
+  const baseApi = String(api.defaults.baseURL || '')
+    .replace(/\/api\/?$/i, '')
+    .replace(/\/$/, '')
+  let limpia = ruta.replace(/^\/+/, '').replace(/^public\//i, '')
+  if (!limpia.startsWith('storage/')) limpia = `storage/${limpia}`
+  return `${baseApi}/${limpia}`
+})
+
+function abrirVisorFoto() {
+  if (fotoPerfilUrl.value) visorFoto.value = true
+}
 
 const iniciales = computed(() => {
   const partes =

@@ -54,19 +54,6 @@ Broadcast::channel(
 );
 
 Broadcast::channel(
-    'viajes.chat.{solicitudId}',
-    function (
-        $user,
-        $solicitudId
-    ) {
-        return autorizarParticipanteViaje(
-            $user,
-            (int) $solicitudId,
-            true
-        );
-    }
-);
-Broadcast::channel(
     'viajes.incidencias.{solicitudId}',
     function (
         $user,

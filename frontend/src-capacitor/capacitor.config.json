@@ -1,7 +1,7 @@
 {
   "appId": "bo.edu.josecastillo.motrix",
   "appName": "MOTRIX",
-  "webDir": "www",
+  "webDir": "../dist/spa",
   "server": {
     "androidScheme": "https"
   },

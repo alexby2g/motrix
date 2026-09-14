@@ -52,6 +52,15 @@ const routes = [
     meta: { guestOnly: true }
   },
   {
+    path: '/recuperar-contrasena',
+    component: () => import('pages/RecuperarContrasenaPage.vue'),
+    meta: { guestOnly: true }
+  },
+  {
+    path: '/seguimiento/:token',
+    component: () => import('pages/publico/SeguimientoCompartidoPage.vue')
+  },
+  {
     path: '/verificar/:codigo',
     component: () => import('pages/publico/VerificarPage.vue')
   },

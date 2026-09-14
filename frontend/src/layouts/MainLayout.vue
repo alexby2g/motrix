@@ -708,6 +708,7 @@ import Pusher from 'pusher-js'
 
 import { api } from '../boot/axios.js'
 import { echoOptions } from '../config/runtime.js'
+import { inicializarPushMotrix, desregistrarPushMotrix } from '../services/pushNotifications.js'
 window.Pusher = Pusher
 
 const $q = useQuasar()
@@ -2278,6 +2279,7 @@ async function cerrarSesion() {
   cerrandoSesion.value = true
 
   try {
+    await desregistrarPushMotrix()
     await api.post('/auth/logout')
   } catch (error) {
     const estado = error?.response?.status
@@ -2301,7 +2303,9 @@ async function cerrarSesion() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await inicializarPushMotrix(router)
+
   if (!puedeGestionarIncidencias.value) return
 
   document.addEventListener(
@@ -2625,7 +2629,7 @@ onBeforeUnmount(() => {
 .driver-bottom-nav {
   min-height: 68px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
   padding:
     5px

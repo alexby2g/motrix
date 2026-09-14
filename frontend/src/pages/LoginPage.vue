@@ -27,8 +27,11 @@
               </div>
 
               <div class="text-subtitle2 text-green-2 q-mt-xs">
-                Sistema Web y Aplicación Móvil para el Registro y
-                Solicitud de Mototaxistas
+                {{
+                  esAppNativa
+                    ? 'Aplicación MOTRIX para el Registro y Solicitud de Mototaxistas'
+                    : 'Sistema Web y Aplicación Móvil para el Registro y Solicitud de Mototaxistas'
+                }}
               </div>
 
               <q-list class="q-mt-xl branding-list">
@@ -104,7 +107,11 @@
                   </div>
 
                   <div class="text-caption text-grey-6">
-                    Plataforma integrada de mototaxis
+                    {{
+                      esAppNativa
+                        ? 'Aplicación MOTRIX'
+                        : 'Plataforma integrada de mototaxis'
+                    }}
                   </div>
                 </div>
               </div>
@@ -198,6 +205,18 @@
                   size="md"
                   :loading="cargando"
                 />
+
+                <div class="text-right q-mt-sm">
+                  <q-btn
+                    flat
+                    dense
+                    no-caps
+                    color="green-8"
+                    icon="lock_reset"
+                    label="¿Olvidaste tu contraseña?"
+                    to="/recuperar-contrasena"
+                  />
+                </div>
               </q-form>
 
               <div class="registro-pasajero q-mt-lg text-center">
@@ -265,8 +284,10 @@ const router = useRouter()
 const cargando = ref(false)
 const mostrarPassword = ref(false)
 const googleButton = ref(null)
+const esAppNativa = esContenedorNativo()
+
 const mostrarGoogleWeb = ref(
-  googleClientConfigurado() && !esContenedorNativo()
+  googleClientConfigurado() && !esAppNativa
 )
 
 onMounted(async () => {

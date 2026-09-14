@@ -194,6 +194,50 @@
                           </div>
                         </div>
                       </div>
+
+                      <q-card
+                        v-if="requiereQrViajeActivo && viajeActivo?.mototaxista_id"
+                        flat
+                        bordered
+                        class="qr-pago-card q-mt-md"
+                      >
+                        <q-card-section class="text-center">
+                          <div class="text-subtitle1 text-weight-bold text-indigo-9">
+                            QR de cobro del mototaxista
+                          </div>
+                          <div class="text-caption text-grey-7 q-mb-md">
+                            Usa este QR para la parte digital del pago.
+                          </div>
+
+                          <img
+                            v-if="qrPagoConductorUrl"
+                            :src="qrPagoConductorUrl"
+                            alt="QR de cobro del mototaxista"
+                            class="qr-pago-image"
+                          >
+
+                          <q-banner
+                            v-else
+                            rounded
+                            class="bg-orange-1 text-orange-10 text-left"
+                          >
+                            Este mototaxista aún no registró un QR de cobro.
+                            Coordina el pago directamente con el conductor.
+                          </q-banner>
+
+                          <div
+                            v-if="qrPagoConductorUrl"
+                            class="q-mt-md"
+                          >
+                            <div class="text-weight-bold">
+                              {{ qrPagoMetodoConductor }}
+                            </div>
+                            <div class="text-caption text-grey-7">
+                              Titular: {{ qrPagoTitularConductor }}
+                            </div>
+                          </div>
+                        </q-card-section>
+                      </q-card>
                     </q-card-section>
                   </q-card>
                 </div>
@@ -210,8 +254,17 @@
                         size="78px"
                         :color="nombreConductor ? 'primary' : 'grey-4'"
                         :text-color="nombreConductor ? 'white' : 'grey-7'"
-                        icon="two_wheeler"
-                      />
+                        class="conductor-avatar"
+                        :class="{ 'cursor-pointer': Boolean(fotoConductorUrl) }"
+                        @click="abrirFotoConductor"
+                      >
+                        <img
+                          v-if="fotoConductorUrl"
+                          :src="fotoConductorUrl"
+                          :alt="`Foto de ${nombreConductor || 'mototaxista'}`"
+                        >
+                        <q-icon v-else name="two_wheeler" size="40px" />
+                      </q-avatar>
 
                       <div class="text-caption text-grey-6 q-mt-md">
                         Mototaxista asignado
@@ -232,6 +285,31 @@
                       </div>
 
                       <div
+                        v-if="nombreConductor"
+                        class="row items-center justify-center q-gutter-xs q-mt-xs"
+                      >
+                        <q-rating
+                          v-if="totalCalificacionesConductor > 0"
+                          :model-value="promedioCalificacionConductor"
+                          readonly
+                          size="20px"
+                          color="amber-7"
+                          icon="star_border"
+                          icon-selected="star"
+                        />
+                        <span
+                          v-if="totalCalificacionesConductor > 0"
+                          class="text-caption text-weight-bold text-grey-9"
+                        >
+                          {{ promedioCalificacionConductor.toFixed(1) }}
+                          ({{ totalCalificacionesConductor }})
+                        </span>
+                        <span v-else class="text-caption text-grey-6">
+                          Sin calificaciones
+                        </span>
+                      </div>
+
+                      <div
                         v-if="viajeActivo.mototaxista_id"
                         class="text-caption text-grey-6 q-mt-xs"
                       >
@@ -240,25 +318,6 @@
                       </div>
 
                       <q-separator class="q-my-md" />
-
-                      <q-btn
-                        v-if="chatDisponible"
-                        color="primary"
-                        icon="chat"
-                        label="Chat con el mototaxista"
-                        class="full-width text-weight-bold"
-                        unelevated
-                        @click="abrirChatViaje"
-                      >
-                        <q-badge
-                          v-if="chatNoLeidos > 0"
-                          color="negative"
-                          floating
-                          rounded
-                        >
-                          {{ chatNoLeidos > 99 ? '99+' : chatNoLeidos }}
-                        </q-badge>
-                      </q-btn>
 
                       <q-banner
                         v-if="incidenciaActiva"
@@ -284,6 +343,17 @@
                         class="full-width text-weight-bold q-mt-sm"
                         unelevated
                         @click="abrirDialogoSos"
+                      />
+
+                      <q-btn
+                        v-if="puedeMostrarSeguimiento"
+                        outline
+                        color="green-8"
+                        icon="share_location"
+                        label="Compartir seguimiento"
+                        class="full-width q-mt-sm"
+                        :loading="compartiendoViaje"
+                        @click="compartirViaje"
                       />
 
                       <q-btn
@@ -1125,180 +1195,6 @@
       </q-card>
     </q-dialog>
 
-    <!-- CHAT EN TIEMPO REAL CON EL MOTOTAXISTA -->
-    <q-dialog
-      v-model="dialogChat"
-      :maximized="$q.screen.lt.sm"
-      transition-show="slide-up"
-      transition-hide="slide-down"
-      @hide="alCerrarChat"
-    >
-      <q-card class="chat-dialog-card column no-wrap">
-        <q-card-section class="bg-primary text-white row items-center no-wrap">
-          <q-avatar
-            color="white"
-            text-color="primary"
-            icon="two_wheeler"
-            size="46px"
-            class="q-mr-md"
-          />
-
-          <div class="col min-width-zero">
-            <div class="text-h6 text-weight-bold ellipsis">
-              Chat con {{ nombreConductor || 'el mototaxista' }}
-            </div>
-            <div class="text-caption text-blue-1">
-              Viaje #{{ viajeActivo?.id || '—' }} · {{ viajeActivo?.estado || 'Sin estado' }}
-            </div>
-          </div>
-
-          <q-chip
-            :color="websocketConectado ? 'positive' : 'orange-8'"
-            text-color="white"
-            :icon="websocketConectado ? 'sensors' : 'sync_problem'"
-            dense
-            class="q-mr-sm"
-          >
-            {{ websocketConectado ? 'EN VIVO' : 'RESPALDO' }}
-          </q-chip>
-
-          <q-btn
-            flat
-            round
-            dense
-            icon="close"
-            aria-label="Cerrar chat"
-            @click="dialogChat = false"
-          />
-        </q-card-section>
-
-        <q-linear-progress
-          v-if="chatCargando"
-          indeterminate
-          color="primary"
-        />
-
-        <div
-          ref="chatContenedor"
-          class="chat-messages col"
-        >
-          <div
-            v-if="!chatCargando && chatMensajes.length === 0"
-            class="column items-center justify-center text-center text-grey-6 chat-empty"
-          >
-            <q-icon name="forum" size="54px" color="grey-5" />
-            <div class="text-subtitle1 text-weight-bold q-mt-sm">
-              Todavía no hay mensajes
-            </div>
-            <div class="text-caption">
-              Puedes coordinar directamente con el mototaxista.
-            </div>
-          </div>
-
-          <div
-            v-for="mensaje in chatMensajes"
-            :key="mensaje.id"
-            class="chat-row"
-            :class="esMensajeChatPropio(mensaje) ? 'chat-row-own' : 'chat-row-other'"
-          >
-            <div
-              class="chat-bubble"
-              :class="esMensajeChatPropio(mensaje) ? 'chat-bubble-own' : 'chat-bubble-other'"
-            >
-              <div
-                v-if="!esMensajeChatPropio(mensaje)"
-                class="text-caption text-weight-bold text-primary q-mb-xs"
-              >
-                {{ mensaje.remitente_nombre || 'Mototaxista' }}
-              </div>
-
-              <div class="text-body2 chat-message-text">
-                {{ mensaje.mensaje }}
-              </div>
-
-              <div class="chat-message-time">
-                {{ formatearHoraChat(mensaje.creado_en) }}
-                <q-icon
-                  v-if="esMensajeChatPropio(mensaje)"
-                  :name="mensaje.leido_conductor_en ? 'done_all' : 'done'"
-                  :color="mensaje.leido_conductor_en ? 'light-blue-7' : 'grey-6'"
-                  size="16px"
-                  class="q-ml-xs"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <q-separator />
-
-        <q-card-section class="q-py-sm bg-grey-1">
-          <div class="text-caption text-grey-7 q-mb-xs">
-            Mensajes rápidos
-          </div>
-
-          <div class="row q-gutter-xs no-wrap chat-quick-scroll">
-            <q-btn
-              v-for="texto in mensajesRapidosPasajero"
-              :key="texto"
-              outline
-              rounded
-              no-caps
-              dense
-              color="primary"
-              :label="texto"
-              :disable="chatEnviando || !chatHabilitado"
-              @click="enviarMensajeChat(texto)"
-            />
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-sm">
-          <q-banner
-            v-if="!chatHabilitado"
-            rounded
-            class="bg-orange-1 text-orange-10 q-mb-sm"
-          >
-            El chat está cerrado porque el viaje finalizó o fue cancelado.
-          </q-banner>
-
-          <div class="row items-end q-col-gutter-sm">
-            <div class="col">
-              <q-input
-                v-model="chatTexto"
-                outlined
-                autogrow
-                type="textarea"
-                maxlength="1000"
-                counter
-                label="Escribe un mensaje"
-                :disable="!chatHabilitado || chatEnviando"
-                @keydown.enter.exact.prevent="enviarMensajeChat()"
-              >
-                <template #prepend>
-                  <q-icon name="message" color="primary" />
-                </template>
-              </q-input>
-            </div>
-
-            <div class="col-auto">
-              <q-btn
-                round
-                color="primary"
-                icon="send"
-                size="lg"
-                :loading="chatEnviando"
-                :disable="!chatHabilitado || !chatTexto.trim()"
-                @click="enviarMensajeChat()"
-              >
-                <q-tooltip>Enviar mensaje</q-tooltip>
-              </q-btn>
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
-
     <!-- NOTIFICACIÓN DESTACADA DEL ESTADO DEL VIAJE -->
     <q-dialog
       v-model="dialogNotificacion"
@@ -1401,6 +1297,12 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <PhotoViewerDialog
+      v-model="visorFotoConductor"
+      :src="fotoConductorUrl"
+      :title="nombreConductor || 'Mototaxista MOTRIX'"
+    />
   </q-page>
 </template>
 
@@ -1427,6 +1329,7 @@ import 'leaflet/dist/leaflet.css'
 
 import { api } from '../../boot/axios.js'
 import { BROADCAST_AUTH_URL, echoOptions } from '../../config/runtime.js'
+import PhotoViewerDialog from '../../components/PhotoViewerDialog.vue'
 window.Pusher = Pusher
 
 const $q = useQuasar()
@@ -1470,15 +1373,9 @@ const distanciaKm = ref(0)
 
 const dialogNotificacion = ref(false)
 const websocketConectado = ref(false)
+const visorFotoConductor = ref(false)
+const compartiendoViaje = ref(false)
 
-const dialogChat = ref(false)
-const chatMensajes = ref([])
-const chatTexto = ref('')
-const chatCargando = ref(false)
-const chatEnviando = ref(false)
-const chatHabilitado = ref(false)
-const chatNoLeidos = ref(0)
-const chatContenedor = ref(null)
 
 const dialogSos = ref(false)
 const sosTipo = ref('')
@@ -1502,12 +1399,6 @@ const tiposIncidenciaPasajero = [
   'Otro'
 ]
 
-const mensajesRapidosPasajero = [
-  'Ya estoy en el punto de recogida',
-  'No encuentro la moto',
-  'Espérame un momento',
-  'Voy saliendo'
-]
 const notificacionActual = ref({
   solicitudId: null,
   titulo: '',
@@ -1543,10 +1434,9 @@ let marcadorDestinoSeguimiento = null
 let lineaRutaSeguimiento = null
 let ultimaClaveRutaSeguimiento = null
 let intervaloActualizacion = null
+let intervaloIncidencias = null
 let cargaViajeEnCurso = false
 let ultimaSincronizacionViaje = 0
-let intervaloChat = null
-let canalChatSolicitudId = null
 let canalIncidenciasSolicitudId = null
 let echoInstance = null
 let audioContexto = null
@@ -1562,6 +1452,10 @@ const metodosPago = [
   {
     label: 'Pago por QR',
     value: 'QR'
+  },
+  {
+    label: 'Pago mixto: efectivo + QR',
+    value: 'Mixto'
   }
 ]
 
@@ -1802,11 +1696,50 @@ const nombreConductor = computed(() => {
   )
 })
 
-/*
- * El chat se conserva programado, pero permanece oculto
- * temporalmente por decisión de alcance del proyecto.
- */
-const chatDisponible = computed(() => false)
+const fotoConductorUrl = computed(() => {
+  return fotoPersonaUrl(viajeActivo.value?.mototaxista?.persona)
+})
+
+const requiereQrViajeActivo = computed(() => {
+  return ['QR', 'Transferencia / QR', 'Mixto'].includes(
+    String(viajeActivo.value?.metodo_pago || '')
+  )
+})
+
+const qrPagoConductorUrl = computed(() => {
+  return resolverUrlImagenPersona(
+    viajeActivo.value?.mototaxista?.qr_pago_ruta
+  )
+})
+
+const qrPagoMetodoConductor = computed(() => {
+  return String(
+    viajeActivo.value?.mototaxista?.qr_pago_metodo
+    || 'QR / billetera móvil'
+  )
+})
+
+const qrPagoTitularConductor = computed(() => {
+  return String(
+    viajeActivo.value?.mototaxista?.qr_pago_titular
+    || nombreConductor.value
+    || 'Mototaxista MOTRIX'
+  )
+})
+
+const promedioCalificacionConductor = computed(() => {
+  return Number(viajeActivo.value?.mototaxista?.promedio_calificacion || 0)
+})
+
+const totalCalificacionesConductor = computed(() => {
+  return Number(viajeActivo.value?.mototaxista?.total_calificaciones || 0)
+})
+
+function abrirFotoConductor() {
+  if (fotoConductorUrl.value) {
+    visorFotoConductor.value = true
+  }
+}
 
 const sosDisponible = computed(() => {
   const estado = String(viajeActivo.value?.estado || '')
@@ -2417,6 +2350,75 @@ function crearIconoMarcador(tipo) {
   })
 }
 
+function formatearDireccionNominatim(datos) {
+  const direccion = datos?.address || {}
+
+  const via = String(
+    direccion.road
+    || direccion.pedestrian
+    || direccion.residential
+    || direccion.footway
+    || direccion.path
+    || ''
+  ).trim()
+
+  const numero = String(
+    direccion.house_number || ''
+  ).trim()
+
+  const zona = String(
+    direccion.neighbourhood
+    || direccion.suburb
+    || direccion.quarter
+    || direccion.city_district
+    || direccion.borough
+    || ''
+  ).trim()
+
+  const ciudad = String(
+    direccion.city
+    || direccion.town
+    || direccion.village
+    || direccion.municipality
+    || 'Trinidad'
+  ).trim()
+
+  const calle = [via, numero]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+
+  const partes = [calle, zona, ciudad]
+    .filter(Boolean)
+    .filter(
+      (valor, indice, lista) =>
+        lista.findIndex(
+          (otro) =>
+            otro.toLocaleLowerCase('es')
+            === valor.toLocaleLowerCase('es')
+        ) === indice
+    )
+
+  if (partes.length >= 2) {
+    return partes.join(', ')
+  }
+
+  const displayName = String(
+    datos?.display_name || ''
+  ).trim()
+
+  if (displayName) {
+    return displayName
+      .split(',')
+      .map((parte) => parte.trim())
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(', ')
+  }
+
+  return ''
+}
+
 async function obtenerDireccion(lat, lng) {
   try {
     const respuesta = await axios.get(
@@ -2425,18 +2427,19 @@ async function obtenerDireccion(lat, lng) {
         params: {
           lat,
           lon: lng,
-          format: 'json',
-          addressdetails: 1
+          format: 'jsonv2',
+          addressdetails: 1,
+          zoom: 18
         }
       }
     )
 
-    if (respuesta.data?.display_name) {
-      return respuesta.data.display_name
-        .split(',')
-        .slice(0, 3)
-        .join(',')
-        .trim()
+    const direccion = formatearDireccionNominatim(
+      respuesta.data
+    )
+
+    if (direccion) {
+      return direccion
     }
   } catch (error) {
     console.error('Error obteniendo dirección:', error)
@@ -2499,19 +2502,13 @@ function nombreResultadoDestino(resultado) {
 }
 
 function direccionResultadoDestino(resultado) {
-  const nombreCompleto = String(
-    resultado?.display_name || ''
-  ).trim()
+  const direccionCorta = formatearDireccionNominatim(resultado)
 
-  if (!nombreCompleto) {
-    return 'Trinidad, Beni, Bolivia'
+  if (direccionCorta) {
+    return direccionCorta
   }
 
-  return nombreCompleto
-    .split(',')
-    .slice(0, 6)
-    .join(',')
-    .trim()
+  return 'Trinidad, Beni, Bolivia'
 }
 
 function limpiarDestinoSeleccionado(limpiarBusqueda = true) {
@@ -3303,17 +3300,26 @@ async function procesarEventoSolicitud(
   solicitud,
   tipo = 'estado_actualizado'
 ) {
+  if (
+    !solicitud?.id
+    || obtenerPasajeroIdSolicitud(solicitud) !== PASAJERO_ID
+  ) {
+    return
+  }
+
+  /*
+   * Los eventos de Echo se usan solo como señal de actualización.
+   * La solicitud vigente siempre se vuelve a consultar al backend para
+   * evitar que un evento atrasado reemplace un viaje ya aceptado por
+   * otro conductor.
+   */
   const notificar = tipo !== 'cancelado_por_pasajero'
 
-  await aplicarSolicitudTiempoReal(
-    solicitud,
-    tipo,
-    notificar
-  )
+  await cargarViajeActivo(true, notificar, tipo)
 }
 
 
-function obtenerEndpointAutorizacionChat() {
+function obtenerEndpointAutorizacionRealtime() {
   const baseConfigurada = String(
     api?.defaults?.baseURL || ''
   ).trim().replace(/\/+$/, '')
@@ -3325,7 +3331,7 @@ function obtenerEndpointAutorizacionChat() {
   return BROADCAST_AUTH_URL
 }
 
-function obtenerCabecerasAutorizacionChat() {
+function obtenerCabecerasAutorizacionRealtime() {
   const token = localStorage.getItem('motrix_token') || ''
 
   return {
@@ -3334,253 +3340,6 @@ function obtenerCabecerasAutorizacionChat() {
       ? { Authorization: `Bearer ${token}` }
       : {})
   }
-}
-
-function esMensajeChatPropio(mensaje) {
-  return String(mensaje?.remitente_tipo || '').toLowerCase() === 'pasajero'
-}
-
-function formatearHoraChat(fecha) {
-  if (!fecha) return ''
-
-  const normalizada = String(fecha).includes('T')
-    ? String(fecha)
-    : String(fecha).replace(' ', 'T')
-
-  const valor = new Date(normalizada)
-
-  if (Number.isNaN(valor.getTime())) {
-    return String(fecha).slice(11, 16)
-  }
-
-  return valor.toLocaleTimeString('es-BO', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-async function desplazarChatAlFinal() {
-  await nextTick()
-
-  if (chatContenedor.value) {
-    chatContenedor.value.scrollTop = chatContenedor.value.scrollHeight
-  }
-}
-
-async function agregarMensajeChat(mensaje) {
-  if (!mensaje?.id) return false
-
-  const existe = chatMensajes.value.some(
-    item => Number(item.id) === Number(mensaje.id)
-  )
-
-  if (existe) return false
-
-  chatMensajes.value.push(mensaje)
-  await desplazarChatAlFinal()
-  return true
-}
-
-async function marcarMensajesChatLeidos() {
-  if (!viajeActivo.value?.id) return
-
-  try {
-    await api.post(
-      `/pasajero/solicitudes/${viajeActivo.value.id}/mensajes/leidos`
-    )
-
-    const fechaLectura = new Date().toISOString()
-
-    chatMensajes.value = chatMensajes.value.map((mensaje) => {
-      if (
-        String(mensaje.remitente_tipo).toLowerCase() === 'conductor'
-        && !mensaje.leido_pasajero_en
-      ) {
-        return {
-          ...mensaje,
-          leido_pasajero_en: fechaLectura
-        }
-      }
-
-      return mensaje
-    })
-
-    chatNoLeidos.value = 0
-  } catch (error) {
-    console.warn(
-      'No se pudieron marcar los mensajes del pasajero como leídos:',
-      error
-    )
-  }
-}
-
-async function cargarChatViaje(silencioso = false) {
-  if (!viajeActivo.value?.id) {
-    chatMensajes.value = []
-    chatNoLeidos.value = 0
-    chatHabilitado.value = false
-    return
-  }
-
-  if (!silencioso) {
-    chatCargando.value = true
-  }
-
-  try {
-    const respuesta = await api.get(
-      `/pasajero/solicitudes/${viajeActivo.value.id}/mensajes`,
-      { params: { _t: Date.now() } }
-    )
-
-    chatMensajes.value = Array.isArray(respuesta.data?.mensajes)
-      ? respuesta.data.mensajes
-      : []
-
-    chatHabilitado.value = Boolean(
-      respuesta.data?.chat_habilitado
-    )
-
-    chatNoLeidos.value = Number(
-      respuesta.data?.no_leidos || 0
-    )
-
-    if (dialogChat.value) {
-      await marcarMensajesChatLeidos()
-    }
-
-    await desplazarChatAlFinal()
-  } catch (error) {
-    if (!silencioso) {
-      $q.notify({
-        type: 'negative',
-        message: extraerMensajeError(error)
-      })
-    }
-  } finally {
-    if (!silencioso) {
-      chatCargando.value = false
-    }
-  }
-}
-
-async function reproducirSonidoChat() {
-  const audioDisponible = await prepararAudioNotificaciones()
-
-  if (!audioDisponible || !audioContexto) return
-
-  try {
-    const inicio = audioContexto.currentTime
-    const tonos = [740, 988]
-
-    tonos.forEach((frecuencia, indice) => {
-      const oscilador = audioContexto.createOscillator()
-      const ganancia = audioContexto.createGain()
-      const empieza = inicio + (indice * 0.16)
-      const termina = empieza + 0.12
-
-      oscilador.type = 'sine'
-      oscilador.frequency.setValueAtTime(frecuencia, empieza)
-      ganancia.gain.setValueAtTime(0.0001, empieza)
-      ganancia.gain.exponentialRampToValueAtTime(0.20, empieza + 0.02)
-      ganancia.gain.exponentialRampToValueAtTime(0.0001, termina)
-
-      oscilador.connect(ganancia)
-      ganancia.connect(audioContexto.destination)
-      oscilador.start(empieza)
-      oscilador.stop(termina)
-    })
-  } catch (error) {
-    console.warn('No se pudo reproducir el sonido del chat:', error)
-  }
-}
-
-async function abrirChatViaje() {
-  if (!chatDisponible.value) {
-    $q.notify({
-      type: 'warning',
-      message: 'El chat estará disponible cuando exista un conductor asignado.'
-    })
-    return
-  }
-
-  dialogChat.value = true
-  await cargarChatViaje()
-  await marcarMensajesChatLeidos()
-}
-
-function alCerrarChat() {
-  chatTexto.value = ''
-}
-
-async function enviarMensajeChat(mensajeRapido = null) {
-  const texto = String(
-    mensajeRapido ?? chatTexto.value
-  ).trim()
-
-  if (!texto || !viajeActivo.value?.id || chatEnviando.value) {
-    return
-  }
-
-  chatEnviando.value = true
-
-  try {
-    const respuesta = await api.post(
-      `/pasajero/solicitudes/${viajeActivo.value.id}/mensajes`,
-      { mensaje: texto }
-    )
-
-    await agregarMensajeChat(respuesta.data?.chat_mensaje)
-    chatTexto.value = ''
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: extraerMensajeError(error)
-    })
-  } finally {
-    chatEnviando.value = false
-  }
-}
-
-async function procesarMensajeChatRecibido(data) {
-  const mensaje = data?.mensaje
-
-  if (
-    !mensaje
-    || Number(mensaje.solicitud_id) !== Number(viajeActivo.value?.id)
-  ) {
-    return
-  }
-
-  const agregado = await agregarMensajeChat(mensaje)
-
-  if (!agregado || esMensajeChatPropio(mensaje)) {
-    return
-  }
-
-  if (dialogChat.value) {
-    await marcarMensajesChatLeidos()
-    return
-  }
-
-  chatNoLeidos.value += 1
-  await reproducirSonidoChat()
-
-  $q.notify({
-    color: 'primary',
-    textColor: 'white',
-    icon: 'chat',
-    message: mensaje.remitente_nombre || 'Nuevo mensaje del mototaxista',
-    caption: mensaje.mensaje,
-    position: 'top',
-    timeout: 7000,
-    actions: [
-      {
-        label: 'ABRIR',
-        color: 'white',
-        handler: abrirChatViaje
-      }
-    ]
-  })
 }
 
 function normalizarIncidenciaActiva() {
@@ -3814,46 +3573,6 @@ async function sincronizarCanalIncidencias() {
   await cargarIncidenciasViaje(true)
 }
 
-function salirCanalChat() {
-  if (!echoInstance || !canalChatSolicitudId) return
-
-  echoInstance.leave(`viajes.chat.${canalChatSolicitudId}`)
-  canalChatSolicitudId = null
-}
-
-async function sincronizarCanalChat() {
-  const solicitudId = Number(viajeActivo.value?.id || 0)
-
-  if (
-    !echoInstance
-    || !solicitudId
-    || !viajeActivo.value?.mototaxista_id
-  ) {
-    salirCanalChat()
-    chatNoLeidos.value = 0
-    chatMensajes.value = []
-    chatHabilitado.value = false
-    return
-  }
-
-  if (Number(canalChatSolicitudId) === solicitudId) {
-    return
-  }
-
-  salirCanalChat()
-  canalChatSolicitudId = solicitudId
-
-  echoInstance
-    .private(`viajes.chat.${solicitudId}`)
-    .listen('.MensajeViajeEnviado', (data) => {
-      procesarMensajeChatRecibido(data).catch((error) => {
-        console.error('Error procesando mensaje del chat:', error)
-      })
-    })
-
-  await cargarChatViaje(true)
-}
-
 function inicializarWebsocketPasajero() {
   if (echoInstance) {
     return
@@ -3862,9 +3581,9 @@ function inicializarWebsocketPasajero() {
   try {
     echoInstance = new Echo({
       ...echoOptions(),
-      authEndpoint: obtenerEndpointAutorizacionChat(),
+      authEndpoint: obtenerEndpointAutorizacionRealtime(),
       auth: {
-        headers: obtenerCabecerasAutorizacionChat()
+        headers: obtenerCabecerasAutorizacionRealtime()
       }
     })
 
@@ -3930,7 +3649,6 @@ function desconectarWebsocketPasajero() {
     return
   }
 
-  salirCanalChat()
   salirCanalIncidencias()
   echoInstance.leave(`pasajero.${PASAJERO_ID}.solicitudes`)
   echoInstance.disconnect()
@@ -4060,7 +3778,11 @@ async function omitirCalificacion() {
   inicializarMapa()
 }
 
-async function cargarViajeActivo(silencioso = false) {
+async function cargarViajeActivo(
+  silencioso = false,
+  notificar = true,
+  tipoNotificacion = 'consulta'
+) {
   if (!validarSesion() || cargaViajeEnCurso) {
     return
   }
@@ -4083,10 +3805,14 @@ async function cargarViajeActivo(silencioso = false) {
     if (solicitudActual) {
       viajeFinalizado.value = null
 
-      await mostrarNotificacionEstado(
-        solicitudActual,
-        'consulta'
-      )
+      if (notificar) {
+        await mostrarNotificacionEstado(
+          solicitudActual,
+          tipoNotificacion
+        )
+      } else {
+        registrarFirmaSolicitud(solicitudActual)
+      }
 
       await nextTick()
       await actualizarMapaSeguimiento()
@@ -4111,8 +3837,8 @@ async function cargarViajeActivo(silencioso = false) {
           ) {
             await aplicarSolicitudTiempoReal(
               solicitudCerrada,
-              'consulta',
-              true
+              tipoNotificacion,
+              notificar
             )
           }
         } catch (errorEstado) {
@@ -4286,6 +4012,57 @@ async function cancelarSolicitud(motivo) {
   }
 }
 
+async function compartirViaje() {
+  if (!viajeActivo.value?.id || compartiendoViaje.value) return
+
+  compartiendoViaje.value = true
+
+  try {
+    const respuesta = await api.post(
+      `/pasajero/solicitudes/${viajeActivo.value.id}/compartir`
+    )
+
+    const url = String(respuesta.data?.url || '').trim()
+    if (!url) {
+      throw new Error('El servidor no devolvió el enlace de seguimiento.')
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Seguimiento de viaje MOTRIX',
+          text: 'Puedes seguir temporalmente mi viaje MOTRIX desde este enlace:',
+          url
+        })
+        return
+      } catch (error) {
+        if (error?.name === 'AbortError') return
+      }
+    }
+
+    await navigator.clipboard?.writeText?.(url)
+
+    $q.dialog({
+      title: 'Seguimiento compartido',
+      message: `Enlace temporal: ${url}`,
+      ok: { label: 'Entendido', color: 'green-8' }
+    })
+
+    $q.notify({
+      type: 'positive',
+      icon: 'link',
+      message: 'Enlace de seguimiento creado. También se copió cuando el dispositivo lo permitió.'
+    })
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: extraerMensajeError(error)
+    })
+  } finally {
+    compartiendoViaje.value = false
+  }
+}
+
 function volver() {
   router.push('/pasajero')
 }
@@ -4297,11 +4074,9 @@ watch(
     viajeActivo.value?.mototaxista_id || null
   ],
   async () => {
-    await sincronizarCanalChat()
     await sincronizarCanalIncidencias()
 
     if (!viajeActivo.value?.id) {
-      dialogChat.value = false
       dialogSos.value = false
     }
   }
@@ -4321,7 +4096,6 @@ onMounted(async () => {
   inicializarWebsocketPasajero()
 
   await cargarViajeActivo()
-  await sincronizarCanalChat()
   await sincronizarCanalIncidencias()
 
   if (viajeActivo.value) {
@@ -4352,11 +4126,8 @@ onMounted(async () => {
     }
   }, 5000)
 
-  intervaloChat = window.setInterval(() => {
+  intervaloIncidencias = window.setInterval(() => {
     if (viajeActivo.value?.id) {
-      if (viajeActivo.value?.mototaxista_id) {
-        cargarChatViaje(true).catch(() => {})
-      }
       cargarIncidenciasViaje(true).catch(() => {})
     }
   }, 15000)
@@ -4379,8 +4150,8 @@ onBeforeUnmount(() => {
     window.clearInterval(intervaloActualizacion)
   }
 
-  if (intervaloChat) {
-    window.clearInterval(intervaloChat)
+  if (intervaloIncidencias) {
+    window.clearInterval(intervaloIncidencias)
   }
 
   if (mapa) {
@@ -4635,90 +4406,22 @@ onBeforeUnmount(() => {
   }
 }
 
-.chat-dialog-card {
-  width: min(720px, 96vw);
-  height: min(760px, 92vh);
-  max-width: 720px;
-  border-radius: 18px;
-  overflow: hidden;
-}
 
-.chat-messages {
-  min-height: 280px;
-  padding: 16px;
-  overflow-y: auto;
-  background: #eef2f5;
-  scroll-behavior: smooth;
-}
-
-.chat-empty {
-  min-height: 100%;
-  padding: 42px 20px;
-}
-
-.chat-row {
-  display: flex;
-  width: 100%;
-  margin-bottom: 10px;
-}
-
-.chat-row-own {
-  justify-content: flex-end;
-}
-
-.chat-row-other {
-  justify-content: flex-start;
-}
-
-.chat-bubble {
-  max-width: 82%;
-  padding: 9px 12px 6px;
+.qr-pago-card {
   border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  background: #fafaff;
 }
 
-.chat-bubble-own {
-  color: #1b4332;
-  background: #d8f3dc;
-  border-bottom-right-radius: 5px;
-}
-
-.chat-bubble-other {
-  color: #263238;
-  background: #ffffff;
-  border-bottom-left-radius: 5px;
-}
-
-.chat-message-text {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.chat-message-time {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: 3px;
-  color: #78909c;
-  font-size: 11px;
-}
-
-.chat-quick-scroll {
-  padding-bottom: 4px;
-  overflow-x: auto;
-}
-
-@media (max-width: 599px) {
-  .chat-dialog-card {
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    border-radius: 0;
-  }
-
-  .chat-bubble {
-    max-width: 90%;
-  }
+.qr-pago-image {
+  display: block;
+  width: min(100%, 320px);
+  max-height: 360px;
+  object-fit: contain;
+  margin: 0 auto;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e3e7ef;
+  padding: 10px;
 }
 
 </style>

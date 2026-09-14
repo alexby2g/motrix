@@ -12,24 +12,6 @@
 
       <div class="col-auto row q-gutter-sm">
         <q-btn
-          v-if="configurada"
-          outline
-          color="red-8"
-          icon="picture_as_pdf"
-          label="PDF"
-          no-caps
-          @click="descargarReporte('pdf')"
-        />
-        <q-btn
-          v-if="configurada"
-          outline
-          color="green-8"
-          icon="table_view"
-          label="Excel"
-          no-caps
-          @click="descargarReporte('excel')"
-        />
-        <q-btn
           outline
           color="green-8"
           icon="refresh"
@@ -869,48 +851,6 @@ function mensajeError(error) {
     || error.response?.data?.mensaje
     || 'No se pudo cargar tu suscripción MOTRIX.'
   )
-}
-
-async function descargarReporte(formato) {
-  try {
-    const respuesta = await api.get(
-      `/conductor/suscripcion-motrix/reporte/${formato}`,
-      {
-        responseType: 'blob'
-      }
-    )
-
-    const extension =
-      formato === 'pdf' ? 'pdf' : 'xlsx'
-
-    descargarBlob(
-      respuesta.data,
-      `MOTRIX_historial_suscripcion.${extension}`
-    )
-  } catch (error) {
-    console.error(
-      'Error descargando reporte:',
-      error
-    )
-
-    $q.notify({
-      type: 'negative',
-      message: mensajeError(error),
-      position: 'top'
-    })
-  }
-}
-
-function descargarBlob(blob, nombre) {
-  const url = URL.createObjectURL(blob)
-  const enlace = document.createElement('a')
-
-  enlace.href = url
-  enlace.download = nombre
-  document.body.appendChild(enlace)
-  enlace.click()
-  enlace.remove()
-  URL.revokeObjectURL(url)
 }
 
 onMounted(async () => {

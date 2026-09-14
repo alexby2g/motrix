@@ -9,7 +9,9 @@ use App\Models\Mototaxista;
 use App\Models\Pago;
 use App\Models\Servicio;
 use App\Models\Solicitud;
+use App\Models\User;
 use App\Services\AsignacionConductorService;
+use App\Services\FcmPushService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,14 +20,15 @@ use Illuminate\Validation\ValidationException;
 class SolicitudController extends Controller
 {
     public function __construct(
-        private readonly AsignacionConductorService $asignacionService
+        private readonly AsignacionConductorService $asignacionService,
+        private readonly FcmPushService $pushService
     ) {
     }
 
     /**
-     * Las solicitudes nuevas estarán disponibles durante 15 minutos.
+     * Las solicitudes nuevas buscarán conductor durante un máximo de 3 minutos.
      */
-    private const MINUTOS_EXPIRACION = 15;
+    private const MINUTOS_EXPIRACION = 3;
 
     /**
      * Tarifa oficial del pasajero.
@@ -756,6 +759,12 @@ class SolicitudController extends Controller
                         $solicitud->id
                     );
 
+                $this->asignacionService
+                    ->registrarSeguimientoAsignacion(
+                        $solicitud->id,
+                        $mototaxista->id
+                    );
+
                 return $solicitud->load([
                     'pasajero.persona',
                     'mototaxista.persona',
@@ -931,12 +940,24 @@ class SolicitudController extends Controller
 
         $solicitud->load([
             'pasajero.persona',
-            'mototaxista.persona',
+            'mototaxista.persona.imagenes',
+            'mototaxista.sindicato',
         ]);
+
+        $this->adjuntarReputacionConductor($solicitud);
 
         broadcast(
             new SolicitudCreada($solicitud)
         )->toOthers();
+
+        if ($solicitud->mototaxista_id) {
+            $this->notificarPushConductor(
+                $solicitud,
+                'Nueva solicitud de viaje',
+                'Tienes 30 segundos para aceptar la solicitud #' . $solicitud->id . '.',
+                'nueva_solicitud'
+            );
+        }
 
         return response()->json([
             'mensaje' => 'Solicitud creada correctamente.',
@@ -1013,6 +1034,8 @@ class SolicitudController extends Controller
             ], 404);
         }
 
+        $this->adjuntarReputacionConductor($solicitud);
+
         return response()->json(
             $solicitud,
             200
@@ -1038,6 +1061,59 @@ class SolicitudController extends Controller
             $pasajeroId
         );
 
+        $solicitudPendiente = Solicitud::query()
+            ->where('id_pasajero', $pasajeroId)
+            ->whereIn(
+                'estado',
+                ['Pendiente', 'Buscando conductor']
+            )
+            ->orderByDesc('id')
+            ->first();
+
+        if ($solicitudPendiente) {
+            $resultadoAsignacion = $this->asignacionService
+                ->revisarAsignacionPendiente(
+                    $solicitudPendiente->id
+                );
+
+            if (
+                $resultadoAsignacion['cambio']
+                && $resultadoAsignacion['conductor'] !== null
+            ) {
+                $solicitudActualizada = Solicitud::query()
+                    ->with([
+                        'pasajero.persona',
+                        'mototaxista.persona',
+                        'mototaxista.persona.imagenes',
+                        'mototaxista.sindicato',
+                    ])
+                    ->find($solicitudPendiente->id);
+
+                if ($solicitudActualizada) {
+                    $tipoEvento = $resultadoAsignacion['motivo']
+                        === 'conductor_asignado'
+                            ? 'conductor_asignado'
+                            : 'conductor_reasignado';
+
+                    $this->adjuntarReputacionConductor($solicitudActualizada);
+
+                    broadcast(
+                        new SolicitudActualizada(
+                            $solicitudActualizada,
+                            $tipoEvento
+                        )
+                    )->toOthers();
+
+                    $this->notificarPushConductor(
+                        $solicitudActualizada,
+                        'Nueva solicitud de viaje',
+                        'Tienes 30 segundos para aceptar la solicitud #' . $solicitudActualizada->id . '.',
+                        $tipoEvento
+                    );
+                }
+            }
+        }
+
         $solicitud = Solicitud::query()
             ->with([
                 'pasajero.persona',
@@ -1055,6 +1131,10 @@ class SolicitudController extends Controller
             ])
             ->orderByDesc('id')
             ->first();
+
+        if ($solicitud) {
+            $this->adjuntarReputacionConductor($solicitud);
+        }
 
         return response()->json([
             'solicitud' => $solicitud,
@@ -1090,6 +1170,10 @@ class SolicitudController extends Controller
             ->whereNull('calificacion')
             ->orderByDesc('id')
             ->first();
+
+        if ($solicitud) {
+            $this->adjuntarReputacionConductor($solicitud);
+        }
 
         return response()->json([
             'solicitud' => $solicitud,
@@ -1347,13 +1431,22 @@ class SolicitudController extends Controller
                     );
 
                     if ($mototaxista) {
-                        $mototaxista->disponible = 1;
+                        $mototaxista->loadMissing('usuarioConductor');
+                        $mototaxista->disponible = (
+                            $mototaxista->habilitadoSindicalmente()
+                            && $mototaxista->usuarioConductor !== null
+                        );
                         $mototaxista->save();
                     }
                 }
 
                 $this->asignacionService
                     ->olvidarRechazos($solicitud->id);
+
+                $this->asignacionService
+                    ->olvidarSeguimientoAsignacion(
+                        $solicitud->id
+                    );
 
                 $solicitud->load([
                     'pasajero.persona',
@@ -1404,6 +1497,14 @@ class SolicitudController extends Controller
                 $datos['mototaxista_id'] ?? null
             );
 
+        /*
+         * También se valida el límite de respuesta al momento de aceptar.
+         * Así un conductor no puede aceptar una reserva cuyo turno de
+         * 30 segundos ya venció aunque el pasajero todavía no haya hecho poll.
+         */
+        $this->asignacionService
+            ->revisarAsignacionPendiente((int) $id);
+
         return DB::transaction(
             function () use (
                 $mototaxistaId,
@@ -1417,15 +1518,34 @@ class SolicitudController extends Controller
                     ->lockForUpdate()
                     ->findOrFail($mototaxistaId);
 
+                $mototaxista->loadMissing('usuarioConductor');
+
                 if (
-                    $solicitud->mototaxista_id !== null
-                    && (int) $solicitud->mototaxista_id
+                    ! $mototaxista->habilitadoSindicalmente()
+                    || $mototaxista->usuarioConductor === null
+                ) {
+                    $mototaxista->disponible = false;
+                    $mototaxista->save();
+
+                    $motivo = $mototaxista->usuarioConductor === null
+                        ? 'No existe una cuenta MOTRIX de conductor vinculada.'
+                        : ($mototaxista->motivoInhabilitacionSindical()
+                            ?: 'La afiliación sindical no está habilitada.');
+
+                    return response()->json([
+                        'mensaje' => 'No puedes aceptar viajes: ' . $motivo,
+                        'motivo_inhabilitacion' => $motivo,
+                    ], 409);
+                }
+
+                if (
+                    (int) ($solicitud->mototaxista_id ?? 0)
                         !== (int) $mototaxista->id
                 ) {
                     return response()->json([
                         'mensaje' => (
-                            'La solicitud está reservada '
-                            . 'para otro conductor.'
+                            'La solicitud ya no está reservada '
+                            . 'para este conductor.'
                         ),
                     ], 403);
                 }
@@ -1518,12 +1638,18 @@ class SolicitudController extends Controller
                         $solicitud->id
                     );
 
+                $this->asignacionService
+                    ->olvidarSeguimientoAsignacion(
+                        $solicitud->id
+                    );
+
                 $solicitud->load([
                     'pasajero.persona',
-                    'mototaxista.persona',
-                'mototaxista.persona.imagenes',
-                'mototaxista.sindicato',
+                    'mototaxista.persona.imagenes',
+                    'mototaxista.sindicato',
                 ]);
+
+                $this->adjuntarReputacionConductor($solicitud);
 
                 broadcast(
                     new SolicitudActualizada(
@@ -1531,6 +1657,13 @@ class SolicitudController extends Controller
                         'conductor_acepto'
                     )
                 )->toOthers();
+
+                $this->notificarPushPasajero(
+                    $solicitud,
+                    'Conductor en camino',
+                    'Tu mototaxista aceptó el viaje y se dirige al punto de recogida.',
+                    'conductor_acepto'
+                );
 
                 return response()->json(
                     $solicitud,
@@ -1561,6 +1694,9 @@ class SolicitudController extends Controller
                 $request,
                 $datos['mototaxista_id'] ?? null
             );
+
+        $this->asignacionService
+            ->revisarAsignacionPendiente((int) $id);
 
         $solicitud = Solicitud::query()
             ->findOrFail($id);
@@ -1607,6 +1743,8 @@ class SolicitudController extends Controller
             ])
             ->findOrFail($id);
 
+        $this->adjuntarReputacionConductor($solicitudActualizada);
+
         broadcast(
             new SolicitudActualizada(
                 $solicitudActualizada,
@@ -1615,6 +1753,15 @@ class SolicitudController extends Controller
                     : 'conductor_rechazo'
             )
         )->toOthers();
+
+        if ($resultado['conductor'] !== null) {
+            $this->notificarPushConductor(
+                $solicitudActualizada,
+                'Nueva solicitud de viaje',
+                'Tienes 30 segundos para aceptar la solicitud #' . $solicitudActualizada->id . '.',
+                'conductor_reasignado'
+            );
+        }
 
         return response()->json([
             'mensaje' => $resultado['mensaje'],
@@ -1883,17 +2030,25 @@ class SolicitudController extends Controller
                     );
 
                     if ($mototaxista) {
-                        $mototaxista->disponible = 1;
+                        $tieneCuentaConductor = User::query()
+                            ->where('mototaxista_id', $mototaxista->id)
+                            ->where('role', 'conductor')
+                            ->exists();
+
+                        $mototaxista->disponible =
+                            $mototaxista->habilitadoSindicalmente()
+                            && $tieneCuentaConductor;
                         $mototaxista->save();
                     }
                 }
 
                 $solicitud->load([
                     'pasajero.persona',
-                    'mototaxista.persona',
-                'mototaxista.persona.imagenes',
-                'mototaxista.sindicato',
+                    'mototaxista.persona.imagenes',
+                    'mototaxista.sindicato',
                 ]);
+
+                $this->adjuntarReputacionConductor($solicitud);
 
                 $tipoEvento = match ($nuevoEstado) {
                     'Llegó' => 'conductor_llego',
@@ -1909,6 +2064,36 @@ class SolicitudController extends Controller
                         $tipoEvento
                     )
                 )->toOthers();
+
+                [$pushTitulo, $pushMensaje] = match ($nuevoEstado) {
+                    'Llegó' => [
+                        'Tu mototaxista llegó',
+                        'El conductor ya se encuentra en el punto de recogida.',
+                    ],
+                    'En Curso' => [
+                        'Viaje iniciado',
+                        'Tu viaje MOTRIX está en curso.',
+                    ],
+                    'Finalizado' => [
+                        'Viaje finalizado',
+                        'El viaje terminó. Ya puedes calificar la atención del mototaxista.',
+                    ],
+                    'Cancelado' => [
+                        'Viaje cancelado',
+                        'El conductor canceló el viaje. Revisa la aplicación para más detalles.',
+                    ],
+                    default => [
+                        'Actualización de viaje',
+                        'El estado de tu viaje MOTRIX cambió.',
+                    ],
+                };
+
+                $this->notificarPushPasajero(
+                    $solicitud,
+                    $pushTitulo,
+                    $pushMensaje,
+                    $tipoEvento
+                );
 
                 return response()->json(
                     $solicitud,
@@ -2089,6 +2274,87 @@ class SolicitudController extends Controller
     | FUNCIONES INTERNAS
     |--------------------------------------------------------------------------
     */
+
+    private function adjuntarReputacionConductor(?Solicitud $solicitud): void
+    {
+        $mototaxista = $solicitud?->mototaxista;
+
+        if (! $mototaxista?->id) {
+            return;
+        }
+
+        $consulta = Solicitud::query()
+            ->where('mototaxista_id', $mototaxista->id)
+            ->where('estado', 'Finalizado')
+            ->whereNotNull('calificacion');
+
+        $mototaxista->setAttribute(
+            'promedio_calificacion',
+            round((float) ((clone $consulta)->avg('calificacion') ?? 0), 2)
+        );
+        $mototaxista->setAttribute(
+            'total_calificaciones',
+            (clone $consulta)->count()
+        );
+    }
+
+    private function notificarPushConductor(
+        Solicitud $solicitud,
+        string $titulo,
+        string $mensaje,
+        string $tipo
+    ): void {
+        $mototaxistaId = (int) ($solicitud->mototaxista_id ?? 0);
+
+        if ($mototaxistaId <= 0) {
+            return;
+        }
+
+        $userId = User::query()
+            ->where('mototaxista_id', $mototaxistaId)
+            ->where('role', 'conductor')
+            ->value('id');
+
+        $this->pushService->sendToUser(
+            $userId ? (int) $userId : null,
+            $titulo,
+            $mensaje,
+            [
+                'tipo' => $tipo,
+                'solicitud_id' => $solicitud->id,
+                'route' => '/conductor',
+            ]
+        );
+    }
+
+    private function notificarPushPasajero(
+        Solicitud $solicitud,
+        string $titulo,
+        string $mensaje,
+        string $tipo
+    ): void {
+        $pasajeroId = (int) ($solicitud->id_pasajero ?? 0);
+
+        if ($pasajeroId <= 0) {
+            return;
+        }
+
+        $userId = User::query()
+            ->where('pasajero_id', $pasajeroId)
+            ->where('role', 'pasajero')
+            ->value('id');
+
+        $this->pushService->sendToUser(
+            $userId ? (int) $userId : null,
+            $titulo,
+            $mensaje,
+            [
+                'tipo' => $tipo,
+                'solicitud_id' => $solicitud->id,
+                'route' => '/pasajero/solicitar',
+            ]
+        );
+    }
 
     /**
      * Distancia aproximada entre dos coordenadas,

@@ -215,6 +215,12 @@
                       : 'Sin cuenta'
                   }}
                 </q-badge>
+
+                <q-badge
+                  :color="colorEstadoSindical(m.estado_sindical)"
+                >
+                  {{ m.estado_sindical || 'No habilitado' }}
+                </q-badge>
               </div>
             </div>
 
@@ -237,6 +243,18 @@
                       <q-icon name="visibility" color="blue-8" />
                     </q-item-section>
                     <q-item-section>Ver detalle</q-item-section>
+                  </q-item>
+
+                  <q-item
+                    v-if="puedeGestionarHabilitacion"
+                    clickable
+                    v-close-popup
+                    @click="abrirHabilitacionSindical(m)"
+                  >
+                    <q-item-section avatar>
+                      <q-icon name="fact_check" color="orange-9" />
+                    </q-item-section>
+                    <q-item-section>Habilitación sindical</q-item-section>
                   </q-item>
 
                   <q-item
@@ -696,6 +714,19 @@
                           : 'No creada'
                       }}
                     </div>
+                    <div class="text-body2 q-mt-xs">
+                      <strong>Estado sindical:</strong>
+                      <q-badge :color="colorEstadoSindical(seleccionado.estado_sindical)" class="q-ml-xs">
+                        {{ seleccionado.estado_sindical || 'No habilitado' }}
+                      </q-badge>
+                    </div>
+                    <div class="text-caption text-grey-7 q-mt-xs">
+                      Documentación: {{ seleccionado.documentacion_en_regla ? 'En regla' : 'Incompleta' }} ·
+                      Aportes: {{ seleccionado.aportes_al_dia ? 'Al día' : 'Pendientes' }}
+                    </div>
+                    <div v-if="seleccionado.motivo_inhabilitacion || seleccionado.motivo_estado_sindical" class="text-caption text-orange-10 q-mt-xs">
+                      {{ seleccionado.motivo_inhabilitacion || seleccionado.motivo_estado_sindical }}
+                    </div>
                   </div>
                 </div>
 
@@ -854,12 +885,77 @@
         <q-card-actions align="right" class="q-pa-md bg-grey-1">
           <q-btn flat color="grey-7" label="Cerrar" v-close-popup />
           <q-btn
+            v-if="puedeGestionarHabilitacion"
+            outline
+            color="orange-9"
+            icon="fact_check"
+            label="Habilitación sindical"
+            @click="abrirHabilitacionSindical(seleccionado)"
+          />
+          <q-btn
             color="green-8"
             icon="edit"
             label="Editar datos"
             unelevated
             @click="editarDesdeDetalleMototaxista"
           />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- HABILITACIÓN SINDICAL -->
+    <q-dialog v-model="dialogHabilitacion" persistent>
+      <q-card style="width: min(94vw, 560px)">
+        <q-card-section class="bg-orange-9 text-white row items-center">
+          <q-icon name="fact_check" size="30px" class="q-mr-sm" />
+          <div class="col">
+            <div class="text-h6 text-weight-bold">Habilitación sindical</div>
+            <div class="text-caption text-orange-1">
+              {{ nombreCompleto(seleccionadoHabilitacion) }}
+            </div>
+          </div>
+          <q-btn flat round dense icon="close" :disable="guardandoHabilitacion" @click="dialogHabilitacion = false" />
+        </q-card-section>
+
+        <q-card-section class="q-pa-lg">
+          <q-toggle
+            v-model="formHabilitacion.documentacion_en_regla"
+            color="green-8"
+            label="Documentación en regla"
+            class="full-width q-mb-md"
+          />
+          <q-toggle
+            v-model="formHabilitacion.aportes_al_dia"
+            color="green-8"
+            label="Aportes sindicales al día"
+            class="full-width q-mb-md"
+          />
+          <q-select
+            v-model="formHabilitacion.estado_sindical"
+            outlined
+            label="Estado sindical"
+            :options="['Habilitado', 'No habilitado', 'Expulsado']"
+            class="q-mb-md"
+          />
+          <q-input
+            v-model.trim="formHabilitacion.motivo"
+            outlined
+            type="textarea"
+            autogrow
+            maxlength="255"
+            label="Motivo / observación"
+            hint="Obligatorio de hecho cuando corresponda explicar una inhabilitación o expulsión."
+          />
+
+          <q-banner rounded class="bg-orange-1 text-orange-10 q-mt-md">
+            <template #avatar><q-icon name="info" color="orange-9" /></template>
+            Para operar en MOTRIX necesita cuenta de conductor, estado administrativo Activo, documentación en regla, aportes al día y estado sindical Habilitado. Un Expulsado no se reactiva automáticamente.
+          </q-banner>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md bg-grey-1">
+          <q-btn flat label="Cancelar" color="grey-7" :disable="guardandoHabilitacion" @click="dialogHabilitacion = false" />
+          <q-btn color="orange-9" icon="save" label="Guardar habilitación" unelevated :loading="guardandoHabilitacion" @click="guardarHabilitacionSindical" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -1048,21 +1144,25 @@ const $q = useQuasar()
 const router = useRouter()
 const route = useRoute()
 
-const esAdminGeneral = computed(() => {
+const rolActual = computed(() => {
   try {
     const usuario = JSON.parse(
       localStorage.getItem('motrix_user') || 'null'
     )
 
-    return String(
-      usuario?.role || ''
-    )
+    return String(usuario?.role || '')
       .trim()
-      .toLowerCase() === 'admin_general'
+      .toLowerCase()
   } catch {
-    return false
+    return ''
   }
 })
+
+const esAdminGeneral = computed(() => rolActual.value === 'admin_general')
+const esSecretario = computed(() => rolActual.value === 'secretario')
+const puedeGestionarHabilitacion = computed(() => (
+  esAdminGeneral.value || esSecretario.value
+))
 
 
 const mototaxistas = ref([])
@@ -1115,6 +1215,16 @@ const generandoImagenQr = ref(false)
 const dialogCuenta = ref(false)
 const seleccionadoCuenta = ref(null)
 const creandoCuenta = ref(false)
+
+const dialogHabilitacion = ref(false)
+const guardandoHabilitacion = ref(false)
+const seleccionadoHabilitacion = ref(null)
+const formHabilitacion = ref({
+  documentacion_en_regla: false,
+  aportes_al_dia: false,
+  estado_sindical: 'No habilitado',
+  motivo: ''
+})
 
 const formDefault = {
   id: null,
@@ -1650,6 +1760,60 @@ async function guardar() {
     })
   } finally {
     saving.value = false
+  }
+}
+
+function colorEstadoSindical(estado) {
+  const valor = String(estado || '').toLowerCase()
+  if (valor === 'habilitado') return 'positive'
+  if (valor === 'expulsado') return 'negative'
+  return 'orange-9'
+}
+
+function abrirHabilitacionSindical(m) {
+  if (!puedeGestionarHabilitacion.value || !m?.id) return
+
+  seleccionadoHabilitacion.value = m
+  formHabilitacion.value = {
+    documentacion_en_regla: Boolean(m.documentacion_en_regla),
+    aportes_al_dia: Boolean(m.aportes_al_dia),
+    estado_sindical: m.estado_sindical || 'No habilitado',
+    motivo: m.motivo_estado_sindical || ''
+  }
+  dialogHabilitacion.value = true
+}
+
+async function guardarHabilitacionSindical() {
+  const id = seleccionadoHabilitacion.value?.id
+  if (!id || guardandoHabilitacion.value) return
+
+  guardandoHabilitacion.value = true
+  try {
+    const { data } = await api.patch(
+      `/mototaxistas/${id}/habilitacion-sindical`,
+      formHabilitacion.value
+    )
+
+    $q.notify({
+      type: 'positive',
+      position: 'top',
+      message: data?.message || 'Habilitación sindical actualizada.'
+    })
+
+    dialogHabilitacion.value = false
+    await cargarTodo()
+
+    if (seleccionado.value?.id === id) {
+      await abrirDetalle({ id })
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      position: 'top',
+      message: mensajeError(error)
+    })
+  } finally {
+    guardandoHabilitacion.value = false
   }
 }
 

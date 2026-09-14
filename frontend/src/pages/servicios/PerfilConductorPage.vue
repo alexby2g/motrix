@@ -60,6 +60,8 @@
                 color="green-1"
                 text-color="green-9"
                 class="profile-avatar"
+                :class="{ 'cursor-pointer': Boolean(fotoPerfilUrl && !fotoPerfilError) }"
+                @click="abrirVisorFoto"
               >
                 <img
                   v-if="fotoPerfilUrl && !fotoPerfilError"
@@ -236,6 +238,167 @@
               </div>
             </div>
 
+            <q-banner
+              rounded
+              class="q-mt-md"
+              :class="perfil?.habilitado_para_operar ? 'bg-green-1 text-green-10' : 'bg-orange-1 text-orange-10'"
+            >
+              <template #avatar>
+                <q-icon
+                  :name="perfil?.habilitado_para_operar ? 'verified_user' : 'gpp_maybe'"
+                  :color="perfil?.habilitado_para_operar ? 'green-8' : 'orange-9'"
+                />
+              </template>
+
+              <div class="row items-center q-col-gutter-sm">
+                <div class="col-12 col-sm">
+                  <div class="text-weight-bold">
+                    Estado sindical: {{ perfil?.estado_sindical || 'No habilitado' }}
+                  </div>
+                  <div
+                    v-if="!perfil?.habilitado_para_operar && perfil?.motivo_inhabilitacion"
+                    class="text-caption q-mt-xs"
+                  >
+                    {{ perfil.motivo_inhabilitacion }}
+                  </div>
+                </div>
+
+                <div class="col-auto">
+                  <q-chip
+                    dense
+                    :color="perfil?.documentacion_en_regla ? 'green-2' : 'orange-2'"
+                    :text-color="perfil?.documentacion_en_regla ? 'green-10' : 'orange-10'"
+                    :icon="perfil?.documentacion_en_regla ? 'description' : 'pending_actions'"
+                  >
+                    Documentación {{ perfil?.documentacion_en_regla ? 'en regla' : 'pendiente' }}
+                  </q-chip>
+                  <q-chip
+                    dense
+                    :color="perfil?.aportes_al_dia ? 'green-2' : 'orange-2'"
+                    :text-color="perfil?.aportes_al_dia ? 'green-10' : 'orange-10'"
+                    :icon="perfil?.aportes_al_dia ? 'payments' : 'money_off'"
+                  >
+                    Aportes {{ perfil?.aportes_al_dia ? 'al día' : 'pendientes' }}
+                  </q-chip>
+                </div>
+              </div>
+            </q-banner>
+
+            <q-separator class="q-my-lg" />
+
+            <div class="section-title">
+              QR de cobro
+            </div>
+
+            <q-card flat bordered class="qr-payment-card">
+              <q-card-section>
+                <div class="row q-col-gutter-lg items-start">
+                  <div class="col-12 col-md-5 text-center">
+                    <div class="text-subtitle2 text-weight-bold text-green-9 q-mb-sm">
+                      Imagen que verá el pasajero
+                    </div>
+
+                    <img
+                      v-if="qrPagoUrl"
+                      :src="qrPagoUrl"
+                      alt="QR de cobro del mototaxista"
+                      class="profile-qr-image"
+                    >
+
+                    <div
+                      v-else
+                      class="qr-empty-state"
+                    >
+                      <q-icon name="qr_code_2" size="52px" color="grey-5" />
+                      <div class="text-weight-medium text-grey-7 q-mt-sm">
+                        Aún no registraste un QR de cobro
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-7">
+                    <q-input
+                      v-model.trim="qrPagoMetodo"
+                      outlined
+                      dense
+                      label="Banco o billetera"
+                      placeholder="Ej.: QR bancario, Yape, Yasta"
+                      class="q-mb-sm"
+                    >
+                      <template #prepend>
+                        <q-icon name="account_balance_wallet" />
+                      </template>
+                    </q-input>
+
+                    <q-input
+                      v-model.trim="qrPagoTitular"
+                      outlined
+                      dense
+                      label="Titular del QR"
+                      :placeholder="nombreCompleto"
+                      class="q-mb-sm"
+                    >
+                      <template #prepend>
+                        <q-icon name="badge" />
+                      </template>
+                    </q-input>
+
+                    <q-file
+                      v-model="qrPagoArchivo"
+                      outlined
+                      dense
+                      clearable
+                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                      label="Seleccionar imagen QR"
+                      class="q-mb-md"
+                    >
+                      <template #prepend>
+                        <q-icon name="image" />
+                      </template>
+                    </q-file>
+
+                    <div class="text-caption text-grey-7 q-mb-md">
+                      Sube una imagen clara del QR. Se mostrará cuando el cobro
+                      sea por QR o pago mixto. Máximo 4 MB.
+                    </div>
+
+                    <div class="row q-col-gutter-sm">
+                      <div class="col-12 col-sm">
+                        <q-btn
+                          color="green-8"
+                          icon="save"
+                          label="Guardar QR de cobro"
+                          class="full-width"
+                          unelevated
+                          no-caps
+                          :loading="subiendoQrPago"
+                          :disable="eliminandoQrPago"
+                          @click="guardarQrPago"
+                        />
+                      </div>
+
+                      <div
+                        v-if="qrPagoUrl"
+                        class="col-12 col-sm-auto"
+                      >
+                        <q-btn
+                          outline
+                          color="negative"
+                          icon="delete"
+                          label="Eliminar"
+                          class="full-width"
+                          no-caps
+                          :loading="eliminandoQrPago"
+                          :disable="subiendoQrPago"
+                          @click="eliminarQrPago"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+
             <q-separator class="q-my-lg" />
 
             <div class="section-title">
@@ -320,10 +483,10 @@
               </div>
 
               <div class="text-caption text-grey-7">
-                Los datos de afiliación, chaleco, QR y registro del
-                mototaxista provienen del módulo administrativo.
-                Desde esta pantalla el conductor solamente consulta
-                su propia información.
+                Los datos de afiliación, chaleco y QR institucional de
+                verificación provienen del módulo administrativo. El QR de
+                cobro puede ser administrado por el propio conductor desde
+                esta pantalla.
               </div>
             </q-banner>
 
@@ -369,6 +532,12 @@
         </q-card>
       </div>
     </div>
+
+    <PhotoViewerDialog
+      v-model="visorFoto"
+      :src="fotoPerfilUrl"
+      :title="nombreCompleto"
+    />
   </q-page>
 </template>
 
@@ -376,6 +545,7 @@
 import { fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
 
 import ConductorAccountDelete from 'src/components/ConductorAccountDelete.vue'
+import PhotoViewerDialog from 'src/components/PhotoViewerDialog.vue'
 import {
   computed,
   onMounted,
@@ -397,6 +567,12 @@ const router = useRouter()
 const cargando = ref(false)
 const perfil = ref(null)
 const fotoPerfilError = ref(false)
+const visorFoto = ref(false)
+const qrPagoArchivo = ref(null)
+const qrPagoMetodo = ref('')
+const qrPagoTitular = ref('')
+const subiendoQrPago = ref(false)
+const eliminandoQrPago = ref(false)
 const usuario = ref(
   leerUsuarioLocal()
 )
@@ -490,6 +666,18 @@ const fotoPerfilUrl = computed(() => {
   return resolverUrlImagen(ruta)
 })
 
+const qrPagoUrl = computed(() => {
+  return resolverUrlImagen(
+    perfil.value?.qr_pago_ruta
+  )
+})
+
+function abrirVisorFoto() {
+  if (fotoPerfilUrl.value && !fotoPerfilError.value) {
+    visorFoto.value = true
+  }
+}
+
 const iniciales = computed(() => {
   const partes =
     String(nombreCompleto.value)
@@ -539,6 +727,16 @@ async function cargarPerfil() {
       || null
 
     fotoPerfilError.value = false
+    qrPagoArchivo.value = null
+    qrPagoMetodo.value = String(
+      perfil.value?.qr_pago_metodo
+      || ''
+    )
+    qrPagoTitular.value = String(
+      perfil.value?.qr_pago_titular
+      || nombreCompleto.value
+      || ''
+    )
 
     const datosUsuario =
       respuestaUsuario?.data?.user
@@ -568,6 +766,127 @@ async function cargarPerfil() {
   } finally {
     cargando.value = false
   }
+}
+
+async function guardarQrPago() {
+  if (subiendoQrPago.value || eliminandoQrPago.value) return
+
+  if (!qrPagoArchivo.value && !qrPagoUrl.value) {
+    $q.notify({
+      type: 'warning',
+      position: 'top',
+      message: 'Selecciona una imagen QR antes de guardar.'
+    })
+    return
+  }
+
+  subiendoQrPago.value = true
+
+  try {
+    const formData = new FormData()
+
+    if (qrPagoArchivo.value) {
+      formData.append(
+        'imagen',
+        qrPagoArchivo.value
+      )
+    }
+
+    formData.append(
+      'metodo',
+      qrPagoMetodo.value
+      || 'QR / billetera móvil'
+    )
+
+    formData.append(
+      'titular',
+      qrPagoTitular.value
+      || nombreCompleto.value
+    )
+
+    const respuesta = await api.post(
+      '/conductor/qr-pago',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    )
+
+    $q.notify({
+      type: 'positive',
+      position: 'top',
+      message:
+        respuesta?.data?.message
+        || 'QR de cobro actualizado correctamente.'
+    })
+
+    await cargarPerfil()
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      position: 'top',
+      message:
+        error?.response?.data?.message
+        || Object.values(
+          error?.response?.data?.errors || {}
+        ).flat().find(Boolean)
+        || 'No se pudo guardar el QR de cobro.'
+    })
+  } finally {
+    subiendoQrPago.value = false
+  }
+}
+
+function eliminarQrPago() {
+  if (
+    !qrPagoUrl.value
+    || subiendoQrPago.value
+    || eliminandoQrPago.value
+  ) {
+    return
+  }
+
+  $q.dialog({
+    title: 'Eliminar QR de cobro',
+    message:
+      'El pasajero dejará de ver este QR en pagos digitales. ¿Deseas continuar?',
+    cancel: true,
+    persistent: true
+  }).onOk(async () => {
+    eliminandoQrPago.value = true
+
+    try {
+      const respuesta = await api.delete(
+        '/conductor/qr-pago'
+      )
+
+      $q.notify({
+        type: 'positive',
+        position: 'top',
+        message:
+          respuesta?.data?.message
+          || 'QR de cobro eliminado correctamente.'
+      })
+
+      qrPagoArchivo.value = null
+      qrPagoMetodo.value = ''
+      qrPagoTitular.value = ''
+
+      await cargarPerfil()
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        position: 'top',
+        message:
+          error?.response?.data?.message
+          || 'No se pudo eliminar el QR de cobro.'
+      })
+    } finally {
+      eliminandoQrPago.value = false
+    }
+  })
 }
 
 function valor(dato) {
@@ -709,4 +1028,34 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 }
+
+.qr-payment-card {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.profile-qr-image {
+  display: block;
+  width: min(100%, 320px);
+  max-height: 360px;
+  object-fit: contain;
+  margin: 0 auto;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid #dfe7e1;
+  background: #fff;
+}
+
+.qr-empty-state {
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border: 1px dashed #cfd8d2;
+  border-radius: 14px;
+  background: #fafcfb;
+}
+
 </style>

@@ -89,6 +89,14 @@ class User extends Authenticatable
         );
     }
 
+    public function pushDevices()
+    {
+        return $this->hasMany(
+            PushDevice::class,
+            'user_id'
+        );
+    }
+
     public function tieneRol(string ...$roles): bool
     {
         return in_array(

@@ -140,9 +140,10 @@ class AuthController extends Controller
 
     public function logoutAll(Request $request): JsonResponse
     {
-        $request->user()
-            ?->tokens()
-            ->delete();
+        $user = $request->user();
+
+        $user?->tokens()->delete();
+        $user?->pushDevices()->update(['active' => false]);
 
         return response()->json([
             'message' => 'Todas las sesiones fueron cerradas.',
@@ -171,9 +172,9 @@ class AuthController extends Controller
     private function datosUsuario(User $user): array
     {
         $user->loadMissing([
-            'persona',
-            'mototaxista.persona',
-            'pasajero.persona',
+            'persona.imagenes',
+            'mototaxista.persona.imagenes',
+            'pasajero.persona.imagenes',
             'federacion',
             'sindicato.federacionEntidad',
         ]);
@@ -189,6 +190,14 @@ class AuthController extends Controller
             ?? $user->mototaxista?->persona?->apellidos
             ?? $user->pasajero?->persona?->apellidos
             ?? null;
+
+        $personaEntidad = $user->persona
+            ?? $user->mototaxista?->persona
+            ?? $user->pasajero?->persona;
+
+        $fotoRuta = $personaEntidad?->imagenes
+            ?->sortByDesc('id')
+            ->first()?->ruta;
 
         return [
             'id' => $user->id,
@@ -217,6 +226,7 @@ class AuthController extends Controller
             'mototaxista_id' => $user->mototaxista_id,
             'pasajero_id' => $user->pasajero_id,
             'persona_id' => $user->persona_id,
+            'foto_ruta' => $fotoRuta,
             'federacion_id' => $user->federacion_id,
             'federacion_nombre' => $user->federacion?->nombre,
             'sindicato_id' => $user->sindicato_id,
