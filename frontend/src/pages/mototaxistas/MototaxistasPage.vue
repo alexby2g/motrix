@@ -905,7 +905,7 @@
 
     <!-- HABILITACIÓN SINDICAL -->
     <q-dialog v-model="dialogHabilitacion" persistent>
-      <q-card style="width: min(94vw, 560px)">
+      <q-card class="habilitacion-dialog-card">
         <q-card-section class="bg-orange-9 text-white row items-center">
           <q-icon name="fact_check" size="30px" class="q-mr-sm" />
           <div class="col">
@@ -917,7 +917,7 @@
           <q-btn flat round dense icon="close" :disable="guardandoHabilitacion" @click="dialogHabilitacion = false" />
         </q-card-section>
 
-        <q-card-section class="q-pa-lg">
+        <q-card-section class="q-pa-lg habilitacion-dialog-body">
           <q-toggle
             v-model="formHabilitacion.documentacion_en_regla"
             color="green-8"
@@ -2319,6 +2319,28 @@ onMounted(async () => {
   width: 540px;
   max-width: 94vw;
   border-radius: 16px;
+}
+
+.habilitacion-dialog-card {
+  width: min(94vw, 560px);
+  max-width: 94vw;
+  max-height: calc(100dvh - 24px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.habilitacion-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.habilitacion-dialog-card > .q-card-section:first-child,
+.habilitacion-dialog-card > .q-card-actions {
+  flex: 0 0 auto;
 }
 
 .credencial-dialog {
