@@ -198,6 +198,7 @@ class PasswordRecoveryController extends Controller
             $email !== ''
             && ! str_ends_with($emailLower, '@motrix.invalid')
             && ! str_ends_with($emailLower, '@motrix.local')
+            && ! str_ends_with($emailLower, '@motrix.test')
         ) {
             try {
                 Mail::raw(

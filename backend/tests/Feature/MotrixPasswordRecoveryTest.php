@@ -72,6 +72,32 @@ class MotrixPasswordRecoveryTest extends TestCase
         $this->assertNull($otp->destino_enmascarado);
     }
 
+    public function test_correo_motrix_test_no_se_trata_como_destino_real(): void
+    {
+        config([
+            'mail.default' => 'array',
+            'services.motrix_sms.webhook_url' => null,
+            'services.motrix_sms.token' => null,
+        ]);
+
+        [, $usuario] = $this->crearPasajero(
+            'pasajero.70000006@motrix.test',
+            '70000006',
+            '200006'
+        );
+
+        $this->postJson('/api/auth/recuperacion/solicitar', [
+            'login' => '70000006',
+        ])->assertOk();
+
+        $otp = PasswordResetOtp::query()
+            ->where('user_id', $usuario->id)
+            ->firstOrFail();
+
+        $this->assertSame('sin_configurar', $otp->canal);
+        $this->assertNull($otp->destino_enmascarado);
+    }
+
     public function test_respuesta_no_revela_si_la_cuenta_existe(): void
     {
         config([
@@ -143,7 +169,7 @@ class MotrixPasswordRecoveryTest extends TestCase
 
     public function test_token_verificado_permite_cambiar_password_una_sola_vez(): void
     {
-        [, $usuario] = $this->crearPasajero(
+        [$pasajero, $usuario] = $this->crearPasajero(
             'cambio@example.com',
             '70000005',
             '200005'
@@ -175,7 +201,10 @@ class MotrixPasswordRecoveryTest extends TestCase
             ->assertOk();
 
         $usuario->refresh();
+        $pasajero->refresh();
+
         $this->assertTrue(Hash::check('NuevaClave123!', $usuario->password));
+        $this->assertTrue(Hash::check('NuevaClave123!', $pasajero->password));
 
         $otp = PasswordResetOtp::query()
             ->where('user_id', $usuario->id)
