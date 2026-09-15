@@ -3736,9 +3736,10 @@ onMounted(async () => {
   intervaloActualizacion = window.setInterval(async () => {
     try {
       const ahoraMs = Date.now()
-      const esperaOperacion = disponible.value && !tieneViajeActivo.value
-        ? 5000
-        : (websocketConectado.value ? 30000 : 10000)
+      const operacionActiva = disponible.value || tieneViajeActivo.value
+      const esperaOperacion = websocketConectado.value
+        ? 30000
+        : (operacionActiva ? 2000 : 10000)
 
       if (
         ahoraMs - ultimaSincronizacionOperacion >= esperaOperacion
@@ -3754,7 +3755,7 @@ onMounted(async () => {
     } catch (error) {
       console.error('Error en actualización automática:', error)
     }
-  }, 5000)
+  }, 1000)
 
   intervaloReloj = window.setInterval(() => {
     ahora.value = Date.now()

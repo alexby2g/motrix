@@ -4117,14 +4117,14 @@ onMounted(async () => {
   intervaloActualizacion = window.setInterval(() => {
     const espera = websocketConectado.value
       ? 30000
-      : 10000
+      : (viajeActivo.value?.id ? 2000 : 10000)
 
     if (
       Date.now() - ultimaSincronizacionViaje >= espera
     ) {
       cargarViajeActivo(true).catch(() => {})
     }
-  }, 5000)
+  }, 1000)
 
   intervaloIncidencias = window.setInterval(() => {
     if (viajeActivo.value?.id) {
