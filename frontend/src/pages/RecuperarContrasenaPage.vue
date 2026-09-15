@@ -17,17 +17,18 @@
         <q-stepper v-model="paso" flat animated color="green-8" header-nav>
           <q-step :name="1" title="Cuenta" icon="person_search" :done="paso > 1">
             <div class="text-body2 text-grey-7 q-mb-md">
-              Ingresa tu celular, correo o usuario. Si la cuenta tiene un medio de recuperación configurado, recibirás un código de 6 dígitos.
+              Ingresa el número de celular registrado en tu cuenta. Si la cuenta dispone de un medio de recuperación configurado, recibirás un código de 6 dígitos.
             </div>
             <q-input
               v-model.trim="login"
               outlined
-              label="Celular, correo o usuario"
-              autocomplete="username"
+              label="Celular registrado"
+              inputmode="tel"
+              autocomplete="tel"
               :disable="cargando"
               @keyup.enter="solicitarCodigo"
             >
-              <template #prepend><q-icon name="account_circle" color="green-8" /></template>
+              <template #prepend><q-icon name="phone_android" color="green-8" /></template>
             </q-input>
             <q-btn
               color="green-8"
@@ -43,8 +44,10 @@
           </q-step>
 
           <q-step :name="2" title="Código" icon="pin" :done="paso > 2">
-            <q-banner v-if="destino" rounded class="bg-green-1 text-green-10 q-mb-md">
-              Código enviado a {{ destino }}.
+            <q-banner rounded class="bg-green-1 text-green-10 q-mb-md">
+              {{ destino
+                ? `Código enviado a ${destino}.`
+                : 'Si la cuenta dispone de un medio de recuperación, revisa el contacto registrado.' }}
             </q-banner>
             <q-input
               v-model="codigo"
@@ -144,9 +147,41 @@ function mensajeError(error, defecto) {
     || defecto
 }
 
+function normalizarCelular(valor) {
+  const numero = String(valor || '').replace(/\D+/g, '')
+
+  if (numero.startsWith('00591') && numero.length === 13) {
+    return numero.slice(5)
+  }
+
+  if (numero.startsWith('591') && numero.length === 11) {
+    return numero.slice(3)
+  }
+
+  return numero
+}
+
+function celularValido(valor) {
+  const original = String(valor || '').trim()
+
+  if (!original || !/^[+\d\s()-]+$/.test(original)) {
+    return false
+  }
+
+  return /^[0-9]{7,15}$/.test(normalizarCelular(original))
+}
+
 async function solicitarCodigo() {
-  if (!login.value || cargando.value) return
+  if (cargando.value) return
+
+  if (!celularValido(login.value)) {
+    $q.notify({ type: 'warning', message: 'Ingresa el número de celular registrado en tu cuenta.' })
+    return
+  }
+
+  login.value = normalizarCelular(login.value)
   cargando.value = true
+
   try {
     const { data } = await api.post('/auth/recuperacion/solicitar', { login: login.value })
     destino.value = data?.destino || ''
