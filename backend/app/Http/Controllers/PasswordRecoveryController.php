@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PasswordResetOtp;
 use App\Models\Pasajero;
 use App\Models\User;
+use App\Services\MotrixPhoneRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -18,6 +19,11 @@ class PasswordRecoveryController extends Controller
 {
     private const OTP_MINUTES = 10;
     private const MAX_ATTEMPTS = 5;
+
+    public function __construct(
+        private readonly MotrixPhoneRegistry $phoneRegistry
+    ) {
+    }
 
     public function requestCode(Request $request): JsonResponse
     {
@@ -162,30 +168,87 @@ class PasswordRecoveryController extends Controller
     private function findUser(string $identifier): ?User
     {
         $normalized = mb_strtolower(trim($identifier));
-        $phone = $this->normalizePhone($identifier);
+        $phone = $this->phoneRegistry->isPhoneLike($identifier)
+            ? $this->phoneRegistry->normalize($identifier)
+            : '';
 
-        if (strlen($phone) < 7) {
-            $phone = '';
+        $baseQuery = User::query()
+            ->with([
+                'persona',
+                'mototaxista.persona',
+                'pasajero.persona',
+            ])
+            ->whereIn('role', [
+                'conductor',
+                'pasajero',
+            ]);
+
+        if ($phone !== '') {
+            $userIds = $this->phoneRegistry
+                ->matchingEligibleUserIds($phone);
+
+            if (count($userIds) !== 1) {
+                if (count($userIds) > 1) {
+                    Log::warning(
+                        'Recuperación MOTRIX bloqueada por celular ambiguo.',
+                        [
+                            'identifier_hash' => hash(
+                                'sha256',
+                                $phone
+                            ),
+                            'candidate_user_ids' => $userIds,
+                        ]
+                    );
+                }
+
+                return null;
+            }
+
+            return $baseQuery
+                ->whereKey($userIds[0])
+                ->first();
         }
 
-        return User::query()
-            ->with(['persona', 'mototaxista.persona', 'pasajero.persona'])
-            ->where(function ($query) use ($normalized, $phone) {
+        $candidates = $baseQuery
+            ->where(function ($query) use ($normalized) {
                 $query
-                    ->whereRaw('LOWER(email) = ?', [$normalized])
-                    ->orWhereRaw('LOWER(nickname) = ?', [$normalized]);
-
-                if ($phone !== '') {
-                    $query->orWhere('nickname', $phone)
-                        ->orWhereHas('persona', fn ($q) => $q->where('telefono', $phone))
-                        ->orWhereHas('mototaxista', function ($q) use ($phone) {
-                            $q->where('telefono', $phone)
-                                ->orWhereHas('persona', fn ($p) => $p->where('telefono', $phone));
-                        })
-                        ->orWhereHas('pasajero.persona', fn ($q) => $q->where('telefono', $phone));
-                }
+                    ->whereRaw(
+                        'LOWER(email) = ?',
+                        [$normalized]
+                    )
+                    ->orWhereRaw(
+                        'LOWER(nickname) = ?',
+                        [$normalized]
+                    );
             })
-            ->first();
+            ->orderBy('id')
+            ->limit(2)
+            ->get();
+
+        if ($candidates->count() !== 1) {
+            if ($candidates->count() > 1) {
+                Log::warning(
+                    'Recuperación MOTRIX bloqueada por identificador ambiguo.',
+                    [
+                        'identifier_hash' => hash(
+                            'sha256',
+                            $normalized
+                        ),
+                        'candidate_user_ids' =>
+                            $candidates
+                                ->pluck('id')
+                                ->map(
+                                    static fn ($id) => (int) $id
+                                )
+                                ->all(),
+                    ]
+                );
+            }
+
+            return null;
+        }
+
+        return $candidates->first();
     }
 
     private function deliverCode(User $user, string $code): array

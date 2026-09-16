@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pasajero;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -59,16 +58,6 @@ class MotrixAccountController extends Controller
         }
 
         $payload = $response->getData(true);
-        $userId = (int) ($payload['user']['id'] ?? 0);
-
-        if ($userId > 0) {
-            $user = User::query()->find($userId);
-            if ($user) {
-                $user->nickname = $telefono;
-                $user->save();
-                $payload['user']['nickname'] = $telefono;
-            }
-        }
 
         if (isset($payload['user']) && is_array($payload['user'])) {
             $payload['user']['email'] = $emailContacto !== ''
@@ -187,18 +176,23 @@ class MotrixAccountController extends Controller
             'nickname' => $telefono,
         ]);
 
-        if ($pasajero->persona) {
-            $pasajero->persona->telefono = $telefono;
-            $pasajero->persona->save();
-        }
-
         $response = $this->pasajeroController
             ->crearCuentaPasajero($request, $id);
 
         if ($response->getStatusCode() === 201) {
+            if ($pasajero->persona) {
+                $pasajero->persona->telefono = $telefono;
+                $pasajero->persona->save();
+            }
+
             $payload = $response->getData(true);
             $payload['mensaje'] = 'Cuenta de pasajero creada. El número de celular es el usuario de acceso.';
             $payload['telefono_acceso'] = $telefono;
+            $payload['data'] = $pasajero->fresh([
+                'persona',
+                'usuarioPasajero',
+            ]);
+
             return response()->json($payload, 201);
         }
 

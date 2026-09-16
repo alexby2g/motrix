@@ -98,6 +98,102 @@ class MotrixPasswordRecoveryTest extends TestCase
         $this->assertNull($otp->destino_enmascarado);
     }
 
+    public function test_recuperacion_bloquea_celular_historico_asociado_a_mas_de_una_cuenta(): void
+    {
+        config([
+            'mail.default' => 'array',
+            'services.motrix_sms.webhook_url' => null,
+            'services.motrix_sms.token' => null,
+        ]);
+
+        $this->crearPasajero(
+            'primero@example.com',
+            '70000007',
+            '200007'
+        );
+
+        $persona = Persona::query()->create([
+            'nombre' => 'Segundo',
+            'apellidos' => 'Historico',
+            'telefono' => '+591 7000-0007',
+            'ci' => '200008',
+        ]);
+
+        $pasajero = Pasajero::query()->create([
+            'email' => 'segundo@example.com',
+            'password' => null,
+            'id_persona' => $persona->id,
+        ]);
+
+        User::factory()->create([
+            'name' => 'Segundo Historico',
+            'nickname' => 'segundo-historico',
+            'email' => 'segundo@example.com',
+            'role' => 'pasajero',
+            'pasajero_id' => $pasajero->id,
+            'persona_id' => $persona->id,
+            'mototaxista_id' => null,
+            'federacion_id' => null,
+            'sindicato_id' => null,
+        ]);
+
+        $this->postJson('/api/auth/recuperacion/solicitar', [
+            'login' => '70000007',
+        ])->assertOk()
+            ->assertJsonStructure(['message']);
+
+        $this->assertDatabaseCount(
+            'password_reset_otps',
+            0
+        );
+    }
+
+    public function test_recuperacion_reconoce_celular_historico_con_formato_bolivia(): void
+    {
+        config([
+            'mail.default' => 'array',
+            'services.motrix_sms.webhook_url' => null,
+            'services.motrix_sms.token' => null,
+        ]);
+
+        $persona = Persona::query()->create([
+            'nombre' => 'Formato',
+            'apellidos' => 'Historico',
+            'telefono' => '+591 7000-0008',
+            'ci' => '200009',
+        ]);
+
+        $pasajero = Pasajero::query()->create([
+            'email' => 'formato@example.com',
+            'password' => null,
+            'id_persona' => $persona->id,
+        ]);
+
+        $usuario = User::factory()->create([
+            'name' => 'Formato Historico',
+            'nickname' => 'formato-historico',
+            'email' => 'formato@example.com',
+            'role' => 'pasajero',
+            'pasajero_id' => $pasajero->id,
+            'persona_id' => $persona->id,
+            'mototaxista_id' => null,
+            'federacion_id' => null,
+            'sindicato_id' => null,
+        ]);
+
+        $this->postJson('/api/auth/recuperacion/solicitar', [
+            'login' => '70000008',
+        ])->assertOk();
+
+        $this->assertDatabaseHas(
+            'password_reset_otps',
+            [
+                'user_id' => $usuario->id,
+                'canal' => 'email',
+            ]
+        );
+    }
+
     public function test_respuesta_no_revela_si_la_cuenta_existe(): void
     {
         config([

@@ -9,6 +9,7 @@ use App\Models\Solicitud;
 use App\Models\User;
 use App\Services\AsignacionConductorService;
 use App\Services\FcmPushService;
+use App\Services\MotrixPhoneRegistry;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,8 @@ class MototaxistaController extends Controller
 {
     public function __construct(
         private readonly AsignacionConductorService $asignacionService,
-        private readonly FcmPushService $pushService
+        private readonly FcmPushService $pushService,
+        private readonly MotrixPhoneRegistry $phoneRegistry
     ) {
     }
 
@@ -849,6 +851,19 @@ class MototaxistaController extends Controller
             ], 409);
         }
 
+        $persona = $mototaxista->persona;
+        $telefonoCuenta = $this->phoneRegistry->firstValidPhone(
+            $request->input('nickname'),
+            $mototaxista->telefono,
+            $persona?->telefono
+        );
+
+        if ($telefonoCuenta !== '') {
+            $request->merge([
+                'nickname' => $telefonoCuenta,
+            ]);
+        }
+
         $datos = $request->validate([
             'email' => [
                 'required',
@@ -870,7 +885,18 @@ class MototaxistaController extends Controller
             ],
         ]);
 
-        $persona = $mototaxista->persona;
+        if ($telefonoCuenta !== '') {
+            $this->phoneRegistry->assertAvailableForAccount(
+                $telefonoCuenta,
+                $mototaxista->id_persona
+                    ? (int) $mototaxista->id_persona
+                    : null,
+                (int) $mototaxista->id,
+                $request->has('telefono')
+                    ? 'telefono'
+                    : 'nickname'
+            );
+        }
 
         $nombreCompleto = trim(
             (

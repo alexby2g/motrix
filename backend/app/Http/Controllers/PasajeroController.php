@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pasajero;
 use App\Models\Persona;
 use App\Models\User;
+use App\Services\MotrixPhoneRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,10 @@ use Illuminate\Validation\Rule;
 
 class PasajeroController extends Controller
 {
+    public function __construct(
+        private readonly MotrixPhoneRegistry $phoneRegistry
+    ) {
+    }
 
     /**
      * Registro público de pasajeros.
@@ -31,7 +36,9 @@ class PasajeroController extends Controller
             'nombre' => trim((string) $request->input('nombre', '')),
             'apellidos' => trim((string) $request->input('apellidos', '')),
             'ci' => trim((string) $request->input('ci', '')),
-            'telefono' => trim((string) $request->input('telefono', '')),
+            'telefono' => $this->phoneRegistry->normalize(
+                $request->input('telefono')
+            ),
             'direccion' => trim((string) $request->input('direccion', '')),
             'email' => mb_strtolower(
                 trim((string) $request->input('email', ''))
@@ -60,7 +67,8 @@ class PasajeroController extends Controller
             'telefono' => [
                 'required',
                 'string',
-                'max:20',
+                'regex:/^[0-9]{7,15}$/',
+                Rule::unique('users', 'nickname'),
             ],
             'direccion' => [
                 'nullable',
@@ -89,11 +97,19 @@ class PasajeroController extends Controller
         ], [
             'ci.unique' =>
                 'Ya existe una persona registrada con este número de CI.',
+            'telefono.regex' =>
+                'Ingresa un número de celular válido.',
+            'telefono.unique' =>
+                'Este número de celular ya tiene una cuenta MOTRIX.',
             'email.unique' =>
                 'Este correo electrónico ya se encuentra registrado.',
             'password.confirmed' =>
                 'La confirmación de la contraseña no coincide.',
         ]);
+
+        $this->phoneRegistry->assertAvailableForNewAccount(
+            $datos['telefono']
+        );
 
         $resultado = DB::transaction(
             function () use (
@@ -125,7 +141,7 @@ class PasajeroController extends Controller
 
                 $user = User::create([
                     'name' => $nombreCompleto,
-                    'nickname' => null,
+                    'nickname' => $datos['telefono'],
                     'email' => $datos['email'],
                     'password' => Hash::make(
                         $datos['password']
@@ -533,6 +549,18 @@ class PasajeroController extends Controller
             ], 409);
         }
 
+        $persona = $pasajero->persona;
+        $telefonoCuenta = $this->phoneRegistry->firstValidPhone(
+            $request->input('nickname'),
+            $persona?->telefono
+        );
+
+        if ($telefonoCuenta !== '') {
+            $request->merge([
+                'nickname' => $telefonoCuenta,
+            ]);
+        }
+
         $datos = $request->validate([
             'email' => [
                 'required',
@@ -554,7 +582,16 @@ class PasajeroController extends Controller
             ],
         ]);
 
-        $persona = $pasajero->persona;
+        if ($telefonoCuenta !== '') {
+            $this->phoneRegistry->assertAvailableForAccount(
+                $telefonoCuenta,
+                (int) $pasajero->id_persona,
+                null,
+                $request->has('telefono')
+                    ? 'telefono'
+                    : 'nickname'
+            );
+        }
 
         $nombreCompleto = trim(
             (
