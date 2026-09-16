@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - v5-suscripciones
     paths:
       - 'frontend/**'
       - '.github/workflows/android-apk.yml'
