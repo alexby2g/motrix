@@ -3260,7 +3260,7 @@ const iniciarSeguimientoGPS = () => {
       gpsEstado.value = 'activo'
       gpsMensaje.value = 'Ubicación activa'
 
-      if (Date.now() - ultimaUbicacionEnviada < 10000) return
+      if (Date.now() - ultimaUbicacionEnviada < 5000) return
 
       try {
         await enviarUbicacion(posicion)

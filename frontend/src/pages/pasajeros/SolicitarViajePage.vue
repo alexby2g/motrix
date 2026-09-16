@@ -1433,6 +1433,7 @@ let marcadorOrigenSeguimiento = null
 let marcadorDestinoSeguimiento = null
 let lineaRutaSeguimiento = null
 let ultimaClaveRutaSeguimiento = null
+let ultimaRutaSeguimientoEn = 0
 let intervaloActualizacion = null
 let intervaloIncidencias = null
 let cargaViajeEnCurso = false
@@ -2050,6 +2051,7 @@ function destruirMapaSeguimiento() {
   marcadorDestinoSeguimiento = null
   lineaRutaSeguimiento = null
   ultimaClaveRutaSeguimiento = null
+  ultimaRutaSeguimientoEn = 0
 
   distanciaSeguimientoKm.value = null
   tiempoSeguimientoMin.value = null
@@ -2182,7 +2184,17 @@ async function dibujarRutaSeguimiento(conductor, objetivo) {
     return
   }
 
+  const ahoraRuta = Date.now()
+
+  if (
+    lineaRutaSeguimiento
+    && ahoraRuta - ultimaRutaSeguimientoEn < 15000
+  ) {
+    return
+  }
+
   ultimaClaveRutaSeguimiento = claveRuta
+  ultimaRutaSeguimientoEn = ahoraRuta
 
   try {
     const origenTexto = `${conductor[1]},${conductor[0]}`
@@ -4115,9 +4127,9 @@ onMounted(async () => {
   }
 
   intervaloActualizacion = window.setInterval(() => {
-    const espera = websocketConectado.value
-      ? 30000
-      : (viajeActivo.value?.id ? 2000 : 10000)
+    const espera = viajeActivo.value?.id
+      ? 5000
+      : (websocketConectado.value ? 30000 : 10000)
 
     if (
       Date.now() - ultimaSincronizacionViaje >= espera
