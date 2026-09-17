@@ -1728,8 +1728,8 @@ function abrirFormulario(m = null) {
   dialogForm.value = true
 }
 
-function cerrarFormulario() {
-  if (saving.value) return
+function cerrarFormulario(forzar = false) {
+  if (saving.value && !forzar) return
 
   dialogForm.value = false
   secuenciaBusquedaPersona += 1
@@ -1789,7 +1789,7 @@ async function guardar() {
           : 'Mototaxista registrado.'
     })
 
-    cerrarFormulario()
+    cerrarFormulario(true)
     await cargarTodo()
   } catch (error) {
     $q.notify({

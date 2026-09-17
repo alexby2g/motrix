@@ -998,8 +998,8 @@ function abrirFormulario(persona = null) {
   dialogOpen.value = true
 }
 
-function cerrarFormulario() {
-  if (saving.value) return
+function cerrarFormulario(forzar = false) {
+  if (saving.value && !forzar) return
 
   dialogOpen.value = false
   archivoImagen.value = null
@@ -1077,7 +1077,7 @@ async function guardarPersona() {
         : 'Persona registrada correctamente.'
     })
 
-    cerrarFormulario()
+    cerrarFormulario(true)
     await cargarPersonas()
   } catch (error) {
     console.error(
