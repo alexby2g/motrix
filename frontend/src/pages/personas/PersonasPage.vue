@@ -487,8 +487,7 @@
                 <q-input
                   v-model.trim="form.ci"
                   outlined
-                  label="Cédula de identidad *"
-                  :rules="[requerido]"
+                  label="Cédula de identidad (opcional)"
                 >
                   <template #prepend>
                     <q-icon name="fingerprint" color="green-8" />

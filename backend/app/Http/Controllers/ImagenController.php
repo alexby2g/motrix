@@ -42,7 +42,7 @@ class ImagenController extends Controller
     ) {
         $datos = $request->validate([
             'ci' => [
-                'required',
+                'nullable',
                 'string',
                 'max:20',
                 'unique:personas,ci',
@@ -93,7 +93,7 @@ class ImagenController extends Controller
                     $ruta = $subida['ruta'];
 
                     $personaDatos = [
-                        'ci' => $datos['ci'],
+                        'ci' => $datos['ci'] ?? null,
                         'nombre' =>
                             $datos['nombre'],
                         'apellidos' =>

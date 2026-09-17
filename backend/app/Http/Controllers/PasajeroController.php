@@ -35,7 +35,7 @@ class PasajeroController extends Controller
         $request->merge([
             'nombre' => trim((string) $request->input('nombre', '')),
             'apellidos' => trim((string) $request->input('apellidos', '')),
-            'ci' => trim((string) $request->input('ci', '')),
+            'ci' => trim((string) $request->input('ci', '')) !== '' ? trim((string) $request->input('ci', '')) : null,
             'telefono' => $this->phoneRegistry->normalize(
                 $request->input('telefono')
             ),
@@ -59,7 +59,7 @@ class PasajeroController extends Controller
                 'max:100',
             ],
             'ci' => [
-                'required',
+                'nullable',
                 'string',
                 'max:20',
                 'unique:personas,ci',

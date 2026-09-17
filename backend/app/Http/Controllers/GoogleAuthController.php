@@ -88,7 +88,7 @@ class GoogleAuthController extends Controller
         $datos = $request->validate([
             'registration_token' => ['required', 'string', 'max:10000'],
             'ci' => [
-                'required',
+                'nullable',
                 'string',
                 'max:20',
                 'unique:personas,ci',
@@ -149,7 +149,7 @@ class GoogleAuthController extends Controller
                 'nombre' => $nombre,
                 'apellidos' => $apellidos,
                 'telefono' => trim((string) $datos['telefono']),
-                'ci' => trim((string) $datos['ci']),
+                'ci' => isset($datos['ci']) && trim((string) $datos['ci']) !== '' ? trim((string) $datos['ci']) : null,
                 'direccion' => isset($datos['direccion'])
                     && trim((string) $datos['direccion']) !== ''
                         ? trim((string) $datos['direccion'])

@@ -144,7 +144,9 @@ jobs:
           if faltantes:
               match = re.search(r'<manifest\b[^>]*>', xml, flags=re.DOTALL)
               if not match:
-                  raise RuntimeError('No se encontró la etiqueta <manifest> en AndroidManifest.xml')
+                  raise RuntimeError(
+                      'No se encontró la etiqueta <manifest> en AndroidManifest.xml'
+                  )
 
               cierre = match.end()
               xml = (
@@ -154,6 +156,47 @@ jobs:
                   + xml[cierre:]
               )
               manifest.write_text(xml, encoding='utf-8')
+          PY
+
+      - name: Configurar Firebase Android
+        shell: bash
+        env:
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.MOTRIX_GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON_B64" ]; then
+            echo "Falta el secret MOTRIX_GOOGLE_SERVICES_JSON_B64."
+            exit 1
+          fi
+
+          printf '%s' "$GOOGLE_SERVICES_JSON_B64" \
+            | base64 --decode \
+            > frontend/src-capacitor/android/app/google-services.json
+
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+
+          archivo = Path(
+              'frontend/src-capacitor/android/app/google-services.json'
+          )
+
+          data = json.loads(archivo.read_text(encoding='utf-8'))
+
+          paquetes = {
+              cliente.get('client_info', {})
+              .get('android_client_info', {})
+              .get('package_name')
+              for cliente in data.get('client', [])
+          }
+
+          esperado = 'bo.edu.josecastillo.motrix'
+
+          if esperado not in paquetes:
+              raise RuntimeError(
+                  f'google-services.json no corresponde a {esperado}'
+              )
+
+          print('Firebase Android configurado correctamente.')
           PY
 
       - name: Compilar APK debug instalable

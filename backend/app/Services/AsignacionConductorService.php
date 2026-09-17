@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class AsignacionConductorService
 {
-    private const RADIO_MAXIMO_KM = 8.0;
+    private const RADIO_MAXIMO_KM = 4.0;
     private const MINUTOS_CONEXION_VALIDA = 3;
     private const MINUTOS_BLOQUEO_RECHAZO = 15;
     private const SEGUNDOS_RESPUESTA_CONDUCTOR = 30;

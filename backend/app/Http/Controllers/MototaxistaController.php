@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\SolicitudActualizada;
 use App\Http\Requests\MototaxistaRequest;
 use App\Models\Mototaxista;
+use App\Models\Persona;
 use App\Models\Solicitud;
 use App\Models\User;
 use App\Services\AsignacionConductorService;
@@ -576,6 +577,9 @@ class MototaxistaController extends Controller
     ) {
         $datos = $request->validated();
 
+        $ciAfiliacion = $datos['ci'] ?? null;
+        unset($datos['ci']);
+
         if (
             $this->rolUsuario($request)
             === 'secretario'
@@ -597,17 +601,41 @@ class MototaxistaController extends Controller
         $datos['estado_sindical_actualizado_en'] = Carbon::now('UTC')
             ->format('Y-m-d H:i:s');
 
-        $mototaxista = Mototaxista::create(
-            $datos
-        );
+        $mototaxista = DB::transaction(
+            function () use (
+                $datos,
+                $ciAfiliacion
+            ) {
+                $persona = Persona::query()
+                    ->whereKey(
+                        (int) $datos['id_persona']
+                    )
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-        if ($mototaxista->id_sindicato) {
-            $mototaxista->persona()
-                ->update([
-                    'sindicato_registro_id' =>
-                        $mototaxista->id_sindicato,
-                ]);
-        }
+                if (
+                    trim((string) $persona->ci) === ''
+                    && $ciAfiliacion !== null
+                ) {
+                    $persona->ci = $ciAfiliacion;
+                }
+
+                if (
+                    ! empty($datos['id_sindicato'])
+                ) {
+                    $persona->sindicato_registro_id =
+                        $datos['id_sindicato'];
+                }
+
+                if ($persona->isDirty()) {
+                    $persona->save();
+                }
+
+                return Mototaxista::create(
+                    $datos
+                );
+            }
+        );
 
         return response()->json([
             'mensaje' =>

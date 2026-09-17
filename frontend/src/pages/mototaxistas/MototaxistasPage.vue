@@ -476,6 +476,7 @@
                   :loading="buscandoPersonas"
                   :rules="[requerido]"
                   @filter="filtrarPersonas"
+                  @update:model-value="alCambiarPersona"
                 >
                   <template #prepend>
                     <q-icon name="person_search" color="green-8" />
@@ -523,6 +524,24 @@
                     </q-item>
                   </template>
                 </q-select>
+              </div>
+
+              <div
+                v-if="requiereCiAfiliacion"
+                class="col-12"
+              >
+                <q-input
+                  v-model.trim="form.ci"
+                  outlined
+                  label="Cédula de identidad *"
+                  maxlength="20"
+                  :rules="[requerido]"
+                  hint="Obligatorio para afiliar a esta persona como mototaxista."
+                >
+                  <template #prepend>
+                    <q-icon name="badge" color="green-8" />
+                  </template>
+                </q-input>
               </div>
 
               <div class="col-12 col-sm-7">
@@ -1229,6 +1248,7 @@ const formHabilitacion = ref({
 const formDefault = {
   id: null,
   id_persona: null,
+  ci: '',
   id_sindicato: null,
   nro_chaleco: '',
   telefono: '',
@@ -1238,6 +1258,17 @@ const formDefault = {
 const form = ref({
   ...formDefault
 })
+
+const personaSeleccionada = computed(() =>
+  personasDisponibles.value.find(
+    (persona) => Number(persona?.id) === Number(form.value.id_persona)
+  ) || null
+)
+
+const requiereCiAfiliacion = computed(() => (
+  Boolean(form.value.id_persona)
+  && String(personaSeleccionada.value?.ci || '').trim() === ''
+))
 
 const mensajeBusquedaPersona = computed(() => {
   const texto = String(
@@ -1652,6 +1683,10 @@ async function filtrarPersonas(
   }
 }
 
+function alCambiarPersona() {
+  form.value.ci = ''
+}
+
 function abrirFormulario(m = null) {
   if (m) {
     editando.value = true
@@ -1659,6 +1694,7 @@ function abrirFormulario(m = null) {
     form.value = {
       id: m.id,
       id_persona: m.id_persona,
+      ci: '',
       id_sindicato: m.id_sindicato,
       nro_chaleco:
         m.nro_chaleco || '',
@@ -1718,6 +1754,10 @@ async function guardar() {
     const payload = {
       id_persona:
         form.value.id_persona,
+      ci:
+        requiereCiAfiliacion.value
+          ? form.value.ci
+          : null,
       id_sindicato:
         form.value.id_sindicato,
       nro_chaleco:

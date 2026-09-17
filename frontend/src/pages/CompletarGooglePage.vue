@@ -71,9 +71,8 @@
                 <q-input
                   v-model.trim="form.ci"
                   outlined
-                  label="Cédula de identidad *"
+                  label="Cédula de identidad (opcional)"
                   lazy-rules
-                  :rules="[requerido]"
                   class="q-mb-md"
                 >
                   <template #prepend>
