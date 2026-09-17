@@ -16,5 +16,8 @@
   },
   "devDependencies": {
     "@capacitor/assets": "3.0.5"
+  },
+  "scripts": {
+    "firebase:check": "node scripts/verify-google-services.mjs"
   }
 }

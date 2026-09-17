@@ -1,19 +1,21 @@
 # Despliegue de MOTRIX
 
-## Arquitectura
+## Arquitectura de producción
 
-- `backend/`: Laravel API + Sanctum.
-- `frontend/`: Quasar/Vue (SPA/PWA).
-- Neon: PostgreSQL de producción.
-- Render `motrix-api`: API Laravel.
-- Render `motrix-reverb`: WebSockets Laravel Reverb.
-- Vercel: frontend Quasar.
+- `backend/`: Laravel API + Sanctum en Hostinger.
+- `frontend/`: Quasar/Vue en Hostinger.
+- Base de datos: MySQL de producción.
+- Dominio principal: `motrixbolivia.com`.
+- Piloto/frontend: `piloto.motrixbolivia.com`.
+- API: `backend.motrixbolivia.com`.
+- Android: Capacitor, misma API de Hostinger.
+- Push: Firebase Cloud Messaging (FCM HTTP v1).
 
 ## Desarrollo local
 
 ### Backend
 
-1. Crear en Laragon la base `motrix_integrado`.
+1. Crear la base local `motrix_integrado`.
 2. Copiar `backend/.env.example` a `backend/.env`.
 3. Ejecutar:
 
@@ -26,12 +28,6 @@ php artisan storage:link
 php artisan serve
 ```
 
-Para tiempo real, en otra terminal:
-
-```bash
-php artisan reverb:start --host=0.0.0.0 --port=8080
-```
-
 ### Frontend
 
 ```bash
@@ -41,54 +37,50 @@ npm ci
 npm run dev
 ```
 
-## Neon
+## Hostinger
 
-Crear una base PostgreSQL y copiar la cadena de conexión SSL en `DB_URL` de Render. El backend ya acepta `DB_CONNECTION=pgsql` y `DB_SSLMODE=require`.
+El backend de producción debe usar `backend/.env.production.example` como referencia y mantener los secretos únicamente en el servidor. Después de cada despliegue del backend:
 
-No importar el dump MySQL con datos privados. La estructura oficial queda definida por las migraciones Laravel.
-
-## Render
-
-El archivo `render.yaml` define dos servicios Docker:
-
-- `motrix-api`
-- `motrix-reverb`
-
-Al crear el Blueprint se deben completar los secretos solicitados:
-
-- `DB_URL`: cadena PostgreSQL de Neon.
-- `CORS_ALLOWED_ORIGINS`: URL final del frontend en Vercel cuando esté disponible.
-- `REVERB_APP_SECRET`: usar exactamente el mismo valor en `motrix-api` y `motrix-reverb`.
-
-El API ejecuta `php artisan migrate --force` antes de cada despliegue.
-
-### Archivos subidos por usuarios
-
-Render no debe usarse como almacenamiento definitivo para fotos en el plan gratuito: el filesystem del servicio es efímero. Motrix puede desplegar y funcionar, pero antes de producción las imágenes de personas, motocicletas y sindicatos deben moverse a almacenamiento persistente u object storage.
-
-## Vercel
-
-Importar el mismo repositorio y establecer `frontend` como **Root Directory**. Configurar:
-
-```text
-VITE_API_URL=https://<motrix-api>.onrender.com/api
-VITE_REVERB_APP_KEY=motrix-prod-key
-VITE_REVERB_HOST=<motrix-reverb>.onrender.com
-VITE_REVERB_PORT=443
-VITE_REVERB_SCHEME=https
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan config:cache
+php artisan route:cache
 ```
 
-El proyecto usa Node 24.x y genera la SPA en `dist/spa`.
+Para el frontend web, usar `frontend/.env.production.example` y generar:
 
-## APK
+```bash
+cd frontend
+npm ci
+npm run build
+```
 
-La SPA/PWA queda preparada para compartir la misma API. El paso Android se hará desde Quasar + Capacitor una vez validados Render, Neon y Vercel.
+La SPA queda en `frontend/dist/spa`.
+
+## Android / APK
+
+La APK no depende de Vercel. El runtime nativo apunta directamente a:
+
+```text
+https://backend.motrixbolivia.com/api
+```
+
+Para FCM es obligatorio un `google-services.json` válido del package `bo.edu.josecastillo.motrix`. En GitHub Actions se carga mediante `MOTRIX_GOOGLE_SERVICES_JSON_B64` y se valida antes de compilar.
+
+Cada build de `main` usa `github.run_number` como `versionCode`, evitando publicar repetidamente el mismo código de versión.
 
 ## Archivos que nunca se publican
 
 - `.env`
+- credenciales Firebase Admin
+- keystores o contraseñas de firma Android
 - dumps `.sql` con datos reales
 - `vendor/`
 - `node_modules/`
-- fotos cargadas por usuarios
+- fotos y archivos privados de usuarios
 - sesiones, logs y cachés
+
+## Configuraciones heredadas
+
+`render.yaml` y `frontend/vercel.json` pertenecen al despliegue anterior. No deben considerarse la configuración oficial de producción actual.

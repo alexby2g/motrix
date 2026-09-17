@@ -487,7 +487,8 @@
                 <q-input
                   v-model.trim="form.ci"
                   outlined
-                  label="Cédula de identidad (opcional)"
+                  label="Cédula de identidad *"
+                  :rules="[requerido]"
                 >
                   <template #prepend>
                     <q-icon name="fingerprint" color="green-8" />
@@ -998,8 +999,8 @@ function abrirFormulario(persona = null) {
   dialogOpen.value = true
 }
 
-function cerrarFormulario(forzar = false) {
-  if (saving.value && !forzar) return
+function cerrarFormulario() {
+  if (saving.value) return
 
   dialogOpen.value = false
   archivoImagen.value = null
@@ -1077,7 +1078,7 @@ async function guardarPersona() {
         : 'Persona registrada correctamente.'
     })
 
-    cerrarFormulario(true)
+    cerrarFormulario()
     await cargarPersonas()
   } catch (error) {
     console.error(

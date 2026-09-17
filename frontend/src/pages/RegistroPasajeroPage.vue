@@ -98,8 +98,9 @@
               <q-input
                 v-model.trim="form.ci"
                 outlined
-                label="Cédula de identidad (opcional)"
+                label="Cédula de identidad *"
                 autocomplete="off"
+                :rules="[reglaObligatoria('El CI es obligatorio')]"
               >
                 <template #prepend>
                   <q-icon name="credit_card" color="green-8" />

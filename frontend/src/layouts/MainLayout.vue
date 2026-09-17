@@ -2304,9 +2304,7 @@ async function cerrarSesion() {
 }
 
 onMounted(async () => {
-  inicializarPushMotrix(router).catch(function (error) {
-    console.warn('No se pudo iniciar push MOTRIX sin bloquear la app:', error)
-  })
+  await inicializarPushMotrix(router)
 
   if (!puedeGestionarIncidencias.value) return
 

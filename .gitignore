@@ -53,7 +53,7 @@ frontend/src-capacitor/android/.kotlin/
 frontend/src-capacitor/android/captures/
 
 # Local publish helper
-SUBIR_A_GITHUB.batfrontend/src-capacitor/google-services.json
+SUBIR_A_GITHUB.bat
+frontend/src-capacitor/google-services.json
 frontend/src-capacitor/android/app/google-services.json
 backend/storage/app/private/firebase/firebase-admin.json
-frontend/src-capacitor/google-services.json
