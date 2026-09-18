@@ -89,7 +89,6 @@ jobs:
           mkdir -p bootstrap/cache
           cp .env.example .env
           php artisan key:generate
-          php artisan optimize:clear
 
       - name: Run test suite
         working-directory: backend
