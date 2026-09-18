@@ -83,8 +83,13 @@ jobs:
       - name: Prepare Laravel test app
         working-directory: backend
         run: |
+          mkdir -p storage/framework/views
+          mkdir -p storage/framework/sessions
+          mkdir -p storage/framework/cache/data
+          mkdir -p bootstrap/cache
           cp .env.example .env
           php artisan key:generate
+          php artisan optimize:clear
 
       - name: Run test suite
         working-directory: backend
