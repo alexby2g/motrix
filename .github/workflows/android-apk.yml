@@ -21,6 +21,7 @@ jobs:
     name: Compilar APK Android
     runs-on: ubuntu-latest
     timeout-minutes: 45
+
     env:
       MOTRIX_VERSION_CODE: ${{ github.run_number }}
       MOTRIX_VERSION_NAME: 1.0.${{ github.run_number }}
@@ -88,9 +89,11 @@ jobs:
         shell: bash
         run: |
           mkdir -p www
+
           if [ ! -f www/index.html ]; then
             printf '<!doctype html><html><body>MOTRIX</body></html>\n' > www/index.html
           fi
+
           if [ ! -d android ]; then
             npx cap add android
           fi
@@ -124,14 +127,22 @@ jobs:
           manifest = root / 'app/src/main/AndroidManifest.xml'
 
           text = variables.read_text(encoding='utf-8')
+
           text = re.sub(
               r'minSdkVersion\s*=\s*\d+',
               'minSdkVersion = 26',
               text
           )
-          variables.write_text(text, encoding='utf-8')
 
-          xml = manifest.read_text(encoding='utf-8')
+          variables.write_text(
+              text,
+              encoding='utf-8'
+          )
+
+          xml = manifest.read_text(
+              encoding='utf-8'
+          )
+
           permisos = [
               '<uses-permission android:name="android.permission.INTERNET" />',
               '<uses-permission android:name="android.permission.CAMERA" />',
@@ -142,23 +153,37 @@ jobs:
               '<uses-feature android:name="android.hardware.location.gps" android:required="false" />'
           ]
 
-          faltantes = [linea for linea in permisos if linea not in xml]
+          faltantes = [
+              linea
+              for linea in permisos
+              if linea not in xml
+          ]
 
           if faltantes:
-              match = re.search(r'<manifest\b[^>]*>', xml, flags=re.DOTALL)
+              match = re.search(
+                  r'<manifest\b[^>]*>',
+                  xml,
+                  flags=re.DOTALL
+              )
+
               if not match:
                   raise RuntimeError(
                       'No se encontró la etiqueta <manifest> en AndroidManifest.xml'
                   )
 
               cierre = match.end()
+
               xml = (
                   xml[:cierre]
                   + '\n    '
                   + '\n    '.join(faltantes)
                   + xml[cierre:]
               )
-              manifest.write_text(xml, encoding='utf-8')
+
+              manifest.write_text(
+                  xml,
+                  encoding='utf-8'
+              )
           PY
 
       - name: Configurar Firebase Android
@@ -183,44 +208,70 @@ jobs:
               'frontend/src-capacitor/android/app/google-services.json'
           )
 
-          data = json.loads(archivo.read_text(encoding='utf-8'))
-
-          paquetes = {
-              cliente.get('client_info', {})
-              .get('android_client_info', {})
-              .get('package_name')
-              for cliente in data.get('client', [])
-          }
+          data = json.loads(
+              archivo.read_text(encoding='utf-8')
+          )
 
           esperado = 'bo.edu.josecastillo.motrix'
 
-          if esperado not in paquetes:
+          cliente_correcto = next(
+              (
+                  cliente
+                  for cliente in data.get('client', [])
+                  if cliente
+                  .get('client_info', {})
+                  .get('android_client_info', {})
+                  .get('package_name') == esperado
+              ),
+              None
+          )
+
+          if cliente_correcto is None:
               raise RuntimeError(
                   f'google-services.json no corresponde a {esperado}'
               )
 
-          project = data.get('project_info', {})
-          client = next(
-              (item for item in data.get('client', [])
-               if item.get('client_info', {})
-                 .get('android_client_info', {})
-                 .get('package_name') == esperado),
-              None,
+          project = data.get(
+              'project_info',
+              {}
+          )
+
+          api_keys = (
+              cliente_correcto.get('api_key')
+              or []
           )
 
           obligatorios = {
               'project_number': project.get('project_number'),
               'project_id': project.get('project_id'),
-              'mobilesdk_app_id': (client or {}).get('client_info', {}).get('mobilesdk_app_id'),
-              'api_key': (((client or {}).get('api_key') or [{}])[0]).get('current_key'),
+              'mobilesdk_app_id': (
+                  cliente_correcto
+                  .get('client_info', {})
+                  .get('mobilesdk_app_id')
+              ),
+              'api_key': (
+                  api_keys[0].get('current_key')
+                  if api_keys
+                  else None
+              ),
           }
-          faltantes = [k for k, v in obligatorios.items() if not str(v or '').strip()]
+
+          faltantes = [
+              clave
+              for clave, valor in obligatorios.items()
+              if not str(valor or '').strip()
+          ]
+
           if faltantes:
               raise RuntimeError(
-                  'google-services.json incompleto. Faltan: ' + ', '.join(faltantes)
+                  'google-services.json incompleto. Faltan: '
+                  + ', '.join(faltantes)
               )
 
-          print('Firebase Android configurado correctamente.')
+          print(
+              'Firebase Android configurado correctamente para '
+              + esperado
+          )
           PY
 
       - name: Validar Firebase antes de compilar
@@ -245,40 +296,130 @@ jobs:
               exit 1
             fi
 
-            echo "Descarga/compilación interrumpida. Reintentando en 12 segundos..."
+            echo "Descarga/compilación interrumpida."
+            echo "Reintentando en 12 segundos..."
             sleep 12
           done
 
       - name: Verificar APK Android antes de publicar
         shell: bash
         run: |
-          APK=frontend/src-capacitor/android/app/build/outputs/apk/debug/app-debug.apk
+          APK="frontend/src-capacitor/android/app/build/outputs/apk/debug/app-debug.apk"
+          AAPT2="$ANDROID_HOME/build-tools/36.0.0/aapt2"
+          FIREBASE_VALUES="frontend/src-capacitor/android/app/build/generated/res/google-services/debug/values/values.xml"
+
+          echo "=========================================="
+          echo "VERIFICANDO APK MOTRIX"
+          echo "=========================================="
 
           if [ ! -f "$APK" ]; then
-            echo "No se generó el APK esperado."
+            echo "ERROR: No se generó el APK esperado."
             exit 1
           fi
 
+          if [ ! -x "$AAPT2" ]; then
+            echo "ERROR: No se encontró aapt2:"
+            echo "$AAPT2"
+            exit 1
+          fi
+
+          echo
+          echo "1. Verificando plugin Push Notifications..."
+
           unzip -p "$APK" assets/capacitor.plugins.json \
-            | grep -q '@capacitor/push-notifications' \
-            || { echo "El APK no contiene el plugin PushNotifications."; exit 1; }
+            > /tmp/motrix-capacitor-plugins.json
 
-          unzip -p "$APK" resources.arsc \
-            | strings -el \
-            | grep -q 'google_app_id' \
-            || { echo "El APK no contiene google_app_id de Firebase."; exit 1; }
+          grep -q '@capacitor/push-notifications' \
+            /tmp/motrix-capacitor-plugins.json \
+            || {
+              echo "ERROR: El APK no contiene PushNotifications."
+              exit 1
+            }
 
-          unzip -p "$APK" AndroidManifest.xml \
-            | strings -el \
-            | grep -q 'android.permission.POST_NOTIFICATIONS' \
-            || { echo "El APK no contiene POST_NOTIFICATIONS."; exit 1; }
+          echo "PushNotifications OK"
 
-          echo "APK verificado: PushNotifications + Firebase + permiso Android OK."
+          echo
+          echo "2. Verificando recursos generados por Google Services..."
+
+          if [ ! -f "$FIREBASE_VALUES" ]; then
+            echo "ERROR: Google Services no generó values.xml."
+            echo "Archivos generados encontrados:"
+
+            find \
+              frontend/src-capacitor/android/app/build/generated \
+              -maxdepth 8 \
+              -type f \
+              2>/dev/null \
+              || true
+
+            exit 1
+          fi
+
+          grep -q 'google_app_id' "$FIREBASE_VALUES" \
+            || {
+              echo "ERROR: values.xml no contiene google_app_id."
+              cat "$FIREBASE_VALUES"
+              exit 1
+            }
+
+          echo "google_app_id generado por Firebase OK"
+
+          echo
+          echo "3. Verificando recursos Firebase dentro del APK..."
+
+          "$AAPT2" dump resources "$APK" \
+            > /tmp/motrix-resources.txt
+
+          grep -q 'google_app_id' \
+            /tmp/motrix-resources.txt \
+            || {
+              echo "ERROR: El APK compilado no contiene google_app_id."
+              exit 1
+            }
+
+          echo "google_app_id dentro del APK OK"
+
+          echo
+          echo "4. Verificando package y permisos Android..."
+
+          "$AAPT2" dump badging "$APK" \
+            > /tmp/motrix-badging.txt
+
+          grep -q "package: name='bo.edu.josecastillo.motrix'" \
+            /tmp/motrix-badging.txt \
+            || {
+              echo "ERROR: El package Android no corresponde a MOTRIX."
+              cat /tmp/motrix-badging.txt
+              exit 1
+            }
+
+          "$AAPT2" dump permissions "$APK" \
+            > /tmp/motrix-permissions.txt
+
+          grep -q 'android.permission.POST_NOTIFICATIONS' \
+            /tmp/motrix-permissions.txt \
+            || {
+              echo "ERROR: El APK no contiene POST_NOTIFICATIONS."
+              cat /tmp/motrix-permissions.txt
+              exit 1
+            }
+
+          echo "POST_NOTIFICATIONS OK"
+
+          echo
+          echo "=========================================="
+          echo "APK MOTRIX VERIFICADO CORRECTAMENTE"
+          echo "PushNotifications: OK"
+          echo "Firebase google_app_id: OK"
+          echo "POST_NOTIFICATIONS: OK"
+          echo "Package MOTRIX: OK"
+          echo "=========================================="
 
       - name: Preparar APK final
         shell: bash
         run: |
           mkdir -p dist-apk
+
           cp \
             frontend/src-capacitor/android/app/build/outputs/apk/debug/app-debug.apk \
             dist-apk/MOTRIX-Android-debug.apk
