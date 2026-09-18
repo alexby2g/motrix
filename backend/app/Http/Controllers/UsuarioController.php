@@ -14,12 +14,14 @@ class UsuarioController extends Controller
 {
     private const ROLES_ADMINISTRATIVOS = [
         'admin_general',
+        'admin_registro',
         'admin_servicios',
         'secretario',
     ];
 
     private const ROLES_GESTIONABLES = [
         'admin_general',
+        'admin_registro',
         'admin_servicios',
         'secretario',
         'conductor',
@@ -189,7 +191,7 @@ class UsuarioController extends Controller
             'password' => [
                 'nullable',
                 'string',
-                'min:6',
+                'min:8',
                 'max:255',
             ],
         ], [
@@ -199,7 +201,7 @@ class UsuarioController extends Controller
             'email.required' => 'El correo es obligatorio para esta cuenta.',
             'email.email' => 'El correo no tiene un formato válido.',
             'email.unique' => 'Ese correo ya está registrado.',
-            'password.min' => 'La contraseña debe tener al menos 6 caracteres.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
         ]);
 
         $actualizacion = [
@@ -245,7 +247,7 @@ class UsuarioController extends Controller
             'password' => [
                 $usuario ? 'nullable' : 'required',
                 'string',
-                'min:6',
+                'min:8',
                 'max:255',
             ],
             'role' => [
@@ -274,7 +276,7 @@ class UsuarioController extends Controller
             'email.email' => 'El correo no tiene un formato válido.',
             'email.unique' => 'Ese correo ya está registrado.',
             'password.required' => 'La contraseña es obligatoria.',
-            'password.min' => 'La contraseña debe tener al menos 6 caracteres.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
             'role.in' => 'El rol administrativo seleccionado no es válido.',
             'sindicato_id.required' => 'El secretario debe estar vinculado a un sindicato.',
             'sindicato_id.exists' => 'El sindicato seleccionado no existe.',

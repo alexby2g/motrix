@@ -170,7 +170,8 @@
                 <q-card
                   flat
                   bordered
-                  class="incidencia-card full-height"
+                  class="incidencia-card full-height cursor-pointer"
+                  @click="abrir(incidencia)"
                 >
                   <q-card-section>
                     <div class="row items-start no-wrap">
@@ -255,7 +256,7 @@
 
                   <q-separator />
 
-                  <q-card-actions align="right">
+                  <q-card-actions align="right" @click.stop>
                     <q-btn
                       flat
                       color="green-8"
@@ -375,6 +376,8 @@
 </template>
 
 <script setup>
+import { fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   onMounted,
@@ -385,10 +388,7 @@ import {
   useQuasar
 } from 'quasar'
 
-import {
-  api
-} from 'src/boot/axios.js'
-
+import { api } from 'src/boot/axios.js'
 const $q = useQuasar()
 
 const cargando = ref(false)
@@ -645,28 +645,7 @@ function colorEstado(estado) {
 }
 
 function formatearFecha(valor) {
-  if (!valor) return 'Fecha no registrada'
-
-  const fecha =
-    new Date(
-      String(valor)
-        .replace(' ', 'T')
-    )
-
-  if (Number.isNaN(fecha.getTime())) {
-    return String(valor)
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }
-  ).format(fecha)
+  return fechaHoraDDMMYYYY(valor, '—')
 }
 
 onMounted(() => {

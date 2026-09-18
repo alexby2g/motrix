@@ -1,8 +1,14 @@
 import { api } from 'src/boot/axios.js'
 
 export default {
-  getAll() {
-    return api.get('/mototaxistas')
+  getAll(params = {}) {
+    return api.get('/mototaxistas', { params })
+  },
+  opcionesMotocicleta(params = {}) {
+    return api.get('/mototaxistas/opciones-motocicleta', { params })
+  },
+  opcionesPagoSindical(params = {}) {
+    return api.get('/mototaxistas/opciones-pago-sindical', { params })
   },
   create(data) {
     return api.post('/mototaxistas', data)

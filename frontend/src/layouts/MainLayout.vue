@@ -1,7 +1,7 @@
 <template>
   <q-layout view="hHh Lpr lFf" class="motrix-layout">
     <!-- ENCABEZADO VERDE -->
-    <q-header elevated class="motrix-header text-white">
+    <q-header class="motrix-header">
       <q-toolbar class="motrix-toolbar">
         <q-btn
           flat
@@ -9,14 +9,14 @@
           round
           icon="menu"
           aria-label="Abrir o cerrar menú"
-          class="q-mr-sm"
+          class="header-icon-btn q-mr-sm"
           @click="toggleLeftDrawer"
         />
 
         <q-icon
           name="two_wheeler"
           size="28px"
-          class="q-mr-md"
+          class="brand-icon q-mr-md"
         />
 
         <q-toolbar-title class="q-pa-none">
@@ -38,7 +38,7 @@
 
         <div
           v-if="$q.screen.gt.sm"
-          class="row items-center no-wrap q-gutter-sm q-mr-md"
+          class="header-location row items-center no-wrap q-gutter-sm q-mr-md"
         >
           <q-icon name="place" size="20px" />
 
@@ -49,11 +49,14 @@
 
         <q-chip
           v-if="puedeGestionarIncidencias && $q.screen.gt.xs"
-          :color="adminWsConectado ? 'green-10' : 'orange-9'"
-          text-color="white"
           :icon="adminWsConectado ? 'sensors' : 'sync'"
           dense
-          class="q-mr-sm text-weight-bold"
+          :class="[
+            'live-status-chip q-mr-sm text-weight-bold',
+            adminWsConectado
+              ? 'live-status-chip--ok'
+              : 'live-status-chip--wait'
+          ]"
         >
           {{ adminWsConectado ? 'EN VIVO' : 'RECONECTANDO' }}
         </q-chip>
@@ -63,9 +66,9 @@
           flat
           round
           icon="sos"
-          color="white"
+          color="negative"
           aria-label="Abrir alertas SOS"
-          class="q-mr-xs"
+          class="header-sos-btn q-mr-xs"
           @click="abrirCentroIncidenciaActual"
         >
           <q-badge
@@ -94,7 +97,9 @@
           flat
           round
           icon="account_circle"
+          color="grey-9"
           aria-label="Cuenta"
+          class="account-trigger"
         >
           <q-menu
             anchor="bottom right"
@@ -176,7 +181,7 @@
       bordered
       :width="250"
       class="motrix-drawer text-white"
-      style="background: #0A2E0A;"
+      style="background: #183c2b; color: #ffffff"
     >
       <div class="drawer-content">
         <!-- IDENTIDAD DEL SISTEMA -->
@@ -238,11 +243,11 @@
                 v-for="opcion in seccion.opciones"
                 :key="opcion.ruta"
                 clickable
-                :to="opcion.ruta"
+
                 :exact="opcion.exact === true"
                 :active-class="opcion.activeClass || 'menu-item-active'"
                 class="menu-item"
-                @click="cerrarDrawerMovil"
+                @click="navegarMenu(opcion.ruta)"
               >
                 <q-item-section avatar>
                   <q-icon
@@ -263,7 +268,7 @@
         <div class="drawer-footer">
           <q-btn
             outline
-            color="negative"
+            color="white"
             icon="logout"
             label="Cerrar sesión"
             class="full-width logout-button"
@@ -272,7 +277,7 @@
           />
 
           <div class="text-caption text-center q-mt-md drawer-footer-text">
-            Instituto José Castillo · Trinidad - Beni 2026
+            MOTRIX · Trinidad - Beni · 2026
           </div>
         </div>
       </div>
@@ -315,6 +320,20 @@
           @click="navegarConductor('/conductor/ganancias')"
         />
 
+        <q-btn
+          flat
+          no-caps
+          stack
+          dense
+          icon="workspace_premium"
+          label="Suscripción"
+          class="driver-nav-item"
+          :class="{
+            'driver-nav-active':
+              esRutaConductorActiva('/conductor/suscripcion', true)
+          }"
+          @click="navegarConductor('/conductor/suscripcion')"
+        />
         <q-btn
           flat
           no-caps
@@ -673,10 +692,14 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-  </q-layout>
+    <LegalAcceptanceGate />
+</q-layout>
 </template>
 
 <script setup>
+import { fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+
+import LegalAcceptanceGate from 'src/components/legal/LegalAcceptanceGate.vue'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
@@ -685,7 +708,7 @@ import Pusher from 'pusher-js'
 
 import { api } from '../boot/axios.js'
 import { echoOptions } from '../config/runtime.js'
-
+import { inicializarPushMotrix, desregistrarPushMotrix } from '../services/pushNotifications.js'
 window.Pusher = Pusher
 
 const $q = useQuasar()
@@ -746,6 +769,10 @@ const esAdminGeneral = computed(
   () => rol.value === 'admin_general'
 )
 
+const esAdminRegistro = computed(
+  () => rol.value === 'admin_registro'
+)
+
 const esAdminServicios = computed(
   () => rol.value === 'admin_servicios'
 )
@@ -789,6 +816,10 @@ const etiquetaRol = computed(() => {
     return 'Administrador general'
   }
 
+  if (esAdminRegistro.value) {
+    return 'Administrador de registro'
+  }
+
   if (esAdminServicios.value) {
     return 'Administrador de servicios'
   }
@@ -811,6 +842,10 @@ const etiquetaRol = computed(() => {
 const tituloPanel = computed(() => {
   if (esAdminGeneral.value) {
     return 'ADMINISTRACIÓN GENERAL'
+  }
+
+  if (esAdminRegistro.value) {
+    return 'ADMINISTRACIÓN DE REGISTRO'
   }
 
   if (esAdminServicios.value) {
@@ -841,6 +876,7 @@ const iconoRol = computed(() => {
   if (esConductor.value) return 'two_wheeler'
   if (esPasajero.value) return 'person_pin_circle'
   if (esSecretario.value) return 'badge'
+  if (esAdminRegistro.value) return 'how_to_reg'
   if (esAdminServicios.value) return 'support_agent'
   return 'admin_panel_settings'
 })
@@ -872,7 +908,49 @@ const menuAdministradorGeneral = [
     opciones: [
       { etiqueta: 'Pagos de viajes', icono: 'payments', ruta: '/pagos' },
       { etiqueta: 'Pagos sindicales', icono: 'account_balance_wallet', ruta: '/pagos-sindicales' },
+      { etiqueta: 'Suscripciones MOTRIX', icono: 'workspace_premium', ruta: '/suscripciones-motrix' },
+      { etiqueta: 'Cobranza MOTRIX', icono: 'point_of_sale', ruta: '/cobranza-motrix' },
+      { etiqueta: 'Liquidaciones MOTRIX', icono: 'account_balance', ruta: '/liquidaciones-motrix' },
       { etiqueta: 'Reportes', icono: 'bar_chart', ruta: '/reportes' }
+    ]
+  }
+]
+
+const menuAdminRegistro = [
+  {
+    titulo: 'Menú principal',
+    opciones: [
+      {
+        etiqueta: 'Inicio',
+        icono: 'home',
+        ruta: '/registro',
+        exact: true
+      },
+      {
+        etiqueta: 'Sindicatos',
+        icono: 'groups',
+        ruta: '/sindicatos'
+      },
+      {
+        etiqueta: 'Personas',
+        icono: 'badge',
+        ruta: '/personas'
+      },
+      {
+        etiqueta: 'Mototaxistas',
+        icono: 'people',
+        ruta: '/mototaxistas'
+      },
+      {
+        etiqueta: 'Motocicletas',
+        icono: 'two_wheeler',
+        ruta: '/motocicletas'
+      },
+      {
+        etiqueta: 'Pagos sindicales',
+        icono: 'payments',
+        ruta: '/pagos-sindicales'
+      }
     ]
   }
 ]
@@ -915,6 +993,21 @@ const menuSecretario = [
         etiqueta: 'Pagos y aportes',
         icono: 'account_balance_wallet',
         ruta: '/pagos-sindicales'
+      },
+      {
+        etiqueta: 'Suscripciones MOTRIX',
+        icono: 'workspace_premium',
+        ruta: '/suscripciones-motrix'
+      },
+      {
+        etiqueta: 'Cobranza MOTRIX',
+        icono: 'point_of_sale',
+        ruta: '/cobranza-motrix'
+      },
+      {
+        etiqueta: 'Liquidaciones MOTRIX',
+        icono: 'account_balance',
+        ruta: '/liquidaciones-motrix'
       }
     ]
   },
@@ -934,11 +1027,6 @@ const menuAdminServicios = [
   {
     titulo: 'Clientes y operación',
     opciones: [
-      {
-        etiqueta: 'Personas / clientes',
-        icono: 'groups',
-        ruta: '/personas'
-      },
       {
         etiqueta: 'Pasajeros / clientes',
         icono: 'person_pin_circle',
@@ -997,6 +1085,14 @@ const menuConductor = [
         exact: true,
         color: 'positive',
         activeClass: 'menu-item-active'
+      },
+      {
+        etiqueta: 'Mi suscripción MOTRIX',
+        icono: 'workspace_premium',
+        ruta: '/conductor/suscripcion',
+        exact: true,
+        color: 'positive',
+        activeClass: 'menu-item-active'
       }
     ]
   },
@@ -1007,6 +1103,14 @@ const menuConductor = [
         etiqueta: 'Mi perfil',
         icono: 'account_circle',
         ruta: '/conductor/perfil',
+        exact: true,
+        color: 'positive',
+        activeClass: 'menu-item-active'
+      },
+      {
+        etiqueta: 'Cambiar contraseña',
+        icono: 'lock_reset',
+        ruta: '/cuenta/cambiar-contrasena',
         exact: true,
         color: 'positive',
         activeClass: 'menu-item-active'
@@ -1063,6 +1167,14 @@ const menuPasajero = [
         exact: true,
         color: 'positive',
         activeClass: 'menu-item-active'
+      },
+      {
+        etiqueta: 'Cambiar contraseña',
+        icono: 'lock_reset',
+        ruta: '/cuenta/cambiar-contrasena',
+        exact: true,
+        color: 'positive',
+        activeClass: 'menu-item-active'
       }
     ]
   }
@@ -1071,6 +1183,10 @@ const menuPasajero = [
 const seccionesMenu = computed(() => {
   if (esAdminGeneral.value) {
     return menuAdministradorGeneral
+  }
+
+  if (esAdminRegistro.value) {
+    return menuAdminRegistro
   }
 
   if (esAdminServicios.value) {
@@ -1136,27 +1252,7 @@ function colorPrioridadIncidencia(prioridad) {
 }
 
 function formatearFechaHoraIncidencia(fecha) {
-  if (!fecha) return 'Fecha no disponible'
-
-  const texto = String(fecha)
-  const normalizada = texto.includes('T')
-    ? new Date(texto)
-    : new Date(texto.replace(' ', 'T'))
-
-  if (Number.isNaN(normalizada.getTime())) {
-    return texto
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }
-  ).format(normalizada)
+  return fechaHoraDDMMYYYY(fecha, 'Fecha no disponible')
 }
 
 function tieneUbicacionIncidencia(incidencia) {
@@ -1941,8 +2037,14 @@ function procesarSolicitudActualizada(data) {
 }
 
 function inicializarNotificacionesAdministrador() {
+  const puedeRecibirTiempoReal = (
+    esAdminGeneral.value
+    || esAdminServicios.value
+    || esSecretario.value
+  )
+
   if (
-    !puedeGestionarIncidencias.value
+    !puedeRecibirTiempoReal
     || echoAdministrador
   ) {
     return
@@ -1996,9 +2098,12 @@ function inicializarNotificacionesAdministrador() {
       () => publicarEstadoWebsocket(false)
     )
 
-    if (esAdminGeneral.value) {
+    if (
+      esAdminGeneral.value
+      || esAdminServicios.value
+    ) {
       echoAdministrador
-        .channel('solicitudes')
+        .private('administracion.solicitudes')
         .listen(
           '.SolicitudCreada',
           procesarSolicitudCreada
@@ -2009,25 +2114,27 @@ function inicializarNotificacionesAdministrador() {
         )
     }
 
-    const canalIncidencias =
-      esSecretario.value
-        ? `sindicato.${Number(
-            usuario.value?.sindicato_id || 0
-          )}.incidencias`
-        : 'administracion.incidencias'
+    if (puedeGestionarIncidencias.value) {
+      const canalIncidencias =
+        esSecretario.value
+          ? `sindicato.${Number(
+              usuario.value?.sindicato_id || 0
+            )}.incidencias`
+          : 'administracion.incidencias'
 
-    echoAdministrador
-      .private(canalIncidencias)
-      .listen(
-        '.IncidenciaViajeReportada',
-        procesarIncidenciaReportada
-      )
-      .listen(
-        '.IncidenciaViajeActualizada',
-        procesarIncidenciaActualizada
-      )
+      echoAdministrador
+        .private(canalIncidencias)
+        .listen(
+          '.IncidenciaViajeReportada',
+          procesarIncidenciaReportada
+        )
+        .listen(
+          '.IncidenciaViajeActualizada',
+          procesarIncidenciaActualizada
+        )
 
-    cargarResumenIncidencias()
+      cargarResumenIncidencias()
+    }
 
     publicarEstadoWebsocket(
       conexion?.state === 'connected'
@@ -2044,20 +2151,27 @@ function inicializarNotificacionesAdministrador() {
 
 function desconectarNotificacionesAdministrador() {
   if (echoAdministrador) {
-    echoAdministrador.leaveChannel(
-      'solicitudes'
-    )
+    if (
+      esAdminGeneral.value
+      || esAdminServicios.value
+    ) {
+      echoAdministrador.leave(
+        'administracion.solicitudes'
+      )
+    }
 
-    const canalIncidencias =
-      esSecretario.value
-        ? `sindicato.${Number(
-            usuario.value?.sindicato_id || 0
-          )}.incidencias`
-        : 'administracion.incidencias'
+    if (puedeGestionarIncidencias.value) {
+      const canalIncidencias =
+        esSecretario.value
+          ? `sindicato.${Number(
+              usuario.value?.sindicato_id || 0
+            )}.incidencias`
+          : 'administracion.incidencias'
 
-    echoAdministrador.leave(
-      canalIncidencias
-    )
+      echoAdministrador.leave(
+        canalIncidencias
+      )
+    }
 
     echoAdministrador.disconnect()
     echoAdministrador = null
@@ -2129,6 +2243,19 @@ function navegarPasajero(rutaDestino) {
   cerrarDrawerMovil()
 }
 
+function navegarMenu(rutaDestino) {
+  const destino = String(rutaDestino || '').trim()
+
+  if (!destino) {
+    return
+  }
+
+  if (route.path !== destino) {
+    router.push(destino)
+  }
+
+  cerrarDrawerMovil()
+}
 function cerrarDrawerMovil() {
   if ($q.screen.lt.md) {
     leftDrawerOpen.value = false
@@ -2152,6 +2279,7 @@ async function cerrarSesion() {
   cerrandoSesion.value = true
 
   try {
+    await desregistrarPushMotrix()
     await api.post('/auth/logout')
   } catch (error) {
     const estado = error?.response?.status
@@ -2170,12 +2298,14 @@ async function cerrarSesion() {
       type: 'positive',
       icon: 'logout',
       message: 'Sesión cerrada correctamente.',
-      position: 'top' 
+      position: 'top'
     })
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await inicializarPushMotrix(router)
+
   if (!puedeGestionarIncidencias.value) return
 
   document.addEventListener(
@@ -2219,25 +2349,29 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .motrix-layout {
-  --motrix-green: #2e7d32;
-  --motrix-green-dark: #0a2e0a;
-  --motrix-green-medium: #1b5e20;
-  --motrix-green-light: #81c784;
-  --motrix-red: #c62828;
-  --motrix-background: #f1f8e9;
+  --motrix-primary: #2e7d32;
+  --motrix-primary-dark: #244e36;
+  --motrix-sidebar: #183c2b;
+  --motrix-sidebar-deep: #123524;
+  --motrix-surface: #ffffff;
+  --motrix-page: #f5f6f7;
+  --motrix-text: #30353b;
+  --motrix-muted: #707780;
+  --motrix-border: #dfe3e6;
+  --motrix-info: #3974a8;
+  --motrix-warning: #d97706;
+  --motrix-danger: #c43d3d;
 }
 
+/* =========================================================
+   CABECERA NEUTRA
+========================================================= */
 .motrix-header {
-  background:
-    linear-gradient(
-      135deg,
-      #1b5e20 0%,
-      #2e7d32 60%,
-      #388e3c 100%
-    );
-  border-bottom: 3px solid #c62828;
-  box-shadow:
-    0 6px 20px rgba(0, 0, 0, 0.25);
+  color: var(--motrix-text);
+  background: rgba(255, 255, 255, 0.97);
+  border-bottom: 1px solid var(--motrix-border);
+  box-shadow: 0 3px 14px rgba(34, 47, 40, 0.06);
+  backdrop-filter: blur(12px);
 }
 
 .motrix-toolbar {
@@ -2246,199 +2380,212 @@ onBeforeUnmount(() => {
   padding-left: 14px;
 }
 
+.header-icon-btn,
+.account-trigger {
+  color: #38413c;
+}
+
+.brand-icon {
+  color: var(--motrix-primary);
+}
+
 .brand-title {
+  color: #202623;
   font-size: 24px;
-  font-weight: 800;
-  letter-spacing: 0.025em;
+  font-weight: 850;
+  letter-spacing: 0.02em;
 }
 
 .brand-subtitle {
   padding-top: 4px;
-  color: #c8e6c9;
+  color: var(--motrix-muted);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
+.header-location {
+  color: #4c5550;
+}
+
+.live-status-chip {
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+
+.live-status-chip--ok {
+  color: #17632b;
+  background: #edf7ef;
+  border-color: #d0ead6;
+}
+
+.live-status-chip--wait {
+  color: #9a5a08;
+  background: #fff7e8;
+  border-color: #f3dfba;
+}
+
+.header-sos-btn {
+  background: #fff4f4;
+}
+
+/* =========================================================
+   DRAWER: VERDE SOBRIO
+========================================================= */
 .motrix-drawer {
   color: #ffffff !important;
-  background: #0a2e0a !important;
-  border-right: 1px solid #1b5e20;
+  background:
+    linear-gradient(
+      180deg,
+      var(--motrix-sidebar) 0%,
+      var(--motrix-sidebar-deep) 100%
+    ) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .drawer-content {
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-
-.drawer-brand {
-  position: relative;
-  padding: 26px 18px 22px;
-  text-align: center;
+  min-height: 100%;
+  color: #ffffff;
   background:
     linear-gradient(
       180deg,
-      rgba(27, 94, 32, 0.36),
-      rgba(10, 46, 10, 0)
+      var(--motrix-sidebar) 0%,
+      var(--motrix-sidebar-deep) 100%
     );
 }
 
-.drawer-brand::after {
-  content: '';
-  position: absolute;
-  right: 18px;
-  bottom: 0;
-  left: 18px;
-  height: 3px;
-  border-radius: 999px;
-  background:
-    linear-gradient(
-      90deg,
-      #c62828,
-      rgba(198, 40, 40, 0.15),
-      transparent
-    );
+.drawer-brand {
+  padding: 24px 18px 18px;
+  text-align: center;
 }
 
 .drawer-logo {
-  color: #66bb6a;
-  filter:
-    drop-shadow(
-      0 3px 5px rgba(0, 0, 0, 0.32)
-    );
+  color: #79c884;
 }
 
 .drawer-brand-caption {
-  margin-top: 3px;
-  color: #a5d6a7;
+  max-width: 205px;
+  margin: 4px auto 0;
+  color: #b6d8bf;
+  line-height: 1.4;
 }
 
 .drawer-user {
   display: flex;
   align-items: center;
-  margin: 12px 12px 4px;
-  padding: 13px 14px;
+  margin: 10px 12px 4px;
+  padding: 12px 13px;
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.075);
-  border: 1px solid rgba(129, 199, 132, 0.16);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 12px;
 }
 
 .drawer-user-name {
-  color: #a5d6a7;
+  color: #b8d9c0;
 }
 
 .drawer-separator {
   margin: 8px 14px 0;
   opacity: 1;
-  background: rgba(102, 187, 106, 0.28);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .drawer-section-title {
-  color: #66bb6a !important;
-  font-size: 11px;
+  color: #8fd39a !important;
+  font-size: 10.5px;
   font-weight: 800;
-  letter-spacing: 0.055em;
+  letter-spacing: 0.08em;
 }
 
 .menu-item {
-  min-height: 42px;
-  margin: 0 6px;
-  color: #ffffff !important;
-  border-radius: 8px;
-  transition:
-    background-color 0.18s ease,
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
+  min-height: 46px;
+  color: #f5faf6 !important;
+  border-radius: 10px;
 }
 
 .menu-item :deep(.q-icon) {
-  color: #66bb6a;
+  color: #c6dfcb;
 }
 
 .menu-item:hover {
   color: #ffffff !important;
-  background: rgba(46, 125, 50, 0.25);
-  transform: translateX(2px);
+  background: rgba(255, 255, 255, 0.07);
 }
 
 :deep(.menu-item-active) {
   color: #ffffff !important;
-  background: rgba(46, 125, 50, 0.38) !important;
-  border-left: 4px solid #c62828;
+  background: rgba(85, 151, 96, 0.34) !important;
   box-shadow:
-    0 0 15px rgba(198, 40, 40, 0.23);
+    inset 3px 0 0 #6bc778,
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 :deep(.menu-item-active .q-icon) {
-  color: #a5d6a7 !important;
+  color: #e0f2e3 !important;
 }
 
 .drawer-footer {
   padding: 13px 11px 15px;
-  background: rgba(0, 0, 0, 0.12);
-  border-top: 1px solid rgba(102, 187, 106, 0.22);
+  background: rgba(0, 0, 0, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
 }
 
 .logout-button {
-  color: #ff8a80 !important;
-  border-radius: 7px;
+  color: #f4f7f5 !important;
+  border-radius: 10px;
 }
 
 .drawer-footer-text {
-  color: #81c784;
+  color: #9bcba5;
   line-height: 1.45;
 }
 
+/* =========================================================
+   ÁREA PRINCIPAL
+========================================================= */
 .motrix-page-container {
   min-height: 100vh;
-  background:
-    radial-gradient(
-      circle at 95% 0%,
-      rgba(129, 199, 132, 0.12),
-      transparent 25%
-    ),
-    #f1f8e9;
+  background: var(--motrix-page);
 }
 
 .min-width-zero {
   min-width: 0;
 }
 
-/*
-|--------------------------------------------------------------------------
-| ADAPTACIÓN VISUAL DE LAS PÁGINAS EXISTENTES
-|--------------------------------------------------------------------------
-*/
-
 :deep(.q-page.bg-grey-2) {
-  background: transparent !important;
+  background: var(--motrix-page) !important;
 }
 
 :deep(.bg-primary) {
-  background: #2e7d32 !important;
+  background: var(--motrix-primary) !important;
 }
 
 :deep(.text-primary) {
-  color: #2e7d32 !important;
+  color: var(--motrix-primary) !important;
 }
 
 :deep(.q-btn.bg-primary) {
-  background: #2e7d32 !important;
+  background: var(--motrix-primary) !important;
 }
 
 :deep(.q-btn.text-primary) {
-  color: #2e7d32 !important;
+  color: var(--motrix-primary) !important;
 }
 
 :deep(.q-card) {
-  border-color: #d4e2d1;
+  border-color: var(--motrix-border);
 }
 
 :deep(.q-field--outlined .q-field__control:hover::before) {
-  border-color: #388e3c;
+  border-color: #7e9f86;
 }
 
+/* =========================================================
+   ALERTA GLOBAL SOS
+========================================================= */
 .incidencia-global-card {
   width: min(720px, 96vw);
   max-width: 720px;
@@ -2471,17 +2618,18 @@ onBeforeUnmount(() => {
 /* =========================================================
    NAVEGACIÓN INFERIOR DEL CONDUCTOR
 ========================================================= */
-.driver-bottom-footer {
-  color: #4f5f50;
+.driver-bottom-footer,
+.passenger-bottom-footer {
+  color: #66706a;
   background: #ffffff !important;
-  border-top: 1px solid #d5e4d2;
+  border-top: 1px solid var(--motrix-border);
+  box-shadow: 0 -4px 18px rgba(34, 47, 40, 0.06);
 }
 
 .driver-bottom-nav {
   min-height: 68px;
   display: grid;
-  grid-template-columns:
-    repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
   padding:
     5px
@@ -2492,7 +2640,7 @@ onBeforeUnmount(() => {
 
 .driver-nav-item {
   min-height: 54px;
-  color: #718072;
+  color: #727b76;
   font-size: 10px;
   border-radius: 12px;
 }
@@ -2502,26 +2650,19 @@ onBeforeUnmount(() => {
 }
 
 .driver-nav-active {
-  color: #2e7d32 !important;
+  color: var(--motrix-primary) !important;
   font-weight: 900;
-  background: #edf7eb;
+  background: #edf5ef;
 }
 
 /* =========================================================
    NAVEGACIÓN INFERIOR DEL PASAJERO
 ========================================================= */
-.passenger-bottom-footer {
-  color: #4f5f50;
-  background: #ffffff !important;
-  border-top: 1px solid #d5e4d2;
-}
-
 .passenger-bottom-nav {
   position: relative;
   min-height: 68px;
   display: grid;
-  grid-template-columns:
-    repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: end;
   padding:
     5px
@@ -2532,7 +2673,7 @@ onBeforeUnmount(() => {
 
 .passenger-nav-item {
   min-height: 54px;
-  color: #718072;
+  color: #727b76;
   font-size: 10px;
   border-radius: 12px;
 }
@@ -2542,7 +2683,7 @@ onBeforeUnmount(() => {
 }
 
 .passenger-nav-active {
-  color: #2e7d32 !important;
+  color: var(--motrix-primary) !important;
   font-weight: 800;
 }
 
@@ -2552,7 +2693,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  color: #718072;
+  color: #727b76;
   font-size: 10px;
   font-weight: 700;
 }
@@ -2563,12 +2704,11 @@ onBeforeUnmount(() => {
   margin-top: -25px;
   margin-bottom: 1px;
   border: 4px solid #ffffff;
-  box-shadow:
-    0 7px 18px rgba(46, 125, 50, 0.32);
+  box-shadow: 0 7px 18px rgba(46, 125, 50, 0.24);
 }
 
 .passenger-qr-label-active {
-  color: #2e7d32;
+  color: var(--motrix-primary);
   font-weight: 900;
 }
 
@@ -2583,6 +2723,11 @@ onBeforeUnmount(() => {
     font-size: 20px;
   }
 
+  .brand-subtitle,
+  .header-location {
+    display: none;
+  }
+
   .incidencia-global-card {
     width: 100vw;
     max-width: none;
@@ -2590,84 +2735,4 @@ onBeforeUnmount(() => {
     border-radius: 0;
   }
 }
-
-/* =========================================================
-   CORRECCIÓN DE CONTRASTE DEL MENÚ LATERAL
-   Mantiene el estilo original de la parte sindical.
-========================================================= */
-:deep(.q-drawer.motrix-drawer),
-:deep(.motrix-drawer .q-drawer__content) {
-  background: #0A2E0A !important;
-  color: #ffffff !important;
-}
-
-.motrix-drawer .drawer-brand {
-  color: #ffffff !important;
-  background: transparent !important;
-}
-
-.motrix-drawer .drawer-user {
-  background: rgba(255, 255, 255, 0.07) !important;
-  border: 1px solid rgba(102, 187, 106, 0.20) !important;
-  color: #ffffff !important;
-}
-
-.motrix-drawer .drawer-user-name,
-.motrix-drawer .drawer-brand-caption {
-  color: #81C784 !important;
-}
-
-.motrix-drawer .drawer-section-title {
-  color: #66BB6A !important;
-  opacity: 1 !important;
-}
-
-.motrix-drawer .menu-item {
-  color: #ffffff !important;
-  margin: 0 6px 4px !important;
-  min-height: 46px;
-  border-radius: 8px;
-  opacity: 1 !important;
-}
-
-.motrix-drawer .menu-item :deep(.q-item__section),
-.motrix-drawer .menu-item :deep(.q-item__label) {
-  color: #ffffff !important;
-  opacity: 1 !important;
-}
-
-.motrix-drawer .menu-item :deep(.q-icon) {
-  color: #66BB6A !important;
-  opacity: 1 !important;
-}
-
-.motrix-drawer .menu-item:hover {
-  background: rgba(46, 125, 50, 0.26) !important;
-}
-
-.motrix-drawer :deep(.menu-item-active) {
-  background: rgba(46, 125, 50, 0.48) !important;
-  border-left: 4px solid #C62828 !important;
-  box-shadow: 0 0 15px rgba(198, 40, 40, 0.25) !important;
-}
-
-.motrix-drawer :deep(.menu-item-active .q-item__section),
-.motrix-drawer :deep(.menu-item-active .q-item__label) {
-  color: #ffffff !important;
-  font-weight: 700 !important;
-}
-
-.motrix-drawer :deep(.menu-item-active .q-icon) {
-  color: #A5D6A7 !important;
-}
-
-.motrix-drawer .drawer-footer {
-  background: rgba(0, 0, 0, 0.16) !important;
-  border-top: 1px solid rgba(102, 187, 106, 0.20) !important;
-}
-
-.motrix-drawer .drawer-footer-text {
-  color: #66BB6A !important;
-}
-
 </style>

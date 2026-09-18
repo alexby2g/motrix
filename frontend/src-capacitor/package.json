@@ -11,9 +11,13 @@
     "@capacitor/core": "8.4.2",
     "@capacitor/geolocation": "8.2.0",
     "@capacitor/haptics": "8.0.2",
-    "@capacitor/splash-screen": "8.0.2"
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/push-notifications": "^8.0.0"
   },
   "devDependencies": {
     "@capacitor/assets": "3.0.5"
+  },
+  "scripts": {
+    "firebase:check": "node scripts/verify-google-services.mjs"
   }
 }

@@ -12,13 +12,105 @@ class PersonaController extends Controller
 {
     public function index(Request $request)
     {
-        return response()->json(
-            $this->consultaVisible($request)
-                ->with('imagenes')
-                ->orderByDesc('id')
-                ->get(),
-            200
+        $datos = $request->validate([
+            'paginated' => ['nullable', 'boolean'],
+            'q' => ['nullable', 'string', 'max:100'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => [
+                'nullable',
+                'integer',
+                'min:5',
+                'max:100',
+            ],
+        ]);
+
+        $consulta = $this->consultaVisible($request);
+
+        $texto = trim((string) ($datos['q'] ?? ''));
+
+        if ($texto !== '') {
+            $terminos = array_values(
+                array_filter(
+                    preg_split('/\\s+/u', $texto) ?: []
+                )
+            );
+
+            foreach (
+                array_slice($terminos, 0, 5)
+                as $termino
+            ) {
+                $consulta->where(
+                    function (
+                        Builder $query
+                    ) use (
+                        $termino
+                    ) {
+                        $patron = '%' . $termino . '%';
+
+                        $query
+                            ->where('nombre', 'like', $patron)
+                            ->orWhere('apellidos', 'like', $patron)
+                            ->orWhere('ci', 'like', $patron)
+                            ->orWhere('telefono', 'like', $patron)
+                            ->orWhere('direccion', 'like', $patron);
+                    }
+                );
+            }
+        }
+
+        $consulta
+            ->with('imagenes')
+            ->orderByDesc('id');
+
+        if (! $request->boolean('paginated')) {
+            return response()->json(
+                $consulta->get(),
+                200
+            );
+        }
+
+        $baseVisible = $this->consultaVisible(
+            $request
         );
+
+        $estadisticas = [
+            'total' => (clone $baseVisible)->count(),
+            'con_foto' => (clone $baseVisible)
+                ->whereHas('imagenes')
+                ->count(),
+            'con_telefono' => (clone $baseVisible)
+                ->whereNotNull('telefono')
+                ->where('telefono', '<>', '')
+                ->count(),
+        ];
+
+        $porPagina = (int) (
+            $datos['per_page'] ?? 20
+        );
+
+        $paginador = $consulta->paginate(
+            $porPagina
+        );
+
+        return response()->json([
+            'data' => $paginador->items(),
+            'meta' => [
+                'current_page' =>
+                    $paginador->currentPage(),
+                'last_page' =>
+                    $paginador->lastPage(),
+                'per_page' =>
+                    $paginador->perPage(),
+                'total' =>
+                    $paginador->total(),
+                'from' =>
+                    $paginador->firstItem(),
+                'to' =>
+                    $paginador->lastItem(),
+                'stats' =>
+                    $estadisticas,
+            ],
+        ], 200);
     }
 
     public function show(
@@ -72,6 +164,241 @@ class PersonaController extends Controller
 
         return response()->json(
             $persona,
+            200
+        );
+    }
+
+    public function opcionesMototaxista(
+        Request $request
+    ) {
+        $rol = $this->rol(
+            $request
+        );
+
+        if (! in_array($rol, [
+            'admin_general',
+            'admin_registro',
+            'secretario',
+        ], true)) {
+            abort(
+                403,
+                'No tienes autorización para buscar personas para afiliación.'
+            );
+        }
+
+        $datos = $request->validate([
+            'q' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+        ]);
+
+        $texto = trim(
+            (string) (
+                $datos['q'] ?? ''
+            )
+        );
+
+        if (
+            mb_strlen($texto) < 2
+        ) {
+            return response()->json(
+                [],
+                200
+            );
+        }
+
+        $terminos = array_values(
+            array_filter(
+                preg_split(
+                    '/\\s+/u',
+                    $texto
+                ) ?: []
+            )
+        );
+
+        if ($rol === 'secretario') {
+            $sindicatoId =
+                $this->sindicatoUsuario(
+                    $request
+                );
+
+            /*
+             * Para afiliar un nuevo mototaxista, el secretario
+             * puede buscar:
+             * - personas ya registradas dentro de su sindicato; o
+             * - personas del padrón general que todavía no hayan
+             *   sido vinculadas a ningún sindicato.
+             *
+             * Nunca se muestran personas vinculadas a otro
+             * sindicato ni personas que ya sean mototaxistas.
+             */
+            $consulta = Persona::query()
+                ->whereDoesntHave(
+                    'mototaxista'
+                )
+                ->where(
+                    function (
+                        Builder $query
+                    ) use (
+                        $sindicatoId
+                    ) {
+                        $query
+                            ->whereNull(
+                                'sindicato_registro_id'
+                            )
+                            ->orWhere(
+                                'sindicato_registro_id',
+                                $sindicatoId
+                            );
+                    }
+                );
+        } else {
+            $consulta = Persona::query()
+                ->whereDoesntHave(
+                    'mototaxista'
+                );
+        }
+
+        foreach (
+            array_slice(
+                $terminos,
+                0,
+                5
+            ) as $termino
+        ) {
+            $consulta->where(
+                function (
+                    Builder $query
+                ) use (
+                    $termino
+                ) {
+                    $patron =
+                        '%' . $termino . '%';
+
+                    $query
+                        ->where(
+                            'nombre',
+                            'like',
+                            $patron
+                        )
+                        ->orWhere(
+                            'apellidos',
+                            'like',
+                            $patron
+                        )
+                        ->orWhere(
+                            'ci',
+                            'like',
+                            $patron
+                        );
+                }
+            );
+        }
+
+        $personas = $consulta
+            ->select([
+                'id',
+                'nombre',
+                'apellidos',
+                'ci',
+                'telefono',
+            ])
+            ->orderBy(
+                'nombre'
+            )
+            ->orderBy(
+                'apellidos'
+            )
+            ->limit(8)
+            ->get();
+
+        return response()->json(
+            $personas,
+            200
+        );
+    }
+
+    public function opcionesPasajero(
+        Request $request
+    ) {
+        $rol = $this->rol($request);
+
+        if (! in_array($rol, [
+            'admin_general',
+            'admin_servicios',
+        ], true)) {
+            abort(
+                403,
+                'No tienes autorización para buscar personas para pasajeros.'
+            );
+        }
+
+        $datos = $request->validate([
+            'q' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+        ]);
+
+        $texto = trim(
+            (string) ($datos['q'] ?? '')
+        );
+
+        if (mb_strlen($texto) < 2) {
+            return response()->json(
+                [],
+                200
+            );
+        }
+
+        $terminos = array_values(
+            array_filter(
+                preg_split('/\\s+/u', $texto) ?: []
+            )
+        );
+
+        $consulta = $this
+            ->consultaVisible($request)
+            ->whereDoesntHave('pasajero');
+
+        foreach (
+            array_slice($terminos, 0, 5)
+            as $termino
+        ) {
+            $consulta->where(
+                function (
+                    Builder $query
+                ) use (
+                    $termino
+                ) {
+                    $patron = '%' . $termino . '%';
+
+                    $query
+                        ->where('nombre', 'like', $patron)
+                        ->orWhere('apellidos', 'like', $patron)
+                        ->orWhere('ci', 'like', $patron);
+                }
+            );
+        }
+
+        $personas = $consulta
+            ->select([
+                'id',
+                'nombre',
+                'apellidos',
+                'ci',
+                'telefono',
+            ])
+            ->orderBy('nombre')
+            ->orderBy('apellidos')
+            ->limit(8)
+            ->get();
+
+        return response()->json(
+            $personas,
             200
         );
     }
@@ -225,7 +552,10 @@ class PersonaController extends Controller
             $request
         );
 
-        if ($rol === 'admin_general') {
+        if (in_array($rol, [
+            'admin_general',
+            'admin_registro',
+        ], true)) {
             return $consulta;
         }
 

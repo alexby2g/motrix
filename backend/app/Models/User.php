@@ -25,6 +25,9 @@ class User extends Authenticatable
         'persona_id',
         'federacion_id',
         'sindicato_id',
+        'google_sub',
+        'google_avatar_url',
+        'google_linked_at',
     ];
 
     protected $hidden = [
@@ -42,6 +45,7 @@ class User extends Authenticatable
             'persona_id' => 'integer',
             'federacion_id' => 'integer',
             'sindicato_id' => 'integer',
+            'google_linked_at' => 'datetime',
         ];
     }
 
@@ -82,6 +86,14 @@ class User extends Authenticatable
         return $this->belongsTo(
             Sindicato::class,
             'sindicato_id'
+        );
+    }
+
+    public function pushDevices()
+    {
+        return $this->hasMany(
+            PushDevice::class,
+            'user_id'
         );
     }
 

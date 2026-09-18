@@ -253,6 +253,13 @@ class MensajeViajeController extends Controller
             )
         );
 
+        $rol = match ($rol) {
+            'admin',
+            'admin_general',
+            'admin_servicios' => 'admin',
+            default => $rol,
+        };
+
         if (!in_array(
             $rol,
             ['admin', 'pasajero', 'conductor'],

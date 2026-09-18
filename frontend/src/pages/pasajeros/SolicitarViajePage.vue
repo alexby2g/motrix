@@ -194,6 +194,50 @@
                           </div>
                         </div>
                       </div>
+
+                      <q-card
+                        v-if="requiereQrViajeActivo && viajeActivo?.mototaxista_id"
+                        flat
+                        bordered
+                        class="qr-pago-card q-mt-md"
+                      >
+                        <q-card-section class="text-center">
+                          <div class="text-subtitle1 text-weight-bold text-indigo-9">
+                            QR de cobro del mototaxista
+                          </div>
+                          <div class="text-caption text-grey-7 q-mb-md">
+                            Usa este QR para la parte digital del pago.
+                          </div>
+
+                          <img
+                            v-if="qrPagoConductorUrl"
+                            :src="qrPagoConductorUrl"
+                            alt="QR de cobro del mototaxista"
+                            class="qr-pago-image"
+                          >
+
+                          <q-banner
+                            v-else
+                            rounded
+                            class="bg-orange-1 text-orange-10 text-left"
+                          >
+                            Este mototaxista aún no registró un QR de cobro.
+                            Coordina el pago directamente con el conductor.
+                          </q-banner>
+
+                          <div
+                            v-if="qrPagoConductorUrl"
+                            class="q-mt-md"
+                          >
+                            <div class="text-weight-bold">
+                              {{ qrPagoMetodoConductor }}
+                            </div>
+                            <div class="text-caption text-grey-7">
+                              Titular: {{ qrPagoTitularConductor }}
+                            </div>
+                          </div>
+                        </q-card-section>
+                      </q-card>
                     </q-card-section>
                   </q-card>
                 </div>
@@ -210,8 +254,17 @@
                         size="78px"
                         :color="nombreConductor ? 'primary' : 'grey-4'"
                         :text-color="nombreConductor ? 'white' : 'grey-7'"
-                        icon="two_wheeler"
-                      />
+                        class="conductor-avatar"
+                        :class="{ 'cursor-pointer': Boolean(fotoConductorUrl) }"
+                        @click="abrirFotoConductor"
+                      >
+                        <img
+                          v-if="fotoConductorUrl"
+                          :src="fotoConductorUrl"
+                          :alt="`Foto de ${nombreConductor || 'mototaxista'}`"
+                        >
+                        <q-icon v-else name="two_wheeler" size="40px" />
+                      </q-avatar>
 
                       <div class="text-caption text-grey-6 q-mt-md">
                         Mototaxista asignado
@@ -232,6 +285,31 @@
                       </div>
 
                       <div
+                        v-if="nombreConductor"
+                        class="row items-center justify-center q-gutter-xs q-mt-xs"
+                      >
+                        <q-rating
+                          v-if="totalCalificacionesConductor > 0"
+                          :model-value="promedioCalificacionConductor"
+                          readonly
+                          size="20px"
+                          color="amber-7"
+                          icon="star_border"
+                          icon-selected="star"
+                        />
+                        <span
+                          v-if="totalCalificacionesConductor > 0"
+                          class="text-caption text-weight-bold text-grey-9"
+                        >
+                          {{ promedioCalificacionConductor.toFixed(1) }}
+                          ({{ totalCalificacionesConductor }})
+                        </span>
+                        <span v-else class="text-caption text-grey-6">
+                          Sin calificaciones
+                        </span>
+                      </div>
+
+                      <div
                         v-if="viajeActivo.mototaxista_id"
                         class="text-caption text-grey-6 q-mt-xs"
                       >
@@ -240,25 +318,6 @@
                       </div>
 
                       <q-separator class="q-my-md" />
-
-                      <q-btn
-                        v-if="chatDisponible"
-                        color="primary"
-                        icon="chat"
-                        label="Chat con el mototaxista"
-                        class="full-width text-weight-bold"
-                        unelevated
-                        @click="abrirChatViaje"
-                      >
-                        <q-badge
-                          v-if="chatNoLeidos > 0"
-                          color="negative"
-                          floating
-                          rounded
-                        >
-                          {{ chatNoLeidos > 99 ? '99+' : chatNoLeidos }}
-                        </q-badge>
-                      </q-btn>
 
                       <q-banner
                         v-if="incidenciaActiva"
@@ -284,6 +343,17 @@
                         class="full-width text-weight-bold q-mt-sm"
                         unelevated
                         @click="abrirDialogoSos"
+                      />
+
+                      <q-btn
+                        v-if="puedeMostrarSeguimiento"
+                        outline
+                        color="green-8"
+                        icon="share_location"
+                        label="Compartir seguimiento"
+                        class="full-width q-mt-sm"
+                        :loading="compartiendoViaje"
+                        @click="compartirViaje"
                       />
 
                       <q-btn
@@ -710,9 +780,10 @@
                     />
                   </template>
 
-                  Presiona una vez en el mapa para marcar el
-                  <strong>origen</strong> y una segunda vez para marcar
-                  el <strong>destino</strong>. Puedes arrastrar los marcadores.
+                  Marca tu <strong>origen</strong> en el mapa o usa tu
+                  ubicación actual. Para el <strong>destino</strong>, escribe
+                  una calle, barrio o lugar y pulsa buscar. También puedes
+                  marcar el destino directamente en el mapa.
                 </q-banner>
 
                 <div class="row q-col-gutter-lg">
@@ -748,14 +819,19 @@
                       />
 
                       <q-input
-                        v-model="form.destino"
+                        v-model="busquedaDestino"
                         outlined
+                        clearable
                         label="Punto de destino"
-                        readonly
+                        placeholder="Ej. Paitití, una calle o un lugar"
+                        :loading="buscandoDestino"
                         :rules="[
-                          valor => Boolean(valor) ||
-                            'Marca el destino en el mapa'
+                          () => Boolean(form.destino) ||
+                            'Busca y selecciona un destino o márcalo en el mapa'
                         ]"
+                        @update:model-value="alEditarBusquedaDestino"
+                        @keydown.enter.prevent="buscarDestino"
+                        @clear="limpiarDestinoSeleccionado(true)"
                       >
                         <template #prepend>
                           <q-icon
@@ -763,7 +839,72 @@
                             color="negative"
                           />
                         </template>
+
+                        <template #append>
+                          <q-btn
+                            round
+                            flat
+                            dense
+                            color="primary"
+                            icon="search"
+                            :loading="buscandoDestino"
+                            :disable="buscandoDestino"
+                            @click="buscarDestino"
+                          >
+                            <q-tooltip>Buscar destino en Trinidad</q-tooltip>
+                          </q-btn>
+                        </template>
                       </q-input>
+
+                      <q-card
+                        v-if="resultadosDestino.length"
+                        flat
+                        bordered
+                        class="destino-resultados"
+                      >
+                        <q-list separator>
+                          <q-item
+                            v-for="resultado in resultadosDestino"
+                            :key="resultado.id"
+                            clickable
+                            v-ripple
+                            class="destino-resultado"
+                            @click="seleccionarResultadoDestino(resultado)"
+                          >
+                            <q-item-section avatar>
+                              <q-avatar
+                                color="red-1"
+                                text-color="negative"
+                                icon="place"
+                              />
+                            </q-item-section>
+
+                            <q-item-section>
+                              <q-item-label class="text-weight-medium">
+                                {{ resultado.nombre }}
+                              </q-item-label>
+
+                              <q-item-label caption lines="2">
+                                {{ resultado.direccion }}
+                              </q-item-label>
+                            </q-item-section>
+                          </q-item>
+                        </q-list>
+                      </q-card>
+
+                      <q-banner
+                        v-else-if="busquedaDestinoRealizada && !buscandoDestino"
+                        dense
+                        rounded
+                        class="bg-orange-1 text-orange-10"
+                      >
+                        <template #avatar>
+                          <q-icon name="search_off" color="orange-9" />
+                        </template>
+
+                        No encontramos ese destino cerca de Trinidad. Prueba
+                        con otra referencia o márcalo manualmente en el mapa.
+                      </q-banner>
 
                       <div class="row q-col-gutter-sm">
                         <div class="col-12 col-sm-6">
@@ -814,7 +955,7 @@
                               </div>
 
                               <div class="text-h5 text-weight-bold text-positive">
-                                {{ formatearPrecio(form.precio) }}
+                                {{ distanciaKm > 0 ? formatearPrecio(form.precio) : '—' }}
                               </div>
                             </div>
 
@@ -843,9 +984,9 @@
                           <q-icon name="info" color="primary" />
                         </template>
 
-                        Tarifas: Bs. 5 hasta 1,2 km; Bs. 8 hasta 2,8 km;
-                        Bs. 10 para viajes más largos. De 22:00 a 06:00:
-                        Bs. 15.
+                        Tarifas de referencia en Trinidad: Bs. 6 hasta
+                        2 km; Bs. 8 hasta 4 km; Bs. 10 para viajes más largos.
+                        De 23:00 a 06:00: Bs. 15.
                       </q-banner>
                     </div>
                   </div>
@@ -1054,180 +1195,6 @@
       </q-card>
     </q-dialog>
 
-    <!-- CHAT EN TIEMPO REAL CON EL MOTOTAXISTA -->
-    <q-dialog
-      v-model="dialogChat"
-      :maximized="$q.screen.lt.sm"
-      transition-show="slide-up"
-      transition-hide="slide-down"
-      @hide="alCerrarChat"
-    >
-      <q-card class="chat-dialog-card column no-wrap">
-        <q-card-section class="bg-primary text-white row items-center no-wrap">
-          <q-avatar
-            color="white"
-            text-color="primary"
-            icon="two_wheeler"
-            size="46px"
-            class="q-mr-md"
-          />
-
-          <div class="col min-width-zero">
-            <div class="text-h6 text-weight-bold ellipsis">
-              Chat con {{ nombreConductor || 'el mototaxista' }}
-            </div>
-            <div class="text-caption text-blue-1">
-              Viaje #{{ viajeActivo?.id || '—' }} · {{ viajeActivo?.estado || 'Sin estado' }}
-            </div>
-          </div>
-
-          <q-chip
-            :color="websocketConectado ? 'positive' : 'orange-8'"
-            text-color="white"
-            :icon="websocketConectado ? 'sensors' : 'sync_problem'"
-            dense
-            class="q-mr-sm"
-          >
-            {{ websocketConectado ? 'EN VIVO' : 'RESPALDO' }}
-          </q-chip>
-
-          <q-btn
-            flat
-            round
-            dense
-            icon="close"
-            aria-label="Cerrar chat"
-            @click="dialogChat = false"
-          />
-        </q-card-section>
-
-        <q-linear-progress
-          v-if="chatCargando"
-          indeterminate
-          color="primary"
-        />
-
-        <div
-          ref="chatContenedor"
-          class="chat-messages col"
-        >
-          <div
-            v-if="!chatCargando && chatMensajes.length === 0"
-            class="column items-center justify-center text-center text-grey-6 chat-empty"
-          >
-            <q-icon name="forum" size="54px" color="grey-5" />
-            <div class="text-subtitle1 text-weight-bold q-mt-sm">
-              Todavía no hay mensajes
-            </div>
-            <div class="text-caption">
-              Puedes coordinar directamente con el mototaxista.
-            </div>
-          </div>
-
-          <div
-            v-for="mensaje in chatMensajes"
-            :key="mensaje.id"
-            class="chat-row"
-            :class="esMensajeChatPropio(mensaje) ? 'chat-row-own' : 'chat-row-other'"
-          >
-            <div
-              class="chat-bubble"
-              :class="esMensajeChatPropio(mensaje) ? 'chat-bubble-own' : 'chat-bubble-other'"
-            >
-              <div
-                v-if="!esMensajeChatPropio(mensaje)"
-                class="text-caption text-weight-bold text-primary q-mb-xs"
-              >
-                {{ mensaje.remitente_nombre || 'Mototaxista' }}
-              </div>
-
-              <div class="text-body2 chat-message-text">
-                {{ mensaje.mensaje }}
-              </div>
-
-              <div class="chat-message-time">
-                {{ formatearHoraChat(mensaje.creado_en) }}
-                <q-icon
-                  v-if="esMensajeChatPropio(mensaje)"
-                  :name="mensaje.leido_conductor_en ? 'done_all' : 'done'"
-                  :color="mensaje.leido_conductor_en ? 'light-blue-7' : 'grey-6'"
-                  size="16px"
-                  class="q-ml-xs"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <q-separator />
-
-        <q-card-section class="q-py-sm bg-grey-1">
-          <div class="text-caption text-grey-7 q-mb-xs">
-            Mensajes rápidos
-          </div>
-
-          <div class="row q-gutter-xs no-wrap chat-quick-scroll">
-            <q-btn
-              v-for="texto in mensajesRapidosPasajero"
-              :key="texto"
-              outline
-              rounded
-              no-caps
-              dense
-              color="primary"
-              :label="texto"
-              :disable="chatEnviando || !chatHabilitado"
-              @click="enviarMensajeChat(texto)"
-            />
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-sm">
-          <q-banner
-            v-if="!chatHabilitado"
-            rounded
-            class="bg-orange-1 text-orange-10 q-mb-sm"
-          >
-            El chat está cerrado porque el viaje finalizó o fue cancelado.
-          </q-banner>
-
-          <div class="row items-end q-col-gutter-sm">
-            <div class="col">
-              <q-input
-                v-model="chatTexto"
-                outlined
-                autogrow
-                type="textarea"
-                maxlength="1000"
-                counter
-                label="Escribe un mensaje"
-                :disable="!chatHabilitado || chatEnviando"
-                @keydown.enter.exact.prevent="enviarMensajeChat()"
-              >
-                <template #prepend>
-                  <q-icon name="message" color="primary" />
-                </template>
-              </q-input>
-            </div>
-
-            <div class="col-auto">
-              <q-btn
-                round
-                color="primary"
-                icon="send"
-                size="lg"
-                :loading="chatEnviando"
-                :disable="!chatHabilitado || !chatTexto.trim()"
-                @click="enviarMensajeChat()"
-              >
-                <q-tooltip>Enviar mensaje</q-tooltip>
-              </q-btn>
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
-
     <!-- NOTIFICACIÓN DESTACADA DEL ESTADO DEL VIAJE -->
     <q-dialog
       v-model="dialogNotificacion"
@@ -1272,19 +1239,46 @@
             class="bg-blue-1 text-primary q-mt-md"
           >
             <template #avatar>
-              <q-icon
-                name="two_wheeler"
-                color="primary"
-                size="28px"
-              />
+              <q-avatar
+                size="58px"
+                color="white"
+                text-color="primary"
+                class="text-weight-bold"
+              >
+                <img
+                  v-if="notificacionActual.foto && !notificacionFotoError"
+                  :src="notificacionActual.foto"
+                  :alt="`Foto de ${notificacionActual.conductor}`"
+                  @error="notificacionFotoError = true"
+                />
+
+                <span v-else>
+                  {{ notificacionActual.iniciales || 'MT' }}
+                </span>
+              </q-avatar>
             </template>
 
             <div class="text-caption">
-              Mototaxista
+              Mototaxista asignado
             </div>
 
             <div class="text-subtitle1 text-weight-bold">
               {{ notificacionActual.conductor }}
+            </div>
+
+            <div
+              v-if="notificacionActual.sindicato"
+              class="text-body2 q-mt-xs"
+            >
+              <q-icon name="groups" size="17px" class="q-mr-xs" />
+              Sindicato {{ notificacionActual.sindicato }}
+            </div>
+
+            <div
+              v-if="notificacionActual.chaleco"
+              class="text-caption q-mt-xs"
+            >
+              N.º de chaleco: {{ notificacionActual.chaleco }}
             </div>
           </q-banner>
         </q-card-section>
@@ -1303,10 +1297,18 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <PhotoViewerDialog
+      v-model="visorFotoConductor"
+      :src="fotoConductorUrl"
+      :title="nombreConductor || 'Mototaxista MOTRIX'"
+    />
   </q-page>
 </template>
 
 <script setup>
+import { fechaDDMMYYYY, fechaISOHoyBolivia } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   nextTick,
@@ -1327,7 +1329,7 @@ import 'leaflet/dist/leaflet.css'
 
 import { api } from '../../boot/axios.js'
 import { BROADCAST_AUTH_URL, echoOptions } from '../../config/runtime.js'
-
+import PhotoViewerDialog from '../../components/PhotoViewerDialog.vue'
 window.Pusher = Pusher
 
 const $q = useQuasar()
@@ -1340,11 +1342,27 @@ const PASAJERO_ID = Number(
 const LAT_TRINIDAD = -14.8308
 const LNG_TRINIDAD = -64.9024
 
+const TARIFA_CORTA_MAX_KM = 2
+const TARIFA_MEDIA_MAX_KM = 4
+const TARIFA_CORTA_BS = 6
+const TARIFA_MEDIA_BS = 8
+const TARIFA_LARGA_BS = 10
+const TARIFA_NOCTURNA_BS = 15
+const HORA_INICIO_NOCTURNA = 23
+const HORA_FIN_NOCTURNA = 6
+
+const RADIO_BUSQUEDA_TRINIDAD_KM = 35
+const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search'
+
 const cargandoInicial = ref(true)
 const cargandoViaje = ref(false)
 const enviando = ref(false)
 const cancelando = ref(false)
 const obteniendoUbicacion = ref(false)
+const buscandoDestino = ref(false)
+const busquedaDestino = ref('')
+const resultadosDestino = ref([])
+const busquedaDestinoRealizada = ref(false)
 
 const viajeActivo = ref(null)
 const viajeFinalizado = ref(null)
@@ -1355,15 +1373,9 @@ const distanciaKm = ref(0)
 
 const dialogNotificacion = ref(false)
 const websocketConectado = ref(false)
+const visorFotoConductor = ref(false)
+const compartiendoViaje = ref(false)
 
-const dialogChat = ref(false)
-const chatMensajes = ref([])
-const chatTexto = ref('')
-const chatCargando = ref(false)
-const chatEnviando = ref(false)
-const chatHabilitado = ref(false)
-const chatNoLeidos = ref(0)
-const chatContenedor = ref(null)
 
 const dialogSos = ref(false)
 const sosTipo = ref('')
@@ -1387,20 +1399,19 @@ const tiposIncidenciaPasajero = [
   'Otro'
 ]
 
-const mensajesRapidosPasajero = [
-  'Ya estoy en el punto de recogida',
-  'No encuentro la moto',
-  'Espérame un momento',
-  'Voy saliendo'
-]
 const notificacionActual = ref({
   solicitudId: null,
   titulo: '',
   mensaje: '',
   conductor: '',
+  sindicato: '',
+  chaleco: '',
+  foto: '',
+  iniciales: '',
   icono: 'notifications_active',
   color: 'primary'
 })
+const notificacionFotoError = ref(false)
 
 const distanciaSeguimientoKm = ref(null)
 const tiempoSeguimientoMin = ref(null)
@@ -1410,19 +1421,22 @@ const origenCoords = ref(null)
 const destinoCoords = ref(null)
 
 let mapa = null
+let inicializandoMapa = false
 let marcadorOrigen = null
 let marcadorDestino = null
 let lineaRuta = null
 
 let mapaSeguimiento = null
+let inicializandoMapaSeguimiento = false
 let marcadorConductorSeguimiento = null
 let marcadorOrigenSeguimiento = null
 let marcadorDestinoSeguimiento = null
 let lineaRutaSeguimiento = null
 let ultimaClaveRutaSeguimiento = null
 let intervaloActualizacion = null
-let intervaloChat = null
-let canalChatSolicitudId = null
+let intervaloIncidencias = null
+let cargaViajeEnCurso = false
+let ultimaSincronizacionViaje = 0
 let canalIncidenciasSolicitudId = null
 let echoInstance = null
 let audioContexto = null
@@ -1438,23 +1452,22 @@ const metodosPago = [
   {
     label: 'Pago por QR',
     value: 'QR'
+  },
+  {
+    label: 'Pago mixto: efectivo + QR',
+    value: 'Mixto'
   }
 ]
 
 function obtenerFechaActual() {
-  const fecha = new Date()
-  const year = fecha.getFullYear()
-  const month = String(fecha.getMonth() + 1).padStart(2, '0')
-  const day = String(fecha.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
+  return fechaISOHoyBolivia()
 }
 
 const form = reactive({
   origen: '',
   destino: '',
   fecha: obtenerFechaActual(),
-  precio: 8,
+  precio: TARIFA_CORTA_BS,
   metodo_pago: 'Efectivo'
 })
 
@@ -1596,20 +1609,137 @@ const bannerEstadoClase = computed(() => {
   return 'bg-grey-2 text-grey-9'
 })
 
-const nombreConductor = computed(() => {
+function nombreCompletoPersona(persona) {
+  const nombreCompleto = String(
+    persona?.nombre_completo || ''
+  ).trim()
+
+  if (nombreCompleto) return nombreCompleto
+
+  const nombre = String(persona?.nombre || '').trim()
+  const apellidos = String(persona?.apellidos || '').trim()
+
+  return [nombre, apellidos]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+}
+
+function resolverUrlImagenPersona(ruta) {
+  const valor = String(ruta || '').trim()
+
+  if (!valor) return ''
+
+  if (/^https?:\/\//i.test(valor)) {
+    return valor
+  }
+
+  const baseApi = String(api.defaults.baseURL || '')
+    .replace(/\/api\/?$/i, '')
+    .replace(/\/$/, '')
+
+  let limpia = valor
+    .replace(/^\/+/, '')
+    .replace(/^public\//i, '')
+
+  if (limpia.startsWith('storage/')) {
+    return `${baseApi}/${limpia}`
+  }
+
+  return `${baseApi}/storage/${limpia}`
+}
+
+function fotoPersonaUrl(persona) {
+  const imagenes = Array.isArray(persona?.imagenes)
+    ? [...persona.imagenes]
+    : []
+
+  imagenes.sort(
+    (a, b) => Number(b?.id || 0) - Number(a?.id || 0)
+  )
+
+  const ruta = (
+    imagenes[0]?.ruta
+    || persona?.foto
+    || persona?.imagen
+    || persona?.foto_url
+    || persona?.imagen_url
+    || ''
+  )
+
+  return resolverUrlImagenPersona(ruta)
+}
+
+function inicialesNombre(nombre) {
+  const partes = String(nombre || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+
+  if (!partes.length) return 'MT'
+
   return (
-    viajeActivo.value?.mototaxista?.persona?.nombre
-    || viajeActivo.value?.mototaxista?.persona?.nombre_completo
+    (partes[0]?.charAt(0) || '')
+    + (partes.length > 1
+      ? partes[partes.length - 1]?.charAt(0)
+      : '')
+  ).toUpperCase()
+}
+
+const nombreConductor = computed(() => {
+  const persona = viajeActivo.value?.mototaxista?.persona
+
+  return (
+    nombreCompletoPersona(persona)
     || viajeActivo.value?.mototaxista?.nombre
     || null
   )
 })
 
-/*
- * El chat se conserva programado, pero permanece oculto
- * temporalmente por decisión de alcance del proyecto.
- */
-const chatDisponible = computed(() => false)
+const fotoConductorUrl = computed(() => {
+  return fotoPersonaUrl(viajeActivo.value?.mototaxista?.persona)
+})
+
+const requiereQrViajeActivo = computed(() => {
+  return ['QR', 'Transferencia / QR', 'Mixto'].includes(
+    String(viajeActivo.value?.metodo_pago || '')
+  )
+})
+
+const qrPagoConductorUrl = computed(() => {
+  return resolverUrlImagenPersona(
+    viajeActivo.value?.mototaxista?.qr_pago_ruta
+  )
+})
+
+const qrPagoMetodoConductor = computed(() => {
+  return String(
+    viajeActivo.value?.mototaxista?.qr_pago_metodo
+    || 'QR / billetera móvil'
+  )
+})
+
+const qrPagoTitularConductor = computed(() => {
+  return String(
+    viajeActivo.value?.mototaxista?.qr_pago_titular
+    || nombreConductor.value
+    || 'Mototaxista MOTRIX'
+  )
+})
+
+const promedioCalificacionConductor = computed(() => {
+  return Number(viajeActivo.value?.mototaxista?.promedio_calificacion || 0)
+})
+
+const totalCalificacionesConductor = computed(() => {
+  return Number(viajeActivo.value?.mototaxista?.total_calificaciones || 0)
+})
+
+function abrirFotoConductor() {
+  if (fotoConductorUrl.value) {
+    visorFotoConductor.value = true
+  }
+}
 
 const sosDisponible = computed(() => {
   const estado = String(viajeActivo.value?.estado || '')
@@ -1621,9 +1751,10 @@ const sosDisponible = computed(() => {
 })
 
 const nombreConductorFinalizado = computed(() => {
+  const persona = viajeFinalizado.value?.mototaxista?.persona
+
   return (
-    viajeFinalizado.value?.mototaxista?.persona?.nombre
-    || viajeFinalizado.value?.mototaxista?.persona?.nombre_completo
+    nombreCompletoPersona(persona)
     || viajeFinalizado.value?.mototaxista?.nombre
     || 'Mototaxista no identificado'
   )
@@ -1777,23 +1908,7 @@ function formatearDistancia(distancia) {
 }
 
 function formatearFecha(fecha) {
-  if (!fecha) {
-    return 'Fecha no registrada'
-  }
-
-  const valor = String(fecha).includes('T')
-    ? new Date(fecha)
-    : new Date(`${fecha}T00:00:00`)
-
-  if (Number.isNaN(valor.getTime())) {
-    return String(fecha)
-  }
-
-  return new Intl.DateTimeFormat('es-BO', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  }).format(valor)
+  return fechaDDMMYYYY(fecha, 'Fecha no registrada')
 }
 
 function extraerMensajeError(error) {
@@ -1816,23 +1931,27 @@ function extraerMensajeError(error) {
 
 function calcularTarifa() {
   const hora = new Date().getHours()
+  const esNocturno = (
+    hora >= HORA_INICIO_NOCTURNA
+    || hora < HORA_FIN_NOCTURNA
+  )
 
-  if (hora >= 22 || hora < 6) {
-    form.precio = 15
+  if (esNocturno) {
+    form.precio = TARIFA_NOCTURNA_BS
     return
   }
 
-  if (distanciaKm.value <= 1.2) {
-    form.precio = 5
+  if (distanciaKm.value <= TARIFA_CORTA_MAX_KM) {
+    form.precio = TARIFA_CORTA_BS
     return
   }
 
-  if (distanciaKm.value <= 2.8) {
-    form.precio = 8
+  if (distanciaKm.value <= TARIFA_MEDIA_MAX_KM) {
+    form.precio = TARIFA_MEDIA_BS
     return
   }
 
-  form.precio = 10
+  form.precio = TARIFA_LARGA_BS
 }
 
 function numeroSeguro(valor) {
@@ -1925,6 +2044,7 @@ function destruirMapaSeguimiento() {
   }
 
   mapaSeguimiento = null
+  inicializandoMapaSeguimiento = false
   marcadorConductorSeguimiento = null
   marcadorOrigenSeguimiento = null
   marcadorDestinoSeguimiento = null
@@ -1936,7 +2056,11 @@ function destruirMapaSeguimiento() {
 }
 
 function inicializarMapaSeguimiento() {
-  if (mapaSeguimiento || !puedeMostrarSeguimiento.value) {
+  if (
+    mapaSeguimiento
+    || inicializandoMapaSeguimiento
+    || !puedeMostrarSeguimiento.value
+  ) {
     return
   }
 
@@ -1944,30 +2068,34 @@ function inicializarMapaSeguimiento() {
     'mapa-seguimiento-pasajero'
   )
 
-  if (!contenedor) {
-    return
+  if (!contenedor) return
+
+  inicializandoMapaSeguimiento = true
+
+  try {
+    if (contenedor._leaflet_id) {
+      contenedor._leaflet_id = null
+    }
+
+    mapaSeguimiento = L.map(
+      contenedor,
+      { zoomControl: true }
+    ).setView(
+      [LAT_TRINIDAD, LNG_TRINIDAD],
+      14
+    )
+
+    L.tileLayer(
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      { attribution: '© OpenStreetMap' }
+    ).addTo(mapaSeguimiento)
+
+    setTimeout(() => {
+      mapaSeguimiento?.invalidateSize()
+    }, 200)
+  } finally {
+    inicializandoMapaSeguimiento = false
   }
-
-  mapaSeguimiento = L.map(
-    contenedor,
-    {
-      zoomControl: true
-    }
-  ).setView(
-    [LAT_TRINIDAD, LNG_TRINIDAD],
-    14
-  )
-
-  L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {
-      attribution: '© OpenStreetMap'
-    }
-  ).addTo(mapaSeguimiento)
-
-  setTimeout(() => {
-    mapaSeguimiento?.invalidateSize()
-  }, 200)
 }
 
 function actualizarMarcadorSeguimiento(
@@ -2222,6 +2350,75 @@ function crearIconoMarcador(tipo) {
   })
 }
 
+function formatearDireccionNominatim(datos) {
+  const direccion = datos?.address || {}
+
+  const via = String(
+    direccion.road
+    || direccion.pedestrian
+    || direccion.residential
+    || direccion.footway
+    || direccion.path
+    || ''
+  ).trim()
+
+  const numero = String(
+    direccion.house_number || ''
+  ).trim()
+
+  const zona = String(
+    direccion.neighbourhood
+    || direccion.suburb
+    || direccion.quarter
+    || direccion.city_district
+    || direccion.borough
+    || ''
+  ).trim()
+
+  const ciudad = String(
+    direccion.city
+    || direccion.town
+    || direccion.village
+    || direccion.municipality
+    || 'Trinidad'
+  ).trim()
+
+  const calle = [via, numero]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+
+  const partes = [calle, zona, ciudad]
+    .filter(Boolean)
+    .filter(
+      (valor, indice, lista) =>
+        lista.findIndex(
+          (otro) =>
+            otro.toLocaleLowerCase('es')
+            === valor.toLocaleLowerCase('es')
+        ) === indice
+    )
+
+  if (partes.length >= 2) {
+    return partes.join(', ')
+  }
+
+  const displayName = String(
+    datos?.display_name || ''
+  ).trim()
+
+  if (displayName) {
+    return displayName
+      .split(',')
+      .map((parte) => parte.trim())
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(', ')
+  }
+
+  return ''
+}
+
 async function obtenerDireccion(lat, lng) {
   try {
     const respuesta = await axios.get(
@@ -2230,18 +2427,19 @@ async function obtenerDireccion(lat, lng) {
         params: {
           lat,
           lon: lng,
-          format: 'json',
-          addressdetails: 1
+          format: 'jsonv2',
+          addressdetails: 1,
+          zoom: 18
         }
       }
     )
 
-    if (respuesta.data?.display_name) {
-      return respuesta.data.display_name
-        .split(',')
-        .slice(0, 3)
-        .join(',')
-        .trim()
+    const direccion = formatearDireccionNominatim(
+      respuesta.data
+    )
+
+    if (direccion) {
+      return direccion
     }
   } catch (error) {
     console.error('Error obteniendo dirección:', error)
@@ -2286,7 +2484,176 @@ async function colocarOrigen(lat, lng) {
   }
 }
 
-async function colocarDestino(lat, lng) {
+function nombreResultadoDestino(resultado) {
+  const direccion = resultado?.address || {}
+
+  return String(
+    resultado?.name
+    || direccion?.road
+    || direccion?.pedestrian
+    || direccion?.neighbourhood
+    || direccion?.suburb
+    || direccion?.quarter
+    || direccion?.amenity
+    || direccion?.shop
+    || resultado?.display_name?.split(',')?.[0]
+    || 'Destino encontrado'
+  ).trim()
+}
+
+function direccionResultadoDestino(resultado) {
+  const direccionCorta = formatearDireccionNominatim(resultado)
+
+  if (direccionCorta) {
+    return direccionCorta
+  }
+
+  return 'Trinidad, Beni, Bolivia'
+}
+
+function limpiarDestinoSeleccionado(limpiarBusqueda = true) {
+  eliminarMarcador(marcadorDestino)
+
+  if (mapa && lineaRuta) {
+    mapa.removeLayer(lineaRuta)
+  }
+
+  marcadorDestino = null
+  lineaRuta = null
+  destinoCoords.value = null
+  distanciaKm.value = 0
+  form.destino = ''
+  form.precio = TARIFA_CORTA_BS
+
+  resultadosDestino.value = []
+  busquedaDestinoRealizada.value = false
+
+  if (limpiarBusqueda) {
+    busquedaDestino.value = ''
+  }
+
+  if (mapa && origenCoords.value) {
+    mapa.setView(origenCoords.value, 16)
+  }
+}
+
+function alEditarBusquedaDestino(valor) {
+  resultadosDestino.value = []
+  busquedaDestinoRealizada.value = false
+
+  const texto = String(valor || '').trim()
+  const destinoActual = String(form.destino || '').trim()
+
+  if (
+    destinoActual
+    && texto !== destinoActual
+  ) {
+    limpiarDestinoSeleccionado(false)
+  }
+}
+
+async function buscarDestino() {
+  const consulta = String(busquedaDestino.value || '').trim()
+
+  if (consulta.length < 3) {
+    $q.notify({
+      type: 'warning',
+      message: 'Escribe al menos 3 caracteres para buscar el destino.'
+    })
+    return
+  }
+
+  buscandoDestino.value = true
+  resultadosDestino.value = []
+  busquedaDestinoRealizada.value = false
+
+  try {
+    const respuesta = await axios.get(
+      NOMINATIM_SEARCH_URL,
+      {
+        params: {
+          q: `${consulta}, Trinidad, Beni, Bolivia`,
+          format: 'jsonv2',
+          addressdetails: 1,
+          limit: 5,
+          countrycodes: 'bo',
+          'accept-language': 'es',
+          viewbox: '-65.02,-14.74,-64.80,-14.95'
+        }
+      }
+    )
+
+    const resultados = Array.isArray(respuesta.data)
+      ? respuesta.data
+      : []
+
+    resultadosDestino.value = resultados
+      .map((resultado) => {
+        const lat = Number.parseFloat(resultado?.lat)
+        const lng = Number.parseFloat(resultado?.lon)
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          return null
+        }
+
+        const distanciaCentro = calcularDistanciaRecta(
+          [LAT_TRINIDAD, LNG_TRINIDAD],
+          [lat, lng]
+        )
+
+        if (distanciaCentro > RADIO_BUSQUEDA_TRINIDAD_KM) {
+          return null
+        }
+
+        return {
+          id: resultado?.place_id || `${lat}-${lng}`,
+          lat,
+          lng,
+          nombre: nombreResultadoDestino(resultado),
+          direccion: direccionResultadoDestino(resultado)
+        }
+      })
+      .filter(Boolean)
+
+    busquedaDestinoRealizada.value = true
+  } catch (error) {
+    console.error('Error buscando destino:', error)
+
+    busquedaDestinoRealizada.value = true
+
+    $q.notify({
+      type: 'warning',
+      message: 'No se pudo buscar el destino en este momento. Puedes marcarlo manualmente en el mapa.'
+    })
+  } finally {
+    buscandoDestino.value = false
+  }
+}
+
+async function seleccionarResultadoDestino(resultado) {
+  if (!resultado) {
+    return
+  }
+
+  resultadosDestino.value = []
+  busquedaDestinoRealizada.value = false
+  busquedaDestino.value = resultado.direccion
+
+  await colocarDestino(
+    resultado.lat,
+    resultado.lng,
+    resultado.direccion
+  )
+
+  if (!origenCoords.value) {
+    mapa?.setView(
+      [resultado.lat, resultado.lng],
+      16
+    )
+  }
+}
+
+async function colocarDestino(lat, lng, direccionConocida = null) {
   destinoCoords.value = [lat, lng]
   form.destino = 'Obteniendo dirección...'
 
@@ -2305,7 +2672,12 @@ async function colocarDestino(lat, lng) {
     await colocarDestino(posicion.lat, posicion.lng)
   })
 
-  form.destino = await obtenerDireccion(lat, lng)
+  form.destino = direccionConocida
+    || await obtenerDireccion(lat, lng)
+
+  busquedaDestino.value = form.destino
+  resultadosDestino.value = []
+  busquedaDestinoRealizada.value = false
 
   marcadorDestino
     .bindPopup(form.destino)
@@ -2317,7 +2689,11 @@ async function colocarDestino(lat, lng) {
 }
 
 function inicializarMapa() {
-  if (mapa || viajeActivo.value) {
+  if (
+    mapa
+    || inicializandoMapa
+    || viajeActivo.value
+  ) {
     return
   }
 
@@ -2325,44 +2701,50 @@ function inicializarMapa() {
     'mapa-viaje-pasajero'
   )
 
-  if (!contenedor) {
-    return
-  }
+  if (!contenedor) return
 
-  mapa = L.map(contenedor).setView(
-    [LAT_TRINIDAD, LNG_TRINIDAD],
-    14
-  )
+  inicializandoMapa = true
 
-  L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {
-      attribution: '© OpenStreetMap'
-    }
-  ).addTo(mapa)
-
-  mapa.on('click', async (evento) => {
-    const { lat, lng } = evento.latlng
-
-    if (!origenCoords.value) {
-      await colocarOrigen(lat, lng)
-      return
+  try {
+    if (contenedor._leaflet_id) {
+      contenedor._leaflet_id = null
     }
 
-    if (!destinoCoords.value) {
-      await colocarDestino(lat, lng)
-      return
-    }
+    mapa = L.map(contenedor).setView(
+      [LAT_TRINIDAD, LNG_TRINIDAD],
+      14
+    )
 
-    $q.notify({
-      type: 'info',
-      message: 'Reinicia el mapa para seleccionar una nueva ruta.'
+    L.tileLayer(
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      { attribution: '© OpenStreetMap' }
+    ).addTo(mapa)
+
+    mapa.on('click', async (evento) => {
+      const { lat, lng } = evento.latlng
+
+      if (!origenCoords.value) {
+        await colocarOrigen(lat, lng)
+        return
+      }
+
+      if (!destinoCoords.value) {
+        await colocarDestino(lat, lng)
+        return
+      }
+
+      $q.notify({
+        type: 'info',
+        message: 'Reinicia el mapa para seleccionar una nueva ruta.'
+      })
     })
-  })
 
-  setTimeout(() => {
-    mapa?.invalidateSize()
-  }, 200)
+    setTimeout(() => {
+      mapa?.invalidateSize()
+    }, 200)
+  } finally {
+    inicializandoMapa = false
+  }
 }
 
 async function obtenerRuta() {
@@ -2458,7 +2840,11 @@ function limpiarMapa() {
 
   form.origen = ''
   form.destino = ''
-  form.precio = 8
+  form.precio = TARIFA_CORTA_BS
+
+  busquedaDestino.value = ''
+  resultadosDestino.value = []
+  busquedaDestinoRealizada.value = false
 
   mapa?.setView(
     [LAT_TRINIDAD, LNG_TRINIDAD],
@@ -2521,13 +2907,26 @@ function obtenerPasajeroIdSolicitud(solicitud) {
   )
 }
 
-function obtenerNombreConductorSolicitud(solicitud) {
-  return (
-    solicitud?.mototaxista?.persona?.nombre
-    || solicitud?.mototaxista?.persona?.nombre_completo
-    || solicitud?.mototaxista?.nombre
+function obtenerDetalleConductorSolicitud(solicitud) {
+  const mototaxista = solicitud?.mototaxista || {}
+  const persona = mototaxista?.persona || {}
+  const nombre = (
+    nombreCompletoPersona(persona)
+    || mototaxista?.nombre
     || ''
   )
+
+  return {
+    nombre,
+    sindicato: String(
+      mototaxista?.sindicato?.nombre || ''
+    ).trim(),
+    chaleco: String(
+      mototaxista?.nro_chaleco || ''
+    ).trim(),
+    foto: fotoPersonaUrl(persona),
+    iniciales: inicialesNombre(nombre)
+  }
 }
 
 function firmaEstadoSolicitud(solicitud) {
@@ -2654,8 +3053,16 @@ function construirNotificacionEstado(
   tipo = 'estado_actualizado'
 ) {
   const estado = normalizarEstadoSolicitud(solicitud)
-  const conductor = obtenerNombreConductorSolicitud(solicitud)
+  const detalleConductor = obtenerDetalleConductorSolicitud(solicitud)
+  const conductor = detalleConductor.nombre
   const solicitudId = Number(solicitud?.id || 0)
+  const datosConductorNotificacion = {
+    conductor,
+    sindicato: detalleConductor.sindicato,
+    chaleco: detalleConductor.chaleco,
+    foto: detalleConductor.foto,
+    iniciales: detalleConductor.iniciales
+  }
 
   if (
     estado === 'buscando conductor'
@@ -2670,7 +3077,7 @@ function construirNotificacionEstado(
         mensaje: conductor
           ? `${conductor} recibió tu solicitud y debe confirmarla.`
           : 'Un mototaxista recibió tu solicitud y debe confirmarla.',
-        conductor,
+        ...datosConductorNotificacion,
         icono: 'person_search',
         color: 'orange-8',
         destacada: true
@@ -2686,6 +3093,10 @@ function construirNotificacionEstado(
         ? 'El conductor anterior no pudo atenderte. MOTRIX continúa buscando otro mototaxista.'
         : 'Tu solicitud fue enviada. Estamos buscando al conductor disponible más cercano.',
       conductor: '',
+      sindicato: '',
+      chaleco: '',
+      foto: '',
+      iniciales: '',
       icono: 'travel_explore',
       color: 'orange-8',
       destacada: false
@@ -2699,7 +3110,7 @@ function construirNotificacionEstado(
       mensaje: conductor
         ? `${conductor} aceptó el viaje y se dirige a recogerte.`
         : 'El mototaxista aceptó el viaje y se dirige a recogerte.',
-      conductor,
+      ...datosConductorNotificacion,
       icono: 'two_wheeler',
       color: 'primary',
       destacada: true
@@ -2713,7 +3124,7 @@ function construirNotificacionEstado(
       mensaje: conductor
         ? `${conductor} ya está en el punto de recogida.`
         : 'El mototaxista ya está en el punto de recogida.',
-      conductor,
+      ...datosConductorNotificacion,
       icono: 'person_pin_circle',
       color: 'positive',
       destacada: true
@@ -2725,7 +3136,7 @@ function construirNotificacionEstado(
       solicitudId,
       titulo: 'Viaje iniciado',
       mensaje: 'Tu viaje está en curso. Puedes seguir el recorrido desde el mapa.',
-      conductor,
+      ...datosConductorNotificacion,
       icono: 'navigation',
       color: 'indigo-9',
       destacada: true
@@ -2737,7 +3148,7 @@ function construirNotificacionEstado(
       solicitudId,
       titulo: 'Viaje finalizado',
       mensaje: 'El viaje terminó correctamente. Revisa el resumen y califica la atención.',
-      conductor,
+      ...datosConductorNotificacion,
       icono: 'check_circle',
       color: 'positive',
       destacada: true
@@ -2750,7 +3161,7 @@ function construirNotificacionEstado(
       titulo: 'Viaje cancelado',
       mensaje: solicitud?.motivo_cancelacion
         || 'El viaje fue cancelado.',
-      conductor,
+      ...datosConductorNotificacion,
       icono: 'cancel',
       color: 'negative',
       destacada: true
@@ -2763,6 +3174,10 @@ function construirNotificacionEstado(
       titulo: 'Solicitud expirada',
       mensaje: 'No se confirmó un conductor dentro del tiempo disponible. Puedes realizar una nueva solicitud.',
       conductor: '',
+      sindicato: '',
+      chaleco: '',
+      foto: '',
+      iniciales: '',
       icono: 'timer_off',
       color: 'negative',
       destacada: true
@@ -2801,6 +3216,7 @@ async function mostrarNotificacionEstado(
     return
   }
 
+  notificacionFotoError.value = false
   notificacionActual.value = notificacion
 
   $q.notify({
@@ -2846,6 +3262,7 @@ async function aplicarSolicitudTiempoReal(
   }
 
   const estado = normalizarEstadoSolicitud(solicitud)
+  ultimaSincronizacionViaje = Date.now()
 
   if (estado === 'finalizado') {
     viajeActivo.value = null
@@ -2883,17 +3300,26 @@ async function procesarEventoSolicitud(
   solicitud,
   tipo = 'estado_actualizado'
 ) {
+  if (
+    !solicitud?.id
+    || obtenerPasajeroIdSolicitud(solicitud) !== PASAJERO_ID
+  ) {
+    return
+  }
+
+  /*
+   * Los eventos de Echo se usan solo como señal de actualización.
+   * La solicitud vigente siempre se vuelve a consultar al backend para
+   * evitar que un evento atrasado reemplace un viaje ya aceptado por
+   * otro conductor.
+   */
   const notificar = tipo !== 'cancelado_por_pasajero'
 
-  await aplicarSolicitudTiempoReal(
-    solicitud,
-    tipo,
-    notificar
-  )
+  await cargarViajeActivo(true, notificar, tipo)
 }
 
 
-function obtenerEndpointAutorizacionChat() {
+function obtenerEndpointAutorizacionRealtime() {
   const baseConfigurada = String(
     api?.defaults?.baseURL || ''
   ).trim().replace(/\/+$/, '')
@@ -2905,7 +3331,7 @@ function obtenerEndpointAutorizacionChat() {
   return BROADCAST_AUTH_URL
 }
 
-function obtenerCabecerasAutorizacionChat() {
+function obtenerCabecerasAutorizacionRealtime() {
   const token = localStorage.getItem('motrix_token') || ''
 
   return {
@@ -2914,253 +3340,6 @@ function obtenerCabecerasAutorizacionChat() {
       ? { Authorization: `Bearer ${token}` }
       : {})
   }
-}
-
-function esMensajeChatPropio(mensaje) {
-  return String(mensaje?.remitente_tipo || '').toLowerCase() === 'pasajero'
-}
-
-function formatearHoraChat(fecha) {
-  if (!fecha) return ''
-
-  const normalizada = String(fecha).includes('T')
-    ? String(fecha)
-    : String(fecha).replace(' ', 'T')
-
-  const valor = new Date(normalizada)
-
-  if (Number.isNaN(valor.getTime())) {
-    return String(fecha).slice(11, 16)
-  }
-
-  return valor.toLocaleTimeString('es-BO', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-async function desplazarChatAlFinal() {
-  await nextTick()
-
-  if (chatContenedor.value) {
-    chatContenedor.value.scrollTop = chatContenedor.value.scrollHeight
-  }
-}
-
-async function agregarMensajeChat(mensaje) {
-  if (!mensaje?.id) return false
-
-  const existe = chatMensajes.value.some(
-    item => Number(item.id) === Number(mensaje.id)
-  )
-
-  if (existe) return false
-
-  chatMensajes.value.push(mensaje)
-  await desplazarChatAlFinal()
-  return true
-}
-
-async function marcarMensajesChatLeidos() {
-  if (!viajeActivo.value?.id) return
-
-  try {
-    await api.post(
-      `/pasajero/solicitudes/${viajeActivo.value.id}/mensajes/leidos`
-    )
-
-    const fechaLectura = new Date().toISOString()
-
-    chatMensajes.value = chatMensajes.value.map((mensaje) => {
-      if (
-        String(mensaje.remitente_tipo).toLowerCase() === 'conductor'
-        && !mensaje.leido_pasajero_en
-      ) {
-        return {
-          ...mensaje,
-          leido_pasajero_en: fechaLectura
-        }
-      }
-
-      return mensaje
-    })
-
-    chatNoLeidos.value = 0
-  } catch (error) {
-    console.warn(
-      'No se pudieron marcar los mensajes del pasajero como leídos:',
-      error
-    )
-  }
-}
-
-async function cargarChatViaje(silencioso = false) {
-  if (!viajeActivo.value?.id) {
-    chatMensajes.value = []
-    chatNoLeidos.value = 0
-    chatHabilitado.value = false
-    return
-  }
-
-  if (!silencioso) {
-    chatCargando.value = true
-  }
-
-  try {
-    const respuesta = await api.get(
-      `/pasajero/solicitudes/${viajeActivo.value.id}/mensajes`,
-      { params: { _t: Date.now() } }
-    )
-
-    chatMensajes.value = Array.isArray(respuesta.data?.mensajes)
-      ? respuesta.data.mensajes
-      : []
-
-    chatHabilitado.value = Boolean(
-      respuesta.data?.chat_habilitado
-    )
-
-    chatNoLeidos.value = Number(
-      respuesta.data?.no_leidos || 0
-    )
-
-    if (dialogChat.value) {
-      await marcarMensajesChatLeidos()
-    }
-
-    await desplazarChatAlFinal()
-  } catch (error) {
-    if (!silencioso) {
-      $q.notify({
-        type: 'negative',
-        message: extraerMensajeError(error)
-      })
-    }
-  } finally {
-    if (!silencioso) {
-      chatCargando.value = false
-    }
-  }
-}
-
-async function reproducirSonidoChat() {
-  const audioDisponible = await prepararAudioNotificaciones()
-
-  if (!audioDisponible || !audioContexto) return
-
-  try {
-    const inicio = audioContexto.currentTime
-    const tonos = [740, 988]
-
-    tonos.forEach((frecuencia, indice) => {
-      const oscilador = audioContexto.createOscillator()
-      const ganancia = audioContexto.createGain()
-      const empieza = inicio + (indice * 0.16)
-      const termina = empieza + 0.12
-
-      oscilador.type = 'sine'
-      oscilador.frequency.setValueAtTime(frecuencia, empieza)
-      ganancia.gain.setValueAtTime(0.0001, empieza)
-      ganancia.gain.exponentialRampToValueAtTime(0.20, empieza + 0.02)
-      ganancia.gain.exponentialRampToValueAtTime(0.0001, termina)
-
-      oscilador.connect(ganancia)
-      ganancia.connect(audioContexto.destination)
-      oscilador.start(empieza)
-      oscilador.stop(termina)
-    })
-  } catch (error) {
-    console.warn('No se pudo reproducir el sonido del chat:', error)
-  }
-}
-
-async function abrirChatViaje() {
-  if (!chatDisponible.value) {
-    $q.notify({
-      type: 'warning',
-      message: 'El chat estará disponible cuando exista un conductor asignado.'
-    })
-    return
-  }
-
-  dialogChat.value = true
-  await cargarChatViaje()
-  await marcarMensajesChatLeidos()
-}
-
-function alCerrarChat() {
-  chatTexto.value = ''
-}
-
-async function enviarMensajeChat(mensajeRapido = null) {
-  const texto = String(
-    mensajeRapido ?? chatTexto.value
-  ).trim()
-
-  if (!texto || !viajeActivo.value?.id || chatEnviando.value) {
-    return
-  }
-
-  chatEnviando.value = true
-
-  try {
-    const respuesta = await api.post(
-      `/pasajero/solicitudes/${viajeActivo.value.id}/mensajes`,
-      { mensaje: texto }
-    )
-
-    await agregarMensajeChat(respuesta.data?.chat_mensaje)
-    chatTexto.value = ''
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: extraerMensajeError(error)
-    })
-  } finally {
-    chatEnviando.value = false
-  }
-}
-
-async function procesarMensajeChatRecibido(data) {
-  const mensaje = data?.mensaje
-
-  if (
-    !mensaje
-    || Number(mensaje.solicitud_id) !== Number(viajeActivo.value?.id)
-  ) {
-    return
-  }
-
-  const agregado = await agregarMensajeChat(mensaje)
-
-  if (!agregado || esMensajeChatPropio(mensaje)) {
-    return
-  }
-
-  if (dialogChat.value) {
-    await marcarMensajesChatLeidos()
-    return
-  }
-
-  chatNoLeidos.value += 1
-  await reproducirSonidoChat()
-
-  $q.notify({
-    color: 'primary',
-    textColor: 'white',
-    icon: 'chat',
-    message: mensaje.remitente_nombre || 'Nuevo mensaje del mototaxista',
-    caption: mensaje.mensaje,
-    position: 'top',
-    timeout: 7000,
-    actions: [
-      {
-        label: 'ABRIR',
-        color: 'white',
-        handler: abrirChatViaje
-      }
-    ]
-  })
 }
 
 function normalizarIncidenciaActiva() {
@@ -3394,46 +3573,6 @@ async function sincronizarCanalIncidencias() {
   await cargarIncidenciasViaje(true)
 }
 
-function salirCanalChat() {
-  if (!echoInstance || !canalChatSolicitudId) return
-
-  echoInstance.leave(`viajes.chat.${canalChatSolicitudId}`)
-  canalChatSolicitudId = null
-}
-
-async function sincronizarCanalChat() {
-  const solicitudId = Number(viajeActivo.value?.id || 0)
-
-  if (
-    !echoInstance
-    || !solicitudId
-    || !viajeActivo.value?.mototaxista_id
-  ) {
-    salirCanalChat()
-    chatNoLeidos.value = 0
-    chatMensajes.value = []
-    chatHabilitado.value = false
-    return
-  }
-
-  if (Number(canalChatSolicitudId) === solicitudId) {
-    return
-  }
-
-  salirCanalChat()
-  canalChatSolicitudId = solicitudId
-
-  echoInstance
-    .private(`viajes.chat.${solicitudId}`)
-    .listen('.MensajeViajeEnviado', (data) => {
-      procesarMensajeChatRecibido(data).catch((error) => {
-        console.error('Error procesando mensaje del chat:', error)
-      })
-    })
-
-  await cargarChatViaje(true)
-}
-
 function inicializarWebsocketPasajero() {
   if (echoInstance) {
     return
@@ -3442,9 +3581,9 @@ function inicializarWebsocketPasajero() {
   try {
     echoInstance = new Echo({
       ...echoOptions(),
-      authEndpoint: obtenerEndpointAutorizacionChat(),
+      authEndpoint: obtenerEndpointAutorizacionRealtime(),
       auth: {
-        headers: obtenerCabecerasAutorizacionChat()
+        headers: obtenerCabecerasAutorizacionRealtime()
       }
     })
 
@@ -3455,6 +3594,7 @@ function inicializarWebsocketPasajero() {
 
     conexion?.bind('connected', () => {
       websocketConectado.value = true
+      cargarViajeActivo(true).catch(() => {})
     })
 
     conexion?.bind('disconnected', () => {
@@ -3471,7 +3611,7 @@ function inicializarWebsocketPasajero() {
     })
 
     echoInstance
-      .channel('solicitudes')
+      .private(`pasajero.${PASAJERO_ID}.solicitudes`)
       .listen('.SolicitudCreada', (data) => {
         procesarEventoSolicitud(
           data?.solicitud,
@@ -3509,9 +3649,8 @@ function desconectarWebsocketPasajero() {
     return
   }
 
-  salirCanalChat()
   salirCanalIncidencias()
-  echoInstance.leaveChannel('solicitudes')
+  echoInstance.leave(`pasajero.${PASAJERO_ID}.solicitudes`)
   echoInstance.disconnect()
   echoInstance = null
   websocketConectado.value = false
@@ -3639,12 +3778,17 @@ async function omitirCalificacion() {
   inicializarMapa()
 }
 
-async function cargarViajeActivo() {
-  if (!validarSesion()) {
+async function cargarViajeActivo(
+  silencioso = false,
+  notificar = true,
+  tipoNotificacion = 'consulta'
+) {
+  if (!validarSesion() || cargaViajeEnCurso) {
     return
   }
 
-  cargandoViaje.value = true
+  cargaViajeEnCurso = true
+  cargandoViaje.value = !silencioso
   const solicitudAnterior = viajeActivo.value
 
   try {
@@ -3661,10 +3805,14 @@ async function cargarViajeActivo() {
     if (solicitudActual) {
       viajeFinalizado.value = null
 
-      await mostrarNotificacionEstado(
-        solicitudActual,
-        'consulta'
-      )
+      if (notificar) {
+        await mostrarNotificacionEstado(
+          solicitudActual,
+          tipoNotificacion
+        )
+      } else {
+        registrarFirmaSolicitud(solicitudActual)
+      }
 
       await nextTick()
       await actualizarMapaSeguimiento()
@@ -3689,8 +3837,8 @@ async function cargarViajeActivo() {
           ) {
             await aplicarSolicitudTiempoReal(
               solicitudCerrada,
-              'consulta',
-              true
+              tipoNotificacion,
+              notificar
             )
           }
         } catch (errorEstado) {
@@ -3713,11 +3861,15 @@ async function cargarViajeActivo() {
   } catch (error) {
     console.error('Error consultando viaje activo:', error)
 
-    $q.notify({
-      type: 'negative',
-      message: extraerMensajeError(error)
-    })
+    if (!silencioso && error?.response?.status !== 401) {
+      $q.notify({
+        type: 'negative',
+        message: extraerMensajeError(error)
+      })
+    }
   } finally {
+    ultimaSincronizacionViaje = Date.now()
+    cargaViajeEnCurso = false
     cargandoViaje.value = false
   }
 }
@@ -3726,7 +3878,7 @@ async function enviarSolicitud() {
   if (!rutaCompleta.value) {
     $q.notify({
       type: 'negative',
-      message: 'Marca el origen y el destino en el mapa.'
+      message: 'Selecciona el origen y un destino válido antes de solicitar.'
     })
 
     return
@@ -3860,6 +4012,57 @@ async function cancelarSolicitud(motivo) {
   }
 }
 
+async function compartirViaje() {
+  if (!viajeActivo.value?.id || compartiendoViaje.value) return
+
+  compartiendoViaje.value = true
+
+  try {
+    const respuesta = await api.post(
+      `/pasajero/solicitudes/${viajeActivo.value.id}/compartir`
+    )
+
+    const url = String(respuesta.data?.url || '').trim()
+    if (!url) {
+      throw new Error('El servidor no devolvió el enlace de seguimiento.')
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Seguimiento de viaje MOTRIX',
+          text: 'Puedes seguir temporalmente mi viaje MOTRIX desde este enlace:',
+          url
+        })
+        return
+      } catch (error) {
+        if (error?.name === 'AbortError') return
+      }
+    }
+
+    await navigator.clipboard?.writeText?.(url)
+
+    $q.dialog({
+      title: 'Seguimiento compartido',
+      message: `Enlace temporal: ${url}`,
+      ok: { label: 'Entendido', color: 'green-8' }
+    })
+
+    $q.notify({
+      type: 'positive',
+      icon: 'link',
+      message: 'Enlace de seguimiento creado. También se copió cuando el dispositivo lo permitió.'
+    })
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: extraerMensajeError(error)
+    })
+  } finally {
+    compartiendoViaje.value = false
+  }
+}
+
 function volver() {
   router.push('/pasajero')
 }
@@ -3871,11 +4074,9 @@ watch(
     viajeActivo.value?.mototaxista_id || null
   ],
   async () => {
-    await sincronizarCanalChat()
     await sincronizarCanalIncidencias()
 
     if (!viajeActivo.value?.id) {
-      dialogChat.value = false
       dialogSos.value = false
     }
   }
@@ -3895,7 +4096,6 @@ onMounted(async () => {
   inicializarWebsocketPasajero()
 
   await cargarViajeActivo()
-  await sincronizarCanalChat()
   await sincronizarCanalIncidencias()
 
   if (viajeActivo.value) {
@@ -3914,16 +4114,20 @@ onMounted(async () => {
     inicializarMapa()
   }
 
-  intervaloActualizacion = window.setInterval(
-    cargarViajeActivo,
-    8000
-  )
+  intervaloActualizacion = window.setInterval(() => {
+    const espera = websocketConectado.value
+      ? 30000
+      : (viajeActivo.value?.id ? 2000 : 10000)
 
-  intervaloChat = window.setInterval(() => {
+    if (
+      Date.now() - ultimaSincronizacionViaje >= espera
+    ) {
+      cargarViajeActivo(true).catch(() => {})
+    }
+  }, 1000)
+
+  intervaloIncidencias = window.setInterval(() => {
     if (viajeActivo.value?.id) {
-      if (viajeActivo.value?.mototaxista_id) {
-        cargarChatViaje(true).catch(() => {})
-      }
       cargarIncidenciasViaje(true).catch(() => {})
     }
   }, 15000)
@@ -3946,8 +4150,8 @@ onBeforeUnmount(() => {
     window.clearInterval(intervaloActualizacion)
   }
 
-  if (intervaloChat) {
-    window.clearInterval(intervaloChat)
+  if (intervaloIncidencias) {
+    window.clearInterval(intervaloIncidencias)
   }
 
   if (mapa) {
@@ -3955,6 +4159,8 @@ onBeforeUnmount(() => {
     mapa = null
   }
 
+  inicializandoMapa = false
+  cargaViajeEnCurso = false
   destruirMapaSeguimiento()
 })
 </script>
@@ -3980,6 +4186,16 @@ onBeforeUnmount(() => {
   width: min(92vw, 520px);
   border-radius: 18px;
   overflow: hidden;
+}
+
+.destino-resultados {
+  max-height: 250px;
+  overflow-y: auto;
+  border-radius: 12px;
+}
+
+.destino-resultado {
+  min-height: 66px;
 }
 
 .map-wrapper {
@@ -4190,90 +4406,22 @@ onBeforeUnmount(() => {
   }
 }
 
-.chat-dialog-card {
-  width: min(720px, 96vw);
-  height: min(760px, 92vh);
-  max-width: 720px;
-  border-radius: 18px;
-  overflow: hidden;
-}
 
-.chat-messages {
-  min-height: 280px;
-  padding: 16px;
-  overflow-y: auto;
-  background: #eef2f5;
-  scroll-behavior: smooth;
-}
-
-.chat-empty {
-  min-height: 100%;
-  padding: 42px 20px;
-}
-
-.chat-row {
-  display: flex;
-  width: 100%;
-  margin-bottom: 10px;
-}
-
-.chat-row-own {
-  justify-content: flex-end;
-}
-
-.chat-row-other {
-  justify-content: flex-start;
-}
-
-.chat-bubble {
-  max-width: 82%;
-  padding: 9px 12px 6px;
+.qr-pago-card {
   border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  background: #fafaff;
 }
 
-.chat-bubble-own {
-  color: #1b4332;
-  background: #d8f3dc;
-  border-bottom-right-radius: 5px;
-}
-
-.chat-bubble-other {
-  color: #263238;
-  background: #ffffff;
-  border-bottom-left-radius: 5px;
-}
-
-.chat-message-text {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.chat-message-time {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: 3px;
-  color: #78909c;
-  font-size: 11px;
-}
-
-.chat-quick-scroll {
-  padding-bottom: 4px;
-  overflow-x: auto;
-}
-
-@media (max-width: 599px) {
-  .chat-dialog-card {
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    border-radius: 0;
-  }
-
-  .chat-bubble {
-    max-width: 90%;
-  }
+.qr-pago-image {
+  display: block;
+  width: min(100%, 320px);
+  max-height: 360px;
+  object-fit: contain;
+  margin: 0 auto;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e3e7ef;
+  padding: 10px;
 }
 
 </style>

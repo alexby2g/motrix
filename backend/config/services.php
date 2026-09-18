@@ -28,6 +28,20 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+
+
+    'motrix_sms' => [
+        'webhook_url' => env('MOTRIX_SMS_WEBHOOK_URL'),
+        'token' => env('MOTRIX_SMS_WEBHOOK_TOKEN'),
+    ],
+
+    'firebase' => [
+        'credentials' => env('MOTRIX_FIREBASE_CREDENTIALS'),
+        'project_id' => env('MOTRIX_FIREBASE_PROJECT_ID'),
+        'client_email' => env('MOTRIX_FIREBASE_CLIENT_EMAIL'),
+        'private_key' => env('MOTRIX_FIREBASE_PRIVATE_KEY'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

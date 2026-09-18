@@ -21,6 +21,9 @@ jobs:
     name: Compilar APK Android
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      MOTRIX_VERSION_CODE: ${{ github.run_number }}
+      MOTRIX_VERSION_NAME: 1.0.${{ github.run_number }}
 
     steps:
       - name: Descargar repositorio
@@ -66,17 +69,17 @@ jobs:
           for intento in 1 2 3; do
             echo "Intento npm ${intento}/3 para dependencias Capacitor"
 
-            if npm install --no-audit --no-fund; then
+            if npm ci --no-audit --no-fund; then
               exit 0
             fi
 
             if [ "$intento" -eq 3 ]; then
-              echo "npm install falló después de 3 intentos."
+              echo "npm ci falló después de 3 intentos."
               exit 1
             fi
 
             echo "Descarga interrumpida. Limpiando instalación parcial y reintentando..."
-            rm -rf node_modules/sharp node_modules/@img || true
+            rm -rf node_modules || true
             sleep 12
           done
 
@@ -135,6 +138,7 @@ jobs:
               '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />',
               '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />',
               '<uses-permission android:name="android.permission.VIBRATE" />',
+              '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />',
               '<uses-feature android:name="android.hardware.location.gps" android:required="false" />'
           ]
 
@@ -143,7 +147,9 @@ jobs:
           if faltantes:
               match = re.search(r'<manifest\b[^>]*>', xml, flags=re.DOTALL)
               if not match:
-                  raise RuntimeError('No se encontró la etiqueta <manifest> en AndroidManifest.xml')
+                  raise RuntimeError(
+                      'No se encontró la etiqueta <manifest> en AndroidManifest.xml'
+                  )
 
               cierre = match.end()
               xml = (
@@ -154,6 +160,72 @@ jobs:
               )
               manifest.write_text(xml, encoding='utf-8')
           PY
+
+      - name: Configurar Firebase Android
+        shell: bash
+        env:
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.MOTRIX_GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON_B64" ]; then
+            echo "Falta el secret MOTRIX_GOOGLE_SERVICES_JSON_B64."
+            exit 1
+          fi
+
+          printf '%s' "$GOOGLE_SERVICES_JSON_B64" \
+            | base64 --decode \
+            > frontend/src-capacitor/android/app/google-services.json
+
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+
+          archivo = Path(
+              'frontend/src-capacitor/android/app/google-services.json'
+          )
+
+          data = json.loads(archivo.read_text(encoding='utf-8'))
+
+          paquetes = {
+              cliente.get('client_info', {})
+              .get('android_client_info', {})
+              .get('package_name')
+              for cliente in data.get('client', [])
+          }
+
+          esperado = 'bo.edu.josecastillo.motrix'
+
+          if esperado not in paquetes:
+              raise RuntimeError(
+                  f'google-services.json no corresponde a {esperado}'
+              )
+
+          project = data.get('project_info', {})
+          client = next(
+              (item for item in data.get('client', [])
+               if item.get('client_info', {})
+                 .get('android_client_info', {})
+                 .get('package_name') == esperado),
+              None,
+          )
+
+          obligatorios = {
+              'project_number': project.get('project_number'),
+              'project_id': project.get('project_id'),
+              'mobilesdk_app_id': (client or {}).get('client_info', {}).get('mobilesdk_app_id'),
+              'api_key': (((client or {}).get('api_key') or [{}])[0]).get('current_key'),
+          }
+          faltantes = [k for k, v in obligatorios.items() if not str(v or '').strip()]
+          if faltantes:
+              raise RuntimeError(
+                  'google-services.json incompleto. Faltan: ' + ', '.join(faltantes)
+              )
+
+          print('Firebase Android configurado correctamente.')
+          PY
+
+      - name: Validar Firebase antes de compilar
+        working-directory: frontend/src-capacitor
+        run: npm run firebase:check
 
       - name: Compilar APK debug instalable
         working-directory: frontend/src-capacitor/android
@@ -176,6 +248,32 @@ jobs:
             echo "Descarga/compilación interrumpida. Reintentando en 12 segundos..."
             sleep 12
           done
+
+      - name: Verificar APK Android antes de publicar
+        shell: bash
+        run: |
+          APK=frontend/src-capacitor/android/app/build/outputs/apk/debug/app-debug.apk
+
+          if [ ! -f "$APK" ]; then
+            echo "No se generó el APK esperado."
+            exit 1
+          fi
+
+          unzip -p "$APK" assets/capacitor.plugins.json \
+            | grep -q '@capacitor/push-notifications' \
+            || { echo "El APK no contiene el plugin PushNotifications."; exit 1; }
+
+          unzip -p "$APK" resources.arsc \
+            | strings -el \
+            | grep -q 'google_app_id' \
+            || { echo "El APK no contiene google_app_id de Firebase."; exit 1; }
+
+          unzip -p "$APK" AndroidManifest.xml \
+            | strings -el \
+            | grep -q 'android.permission.POST_NOTIFICATIONS' \
+            || { echo "El APK no contiene POST_NOTIFICATIONS."; exit 1; }
+
+          echo "APK verificado: PushNotifications + Firebase + permiso Android OK."
 
       - name: Preparar APK final
         shell: bash

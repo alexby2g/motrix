@@ -2,8 +2,9 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
+use App\Models\Solicitud;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -12,32 +13,57 @@ class SolicitudCreada implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $solicitud;
+    public array $solicitud;
 
-    /**
-     * Crear una nueva instancia del evento.
-     */
-    public function __construct($solicitud)
+    public function __construct(Solicitud $solicitud)
     {
-        // Cargamos las relaciones para que el dashboard reciba el nombre del pasajero en vivo
-        $this->solicitud = $solicitud->load(['pasajero.persona']);
+        $solicitud->loadMissing([
+            'pasajero.persona',
+            'mototaxista.persona.imagenes',
+            'mototaxista.sindicato',
+        ]);
+
+        $this->solicitud = $solicitud->toArray();
     }
 
-    /**
-     * El canal público por donde se transmitirá.
-     */
     public function broadcastOn(): array
     {
-        return [
-            new Channel('solicitudes'),
-        ];
+        return $this->canalesParticipantes();
     }
 
-    /**
-     * El nombre con el que lo escuchará Quasar.
-     */
     public function broadcastAs(): string
     {
         return 'SolicitudCreada';
+    }
+
+    public function broadcastWith(): array
+    {
+        return [
+            'solicitud' => $this->solicitud,
+        ];
+    }
+
+    private function canalesParticipantes(): array
+    {
+        $canales = [
+            new PrivateChannel('administracion.solicitudes'),
+        ];
+
+        $pasajeroId = (int) ($this->solicitud['id_pasajero'] ?? 0);
+        $mototaxistaId = (int) ($this->solicitud['mototaxista_id'] ?? 0);
+
+        if ($pasajeroId > 0) {
+            $canales[] = new PrivateChannel(
+                'pasajero.' . $pasajeroId . '.solicitudes'
+            );
+        }
+
+        if ($mototaxistaId > 0) {
+            $canales[] = new PrivateChannel(
+                'conductor.' . $mototaxistaId . '.solicitudes'
+            );
+        }
+
+        return $canales;
     }
 }

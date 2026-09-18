@@ -10,6 +10,7 @@ Thumbs.db
 **/.env
 **/.env.*
 !**/.env.example
+!**/.env.production.example
 
 # Laravel
 backend/vendor/
@@ -32,5 +33,27 @@ frontend/dist/
 frontend/src-capacitor/android/.gradle/
 frontend/src-capacitor/android/app/build/
 
+# Backups locales de desarrollo
+_backup_*/
+**/_backup_*/
+*.bak
+*.bak-*
+*.bak.*
+**/*.bak
+**/*.bak-*
+**/*.bak.*
+
+# Reportes temporales de correcciones V5.7
+MOTRIX_V5.7_*.txt
+
+# Archivos temporales de build Android
+frontend/src-capacitor/android/.idea/
+frontend/src-capacitor/android/local.properties
+frontend/src-capacitor/android/.kotlin/
+frontend/src-capacitor/android/captures/
+
 # Local publish helper
 SUBIR_A_GITHUB.bat
+frontend/src-capacitor/google-services.json
+frontend/src-capacitor/android/app/google-services.json
+backend/storage/app/private/firebase/firebase-admin.json

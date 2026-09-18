@@ -71,8 +71,16 @@
                 color="green-1"
                 text-color="green-9"
                 class="profile-avatar"
+                :class="{ 'cursor-pointer': Boolean(fotoPerfilUrl) }"
+                @click="abrirVisorFoto"
               >
-                {{ iniciales }}
+                <img
+                  v-if="fotoPerfilUrl && !fotoPerfilError"
+                  :src="fotoPerfilUrl"
+                  :alt="`Foto de ${nombreUsuario}`"
+                  @error="fotoPerfilError = true"
+                >
+                <span v-else>{{ iniciales }}</span>
               </q-avatar>
 
               <div class="text-center">
@@ -114,28 +122,28 @@
 
               <div class="profile-data">
                 <q-icon
-                  name="email"
+                  name="phone_android"
                   color="green-8"
                 />
 
                 <div>
-                  <span>Correo</span>
+                  <span>Celular / usuario</span>
                   <strong>
-                    {{ usuario?.email || 'No disponible' }}
+                    {{ usuario?.telefono || usuario?.nickname || 'No registrado' }}
                   </strong>
                 </div>
               </div>
 
               <div class="profile-data">
                 <q-icon
-                  name="alternate_email"
+                  name="email"
                   color="green-8"
                 />
 
                 <div>
-                  <span>Nickname</span>
+                  <span>Correo (opcional)</span>
                   <strong>
-                    {{ usuario?.nickname || 'No registrado' }}
+                    {{ usuario?.email || 'No registrado' }}
                   </strong>
                 </div>
               </div>
@@ -183,6 +191,18 @@
             </q-banner>
 
             <div class="row q-col-gutter-sm q-mt-md">
+              <div class="col-12">
+                <q-btn
+                  outline
+                  color="green-8"
+                  icon="lock_reset"
+                  label="Cambiar contraseña"
+                  class="full-width"
+                  no-caps
+                  @click="router.push('/cuenta/cambiar-contrasena')"
+                />
+              </div>
+
               <div class="col-12 col-sm-6">
                 <q-btn
                   outline
@@ -207,10 +227,90 @@
                 />
               </div>
             </div>
+
+            <q-separator class="q-my-xl" />
+
+            <div class="danger-zone">
+              <div class="text-subtitle1 text-weight-bold text-red-8">
+                Privacidad y eliminación de cuenta
+              </div>
+              <div class="text-caption text-grey-7 q-mt-xs q-mb-md">
+                Puedes eliminar tu acceso de pasajero y solicitar la eliminación o anonimización
+                de tus datos personales. Esta acción es permanente.
+              </div>
+              <q-btn
+                outline
+                color="red-7"
+                icon="delete_forever"
+                label="Eliminar mi cuenta"
+                no-caps
+                @click="abrirEliminarCuenta"
+              />
+            </div>
+
+            <q-dialog v-model="dialogEliminarCuenta" persistent>
+              <q-card class="delete-dialog">
+                <q-card-section class="row items-center">
+                  <q-avatar icon="warning" color="red-1" text-color="red-8" />
+                  <div class="col q-ml-md">
+                    <div class="text-h6 text-weight-bold">Eliminar cuenta</div>
+                    <div class="text-caption text-grey-7">Esta acción no se puede deshacer.</div>
+                  </div>
+                </q-card-section>
+
+                <q-card-section>
+                  <q-banner rounded class="bg-red-1 text-red-9 q-mb-md">
+                    No podrás eliminar la cuenta mientras tengas un viaje activo. Los viajes históricos
+                    se conservarán únicamente de forma anonimizada para mantener la integridad del sistema.
+                  </q-banner>
+
+                  <q-input
+                    v-model="passwordActual"
+                    outlined
+                    type="password"
+                    label="Contraseña actual"
+                    autocomplete="current-password"
+                    class="q-mb-md"
+                  />
+
+                  <q-input
+                    v-model.trim="textoConfirmacion"
+                    outlined
+                    label="Escribe ELIMINAR"
+                    hint="Debe escribirse exactamente en mayúsculas."
+                  />
+                </q-card-section>
+
+                <q-card-actions align="right" class="q-pa-md">
+                  <q-btn
+                    flat
+                    label="Cancelar"
+                    color="grey-7"
+                    :disable="eliminandoCuenta"
+                    @click="dialogEliminarCuenta = false"
+                  />
+                  <q-btn
+                    color="red-7"
+                    icon="delete_forever"
+                    label="Eliminar definitivamente"
+                    unelevated
+                    :loading="eliminandoCuenta"
+                    :disable="!puedeConfirmarEliminacion"
+                    @click="eliminarCuenta"
+                  />
+                </q-card-actions>
+              </q-card>
+            </q-dialog>
           </q-card-section>
         </q-card>
       </div>
     </div>
+
+    <PhotoViewerDialog
+      v-model="visorFoto"
+      :src="fotoPerfilUrl"
+      :title="nombreUsuario"
+    />
   </q-page>
 </template>
 
@@ -226,17 +326,26 @@ import {
 } from 'quasar'
 
 import {
+  useRoute,
   useRouter
 } from 'vue-router'
 
 import {
   api
 } from 'src/boot/axios.js'
+import PhotoViewerDialog from 'src/components/PhotoViewerDialog.vue'
 
 const $q = useQuasar()
 const router = useRouter()
+const route = useRoute()
 
 const cargando = ref(false)
+const visorFoto = ref(false)
+const fotoPerfilError = ref(false)
+const dialogEliminarCuenta = ref(false)
+const eliminandoCuenta = ref(false)
+const passwordActual = ref('')
+const textoConfirmacion = ref('')
 const usuario = ref(
   leerUsuarioLocal()
 )
@@ -261,6 +370,24 @@ const nombreUsuario = computed(() => {
     || 'Pasajero MOTRIX'
   )
 })
+
+const fotoPerfilUrl = computed(() => {
+  if (fotoPerfilError.value) return ''
+  const ruta = String(usuario.value?.foto_ruta || '').trim()
+  if (!ruta) return ''
+  if (/^https?:\/\//i.test(ruta)) return ruta
+
+  const baseApi = String(api.defaults.baseURL || '')
+    .replace(/\/api\/?$/i, '')
+    .replace(/\/$/, '')
+  let limpia = ruta.replace(/^\/+/, '').replace(/^public\//i, '')
+  if (!limpia.startsWith('storage/')) limpia = `storage/${limpia}`
+  return `${baseApi}/${limpia}`
+})
+
+function abrirVisorFoto() {
+  if (fotoPerfilUrl.value) visorFoto.value = true
+}
 
 const iniciales = computed(() => {
   const partes =
@@ -323,6 +450,65 @@ async function cargarPerfil() {
   }
 }
 
+const puedeConfirmarEliminacion = computed(() => {
+  return (
+    textoConfirmacion.value === 'ELIMINAR'
+    && String(passwordActual.value || '').length > 0
+  )
+})
+
+function abrirEliminarCuenta() {
+  passwordActual.value = ''
+  textoConfirmacion.value = ''
+  dialogEliminarCuenta.value = true
+}
+
+function limpiarSesionLocal() {
+  localStorage.removeItem('motrix_token')
+  localStorage.removeItem('motrix_user')
+  localStorage.removeItem('mototaxista_id')
+  localStorage.removeItem('pasajero_id')
+}
+
+async function eliminarCuenta() {
+  if (!puedeConfirmarEliminacion.value || eliminandoCuenta.value) return
+
+  eliminandoCuenta.value = true
+
+  try {
+    const response = await api.delete('/pasajero/cuenta-segura', {
+      data: {
+        confirmacion: textoConfirmacion.value,
+        password_actual: passwordActual.value
+      }
+    })
+
+    limpiarSesionLocal()
+    dialogEliminarCuenta.value = false
+
+    $q.notify({
+      type: 'positive',
+      position: 'top',
+      icon: 'check_circle',
+      message: response?.data?.message || 'Tu cuenta fue eliminada correctamente.'
+    })
+
+    await router.replace('/inicio')
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      position: 'top',
+      icon: 'error',
+      message:
+        error?.response?.data?.message
+        || Object.values(error?.response?.data?.errors || {}).flat().find(Boolean)
+        || 'No se pudo eliminar la cuenta.'
+    })
+  } finally {
+    eliminandoCuenta.value = false
+  }
+}
+
 function volver() {
   router.push('/pasajero')
 }
@@ -337,6 +523,10 @@ function irASolicitar() {
 
 onMounted(() => {
   cargarPerfil()
+
+  if (String(route.query.eliminar || '') === '1') {
+    abrirEliminarCuenta()
+  }
 })
 </script>
 
@@ -422,6 +612,19 @@ onMounted(() => {
 
 .min-width-zero {
   min-width: 0;
+}
+
+.danger-zone {
+  padding: 16px;
+  border: 1px solid #f0caca;
+  border-radius: 14px;
+  background: #fffafa;
+}
+
+.delete-dialog {
+  width: 100%;
+  max-width: 520px;
+  border-radius: 16px;
 }
 
 @media (max-width: 599px) {

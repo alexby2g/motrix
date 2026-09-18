@@ -27,7 +27,7 @@ class PersonaRequest extends FormRequest
 
         return [
             'ci' => [
-                'required',
+                'nullable',
                 'string',
                 'max:20',
                 $reglaCiUnico,

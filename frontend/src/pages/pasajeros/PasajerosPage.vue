@@ -23,8 +23,13 @@
           :columns="columnas"
           row-key="id"
           :loading="loading"
+          v-model:pagination="pagination"
+          :rows-per-page-options="[10, 20, 50]"
           no-data-label="No hay pasajeros registrados"
           rows-per-page-label="Registros por página:"
+          @request="onRequestPasajeros"
+          @row-click="(_, row) => abrirExpediente(row)"
+          class="cursor-pointer"
         >
           <template v-slot:body-cell-cuenta="props">
             <q-td :props="props" class="text-center">
@@ -46,7 +51,7 @@
           </template>
 
           <template v-slot:body-cell-acciones="props">
-            <q-td :props="props" class="q-gutter-xs text-center">
+            <q-td :props="props" class="q-gutter-xs text-center" @click.stop>
               
               <q-btn 
                 flat 
@@ -148,15 +153,41 @@
                 outlined
                 v-model="personaSeleccionada"
                 :options="personasLista"
-                option-label="nombre"
-                label="Seleccionar Persona"
-                emit-value
-                map-options
+                :option-label="nombrePersonaOpcion"
+                label="Buscar persona por nombre o CI"
+                use-input
+                fill-input
+                hide-selected
+                clearable
+                input-debounce="300"
+                :loading="buscandoPersonas"
+                @filter="filtrarPersonasPasajero"
                 @update:model-value="alSeleccionarPersona"
                 :rules="[val => !!val || 'Seleccione una persona de la lista']"
               >
                 <template v-slot:prepend>
-                  <q-icon name="person" />
+                  <q-icon name="person_search" />
+                </template>
+
+                <template #option="scope">
+                  <q-item v-bind="scope.itemProps">
+                    <q-item-section>
+                      <q-item-label>
+                        {{ nombrePersonaOpcion(scope.opt) }}
+                      </q-item-label>
+                      <q-item-label caption>
+                        CI {{ scope.opt.ci || 'no registrado' }}
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
+
+                <template #no-option>
+                  <q-item>
+                    <q-item-section class="text-grey-7">
+                      Escribe al menos 2 caracteres para buscar.
+                    </q-item-section>
+                  </q-item>
                 </template>
               </q-select>
             </div>
@@ -268,37 +299,22 @@
               />
             </template>
 
-            Esta cuenta permitirá al pasajero iniciar sesión en MOTRIX
-            desde la aplicación móvil o la plataforma web.
+            Esta cuenta permitirá al pasajero iniciar sesión en MOTRIX con su número de celular desde la aplicación móvil o la plataforma web.
           </q-banner>
 
           <q-input
-            v-model.trim="cuentaPasajero.email"
+            v-model.trim="cuentaPasajero.telefono"
             outlined
-            type="email"
-            label="Correo electrónico *"
+            type="tel"
+            label="Número de celular *"
+            hint="Este número será el usuario de acceso del pasajero."
             :rules="[
-              val => !!val || 'Ingrese el correo electrónico',
-              val => /.+@.+\..+/.test(val) || 'Ingrese un correo válido'
+              val => String(val || '').replace(/\D+/g, '').length >= 7 || 'Ingrese un celular válido'
             ]"
           >
             <template #prepend>
               <q-icon
-                name="email"
-                color="deep-purple-7"
-              />
-            </template>
-          </q-input>
-
-          <q-input
-            v-model.trim="cuentaPasajero.nickname"
-            outlined
-            label="Nickname (opcional)"
-            hint="También podrá iniciar sesión con este nickname."
-          >
-            <template #prepend>
-              <q-icon
-                name="alternate_email"
+                name="phone_android"
                 color="deep-purple-7"
               />
             </template>
@@ -315,7 +331,7 @@
             label="Contraseña *"
             :rules="[
               val => !!val || 'Ingrese una contraseña',
-              val => String(val || '').length >= 6 || 'Mínimo 6 caracteres'
+              val => String(val || '').length >= 8 || 'Mínimo 8 caracteres'
             ]"
           >
             <template #prepend>
@@ -443,11 +459,12 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import { computed, ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { api } from 'src/boot/axios.js'
-
 const $q = useQuasar()
 const router = useRouter()
 
@@ -468,12 +485,21 @@ const esAdminGeneral = computed(() => {
 })
 
 const pasajeros = ref([])
-const personasLista = ref([]) 
+const personasLista = ref([])
 const loading = ref(false)
 const modalFormulario = ref(false)
 const esEdicion = ref(false)
-const formRef = ref(null) 
+const formRef = ref(null)
 const personaSeleccionada = ref(null)
+
+const pagination = ref({
+  page: 1,
+  rowsPerPage: 10,
+  rowsNumber: 0
+})
+
+const buscandoPersonas = ref(false)
+let secuenciaBusquedaPersona = 0
 
 
 const modalCuentaPasajero = ref(false)
@@ -482,8 +508,7 @@ const pasajeroCuentaSeleccionado = ref(null)
 const mostrarPasswordCuenta = ref(false)
 
 const cuentaPasajero = ref({
-  email: '',
-  nickname: '',
+  telefono: '',
   password: ''
 })
 
@@ -517,13 +542,20 @@ const formulario = ref({
   email: ''
 })
 
+function correoVisible(valor) {
+  const correo = String(valor || '').trim()
+  return correo && !correo.toLowerCase().endsWith('@motrix.invalid')
+    ? correo
+    : '—'
+}
+
 // Columnas de la tabla principal
 const columnas = [
   { name: 'id', align: 'left', label: 'ID', field: 'id' },
   { name: 'nombre', align: 'left', label: 'Nombre Completo', field: row => row.persona?.nombre || 'Sin nombre' },
   { name: 'ci', align: 'left', label: 'Cédula de Identidad', field: row => row.persona?.ci || 'Sin CI' },
   { name: 'telefono', align: 'left', label: 'Teléfono', field: row => row.persona?.telefono || 'Sin teléfono' },
-  { name: 'email', align: 'left', label: 'Correo Electrónico', field: 'email' },
+  { name: 'email', align: 'left', label: 'Correo (opcional)', field: row => correoVisible(row.email) },
   { name: 'cuenta', align: 'center', label: 'Cuenta', field: row => row.usuario_pasajero },
   { name: 'acciones', align: 'center', label: 'Acciones' }
 ]
@@ -533,45 +565,156 @@ const columnasHistorial = [
   { name: 'id', align: 'left', label: 'ID Viaje', field: 'id' },
   { name: 'origen', align: 'left', label: 'Origen', field: 'origen' },
   { name: 'destino', align: 'left', label: 'Destino', field: 'destino' },
-  { name: 'fecha', align: 'center', label: 'Fecha', field: 'fecha' },
+  { name: 'fecha', align: 'center', label: 'Fecha', field: 'fecha', format: val => fechaDDMMYYYY(val) },
   { name: 'precio', align: 'right', label: 'Tarifa', field: 'precio' },
   { name: 'estado', align: 'center', label: 'Estado', field: 'estado' }
 ]
 
-const obtenerPasajeros = async () => {
+const obtenerPasajeros = async (
+  props = null
+) => {
   loading.value = true
+
   try {
-    const res = await api.get('/pasajeros')
-    pasajeros.value = res.data
+    const pagina =
+      props?.pagination?.page
+      ?? pagination.value.page
+
+    const porPagina =
+      props?.pagination?.rowsPerPage
+      ?? pagination.value.rowsPerPage
+
+    const res = await api.get(
+      '/pasajeros',
+      {
+        params: {
+          paginated: 1,
+          page: pagina,
+          per_page: porPagina
+        }
+      }
+    )
+
+    pasajeros.value =
+      Array.isArray(res.data?.data)
+        ? res.data.data
+        : []
+
+    const meta = res.data?.meta || {}
+
+    pagination.value = {
+      page:
+        Number(meta.current_page || pagina),
+      rowsPerPage:
+        Number(meta.per_page || porPagina),
+      rowsNumber:
+        Number(meta.total || 0)
+    }
   } catch (error) {
     console.error(error)
-    $q.notify({ type: 'negative', message: 'Error al cargar los pasajeros' })
+
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar los pasajeros'
+    })
   } finally {
     loading.value = false
   }
 }
 
-const obtenerPersonasExistentes = async () => {
+const onRequestPasajeros = (props) => {
+  obtenerPasajeros(props)
+}
+
+const nombrePersonaOpcion = (persona) => {
+  if (!persona) return ''
+
+  return [
+    persona.nombre,
+    persona.apellidos
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+}
+
+const filtrarPersonasPasajero = async (
+  valor,
+  update
+) => {
+  const texto = String(valor || '').trim()
+
+  if (texto.length < 2) {
+    secuenciaBusquedaPersona += 1
+    buscandoPersonas.value = false
+
+    update(() => {
+      personasLista.value = []
+    })
+
+    return
+  }
+
+  const secuencia =
+    ++secuenciaBusquedaPersona
+
+  buscandoPersonas.value = true
+
   try {
-    const res = await api.get('/personas')
-    personasLista.value = res.data
+    const res = await api.get(
+      '/personas/opciones-pasajero',
+      {
+        params: {
+          q: texto
+        }
+      }
+    )
+
+    if (
+      secuencia
+      !== secuenciaBusquedaPersona
+    ) {
+      return
+    }
+
+    update(() => {
+      personasLista.value =
+        Array.isArray(res.data)
+          ? res.data
+          : []
+    })
   } catch (error) {
-    console.error(error)
+    console.error(
+      'Error buscando personas:',
+      error
+    )
+
+    update(() => {
+      personasLista.value = []
+    })
+  } finally {
+    if (
+      secuencia
+      === secuenciaBusquedaPersona
+    ) {
+      buscandoPersonas.value = false
+    }
   }
 }
 
 const abrirModalCrear = () => {
   esEdicion.value = false
   personaSeleccionada.value = null
+  personasLista.value = []
   formulario.value = { id: null, id_persona: null, nombre_completo: '', ci: '', telefono: '', email: '' }
-  obtenerPersonasExistentes()
   modalFormulario.value = true
 }
 
 const alSeleccionarPersona = (persona) => {
   if (persona) {
     formulario.value.id_persona = persona.id
-    formulario.value.nombre_completo = persona.nombre
+    formulario.value.nombre_completo =
+      nombrePersonaOpcion(persona)
     formulario.value.ci = persona.ci
     formulario.value.telefono = persona.telefono
   } else {
@@ -671,9 +814,7 @@ const abrirCuentaPasajero = (pasajero) => {
     pasajero
 
   cuentaPasajero.value = {
-    email:
-      pasajero.email || '',
-    nickname: '',
+    telefono: pasajero.persona?.telefono || '',
     password: ''
   }
 
@@ -690,8 +831,7 @@ const cerrarCuentaPasajero = () => {
   pasajeroCuentaSeleccionado.value = null
 
   cuentaPasajero.value = {
-    email: '',
-    nickname: '',
+    telefono: '',
     password: ''
   }
 
@@ -706,10 +846,10 @@ const crearCuentaPasajero = async () => {
     return
   }
 
-  if (!cuentaPasajero.value.email) {
+  if (String(cuentaPasajero.value.telefono || '').replace(/\D+/g, '').length < 7) {
     $q.notify({
       type: 'negative',
-      message: 'Ingrese el correo electrónico.'
+      message: 'Ingrese un número de celular válido.'
     })
 
     return
@@ -718,11 +858,11 @@ const crearCuentaPasajero = async () => {
   if (
     String(
       cuentaPasajero.value.password || ''
-    ).length < 6
+    ).length < 8
   ) {
     $q.notify({
       type: 'negative',
-      message: 'La contraseña debe tener al menos 6 caracteres.'
+      message: 'La contraseña debe tener al menos 8 caracteres.'
     })
 
     return
@@ -732,15 +872,10 @@ const crearCuentaPasajero = async () => {
 
   try {
     await api.post(
-      `/pasajeros/${pasajeroId}/cuenta-pasajero`,
+      `/pasajeros/${pasajeroId}/cuenta-pasajero-celular`,
       {
-        email:
-          cuentaPasajero.value.email,
-        nickname:
-          cuentaPasajero.value.nickname
-          || null,
-        password:
-          cuentaPasajero.value.password
+        telefono: cuentaPasajero.value.telefono,
+        password: cuentaPasajero.value.password
       }
     )
 
@@ -749,7 +884,7 @@ const crearCuentaPasajero = async () => {
       position: 'top',
       icon: 'verified_user',
       message:
-        'Cuenta de pasajero creada correctamente.'
+        'Cuenta creada. El celular es el usuario de acceso.'
     })
 
     creandoCuentaPasajero.value = false

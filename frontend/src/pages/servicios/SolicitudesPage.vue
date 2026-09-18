@@ -45,22 +45,24 @@
           row-key="id"
           :filter="filter"
           :loading="loading"
+          v-model:pagination="pagination"
           :grid="$q.screen.lt.lg"
           :hide-header="$q.screen.lt.lg"
-          :rows-per-page-options="[6, 12, 24, 0]"
+          :rows-per-page-options="[6, 12, 24, 50]"
           rows-per-page-label="Registros por página"
           no-data-label="No existen solicitudes registradas"
           no-results-label="No se encontraron resultados"
           loading-label="Cargando solicitudes..."
           flat
           binary-state-sort
+          @request="onRequestSolicitudes"
         >
           <!-- BUSCADOR -->
           <template v-slot:top>
             <div class="row items-center full-width q-col-gutter-sm q-pa-sm">
               <div class="col-12 col-sm">
                 <div class="text-subtitle1 text-weight-bold text-grey-8">
-                  {{ solicitudes.length }} solicitudes registradas
+                  {{ pagination.rowsNumber }} solicitudes registradas
                 </div>
               </div>
 
@@ -207,23 +209,6 @@
                     </q-item>
 
                     <q-item
-                      v-if="false"
-                      clickable
-                      @click="abrirConversacion(props.row)"
-                    >
-                      <q-item-section avatar>
-                        <q-icon
-                          name="forum"
-                          color="primary"
-                        />
-                      </q-item-section>
-
-                      <q-item-section>
-                        Ver conversación
-                      </q-item-section>
-                    </q-item>
-
-                    <q-item
                       v-if="puedeAsignarManual(props.row)"
                       clickable
                       @click="abrirAsignacionManual(props.row)"
@@ -339,23 +324,6 @@
 
                             <q-item-section>
                               Historial del pasajero
-                            </q-item-section>
-                          </q-item>
-
-                          <q-item
-                            v-if="false"
-                            clickable
-                            @click="abrirConversacion(props.row)"
-                          >
-                            <q-item-section avatar>
-                              <q-icon
-                                name="forum"
-                                color="primary"
-                              />
-                            </q-item-section>
-
-                            <q-item-section>
-                              Ver conversación
                             </q-item-section>
                           </q-item>
 
@@ -569,10 +537,24 @@
                   map-options
                   option-value="id"
                   option-label="nombre_completo"
+                  use-input
+                  fill-input
+                  hide-selected
+                  input-debounce="300"
+                  :loading="buscandoPasajeros"
+                  @filter="filtrarPasajeros"
                   :rules="[
                     val => !!val || 'El pasajero es obligatorio'
                   ]"
-                />
+                >
+                  <template #no-option>
+                    <q-item>
+                      <q-item-section class="text-grey-7">
+                        Escribe al menos 2 caracteres para buscar.
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
 
                 <q-input
                   v-model="form.origen"
@@ -653,13 +635,13 @@
                         Ruta de {{ distanciaKm }} km.
                         Tarifas Trinidad:
                         <br>
-                        - Corto (≤1.2 km): Bs. 5
+                        - Corto (≤2 km): Bs. 6
                         <br>
-                        - Medio (≤2.8 km): Bs. 8
+                        - Medio (≤4 km): Bs. 8
                         <br>
-                        - Largo (>2.8 km): Bs. 10
+                        - Largo (>4 km): Bs. 10
                         <br>
-                        - Nocturno (10 PM - 6 AM): tarifa fija Bs. 15
+                        - Nocturno (11 PM - 6 AM): tarifa fija Bs. 15
                       </q-tooltip>
                     </q-icon>
                   </template>
@@ -1186,218 +1168,17 @@
       </q-card>
     </q-dialog>
 
-    <!-- =========================================================
-         CONVERSACIÓN DEL VIAJE — ADMINISTRADOR SOLO LECTURA
-    ========================================================== -->
-    <q-dialog
-      v-model="conversacionDialogOpen"
-      :maximized="$q.screen.lt.sm"
-      transition-show="scale"
-      transition-hide="scale"
-      @hide="alCerrarConversacion"
-    >
-      <q-card class="conversacion-admin-card column no-wrap">
-        <q-card-section class="bg-primary text-white q-pa-md">
-          <div class="row items-center no-wrap">
-            <q-avatar
-              color="white"
-              text-color="primary"
-              icon="forum"
-              size="48px"
-              class="q-mr-md"
-            />
-
-            <div class="col min-width-zero">
-              <div class="text-h6 text-weight-bold ellipsis">
-                Conversación del viaje
-                #{{ solicitudConversacion?.id || '—' }}
-              </div>
-
-              <div class="text-caption text-blue-1 ellipsis">
-                {{ getPasajeroNombre(solicitudConversacion) }}
-                ·
-                {{ getMototaxistaNombre(solicitudConversacion)
-                  || 'Sin conductor asignado' }}
-              </div>
-            </div>
-
-            <q-chip
-              v-if="solicitudConversacion"
-              :color="getEstadoColor(solicitudConversacion.estado)"
-              text-color="white"
-              dense
-              class="q-mr-sm text-weight-bold text-uppercase"
-            >
-              {{ solicitudConversacion.estado || 'Sin estado' }}
-            </q-chip>
-
-            <q-btn
-              flat
-              round
-              dense
-              icon="close"
-              aria-label="Cerrar conversación"
-              @click="conversacionDialogOpen = false"
-            />
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pa-sm bg-grey-2">
-          <div class="row q-col-gutter-sm">
-            <div class="col-12 col-sm-4">
-              <div class="conversacion-resumen-item">
-                <q-icon name="person" color="positive" size="22px" />
-                <div class="min-width-zero">
-                  <div class="text-caption text-grey-6">Pasajero</div>
-                  <div class="text-body2 text-weight-bold ellipsis">
-                    {{ getPasajeroNombre(solicitudConversacion) }}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12 col-sm-4">
-              <div class="conversacion-resumen-item">
-                <q-icon name="two_wheeler" color="primary" size="22px" />
-                <div class="min-width-zero">
-                  <div class="text-caption text-grey-6">Conductor</div>
-                  <div class="text-body2 text-weight-bold ellipsis">
-                    {{ getMototaxistaNombre(solicitudConversacion)
-                      || 'No asignado' }}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-6 col-sm-2">
-              <div class="conversacion-resumen-item">
-                <q-icon name="mark_chat_read" color="indigo" size="22px" />
-                <div>
-                  <div class="text-caption text-grey-6">Mensajes</div>
-                  <div class="text-body2 text-weight-bold">
-                    {{ mensajesConversacion.length }}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-6 col-sm-2">
-              <div class="conversacion-resumen-item">
-                <q-icon
-                  :name="conversacionEnVivo ? 'sensors' : 'sync'"
-                  :color="conversacionEnVivo ? 'positive' : 'orange-8'"
-                  size="22px"
-                />
-                <div>
-                  <div class="text-caption text-grey-6">Canal</div>
-                  <div
-                    class="text-body2 text-weight-bold"
-                    :class="conversacionEnVivo
-                      ? 'text-positive'
-                      : 'text-orange-9'"
-                  >
-                    {{ conversacionEnVivo ? 'En vivo' : 'Respaldo' }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </q-card-section>
-
-        <q-separator />
-
-        <q-linear-progress
-          v-if="conversacionLoading"
-          indeterminate
-          color="primary"
-        />
-
-        <q-card-section
-          ref="conversacionContenedor"
-          class="conversacion-admin-mensajes col"
-        >
-          <div
-            v-if="!conversacionLoading && mensajesConversacion.length === 0"
-            class="conversacion-vacia column flex-center text-center text-grey-6"
-          >
-            <q-avatar
-              color="blue-1"
-              text-color="primary"
-              icon="speaker_notes_off"
-              size="72px"
-              class="q-mb-md"
-            />
-
-            <div class="text-h6 text-weight-bold text-grey-8">
-              Conversación vacía
-            </div>
-
-            <div class="text-body2 q-mt-xs">
-              El pasajero y el conductor todavía no enviaron mensajes.
-            </div>
-          </div>
-
-          <div
-            v-for="mensaje in mensajesConversacion"
-            :key="mensaje.id"
-            class="conversacion-mensaje-fila"
-            :class="claseFilaMensajeConversacion(mensaje)"
-          >
-            <div
-              class="conversacion-mensaje-burbuja"
-              :class="claseBurbujaMensajeConversacion(mensaje)"
-            >
-              <div class="row items-center no-wrap q-mb-xs">
-                <q-icon
-                  :name="iconoRemitenteConversacion(mensaje)"
-                  size="17px"
-                  class="q-mr-xs"
-                />
-
-                <div class="text-caption text-weight-bold ellipsis">
-                  {{ mensaje.remitente_nombre
-                    || etiquetaRemitenteConversacion(mensaje) }}
-                </div>
-              </div>
-
-              <div class="text-body2 conversacion-mensaje-texto">
-                {{ mensaje.mensaje }}
-              </div>
-
-              <div class="text-caption conversacion-mensaje-hora">
-                {{ formatearFechaHoraConversacion(mensaje.creado_en) }}
-              </div>
-            </div>
-          </div>
-        </q-card-section>
-
-        <q-separator />
-
-        <q-card-section class="q-pa-sm bg-blue-1">
-          <q-banner dense rounded class="bg-white text-primary">
-            <template #avatar>
-              <q-icon name="visibility" color="primary" />
-            </template>
-
-            <div class="text-weight-bold">Modo solo lectura</div>
-            <div class="text-caption">
-              El administrador puede supervisar esta conversación, pero no
-              puede enviar, editar ni eliminar mensajes.
-            </div>
-          </q-banner>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
-
   </q-page>
 </template>
 
 <script setup>
+import { fechaDDMMYYYY, fechaISOHoyBolivia, motrixDateV57 } from 'src/utils/motrixDate.js'
+
 import {
   ref,
+  nextTick,
   onMounted,
-  onBeforeUnmount,
-  nextTick
+  onBeforeUnmount
 } from 'vue'
 
 import { useQuasar } from 'quasar'
@@ -1406,15 +1187,10 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 import axios from 'axios'
-import Echo from 'laravel-echo'
-import Pusher from 'pusher-js'
 import { api } from 'src/boot/axios.js'
-import { BROADCAST_AUTH_URL, echoOptions } from 'src/config/runtime.js'
 
 import solicitudService from 'src/services/solicitudService'
 import pasajeroService from 'src/services/pasajeroService'
-
-window.Pusher = Pusher
 
 const $q = useQuasar()
 
@@ -1428,6 +1204,15 @@ const pasajerosOptions = ref([])
 const filter = ref('')
 const loading = ref(false)
 const saving = ref(false)
+
+const pagination = ref({
+  page: 1,
+  rowsPerPage: 12,
+  rowsNumber: 0
+})
+
+const buscandoPasajeros = ref(false)
+let secuenciaBusquedaPasajero = 0
 
 let intervaloActualizacionSolicitudes = null
 let temporizadorEventoTiempoReal = null
@@ -1447,21 +1232,6 @@ const solicitudAsignacion = ref(null)
 const conductoresAsignacion = ref([])
 const conductorSeleccionadoId = ref(null)
 
-/* =========================================================
-   CONVERSACIÓN DEL VIAJE — ADMINISTRADOR SOLO LECTURA
-========================================================= */
-
-const conversacionDialogOpen = ref(false)
-const conversacionLoading = ref(false)
-const solicitudConversacion = ref(null)
-const mensajesConversacion = ref([])
-const conversacionEnVivo = ref(false)
-const conversacionContenedor = ref(null)
-
-let echoConversacion = null
-let canalConversacionId = null
-let intervaloConversacion = null
-let cargandoConversacionSilenciosa = false
 
 const pasajeroSeleccionado = ref({
   id: null,
@@ -1483,6 +1253,15 @@ const estadosOptions = [
 const LAT_TRINIDAD = -14.8308
 const LNG_TRINIDAD = -64.9024
 
+const TARIFA_CORTA_MAX_KM = 2
+const TARIFA_MEDIA_MAX_KM = 4
+const TARIFA_CORTA_BS = 6
+const TARIFA_MEDIA_BS = 8
+const TARIFA_LARGA_BS = 10
+const TARIFA_NOCTURNA_BS = 15
+const HORA_INICIO_NOCTURNA = 23
+const HORA_FIN_NOCTURNA = 6
+
 let mapa = null
 let marcadorOrigen = null
 let marcadorDestino = null
@@ -1496,15 +1275,7 @@ const distanciaKm = ref(0)
    FORMULARIO
 ========================================================= */
 
-const obtenerFechaActual = () => {
-  const fecha = new Date()
-
-  const year = fecha.getFullYear()
-  const month = String(fecha.getMonth() + 1).padStart(2, '0')
-  const day = String(fecha.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
-}
+const obtenerFechaActual = () => fechaISOHoyBolivia()
 
 const crearFormularioDefault = () => ({
   id: null,
@@ -1513,7 +1284,7 @@ const crearFormularioDefault = () => ({
   fecha: obtenerFechaActual(),
   estado: 'Pendiente',
   id_pasajero: null,
-  precio: 8
+  precio: TARIFA_CORTA_BS
 })
 
 const form = ref(crearFormularioDefault())
@@ -1609,25 +1380,8 @@ const formatearPrecio = (precio) => {
   }`
 }
 
-const formatearFecha = (fecha) => {
-  if (!fecha) {
-    return 'Fecha no registrada'
-  }
-
-  const fechaNormalizada = String(fecha).includes('T')
-    ? new Date(fecha)
-    : new Date(`${fecha}T00:00:00`)
-
-  if (Number.isNaN(fechaNormalizada.getTime())) {
-    return String(fecha)
-  }
-
-  return new Intl.DateTimeFormat('es-BO', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  }).format(fechaNormalizada)
-}
+const formatearFecha = (fecha) =>
+  fechaDDMMYYYY(fecha, 'Fecha no registrada')
 
 /* =========================================================
    COLUMNAS DE LA TABLA
@@ -1683,6 +1437,7 @@ const columns = [
     label: 'Fecha',
     align: 'left',
     field: 'fecha',
+    format: value => motrixDateV57(value),
     sortable: true
   },
   {
@@ -1757,278 +1512,23 @@ const abrirHistorialPasajero = async (solicitudSeleccionada) => {
       return
     }
 
-    historialPasajero.value = solicitudes.value
-      .filter((solicitud) => {
-        return (
-          String(getPasajeroId(solicitud))
-          === String(pasajeroId)
-        )
+    const response =
+      await solicitudService.getAll({
+        paginated: 1,
+        page: 1,
+        per_page: 100,
+        id_pasajero: pasajeroId
       })
-      .sort((a, b) => Number(b.id) - Number(a.id))
+
+    historialPasajero.value =
+      Array.isArray(
+        response?.data?.data
+      )
+        ? response.data.data
+        : []
   } finally {
     historialLoading.value = false
   }
-}
-
-/* =========================================================
-   CONVERSACIÓN DEL VIAJE — ADMINISTRADOR SOLO LECTURA
-========================================================= */
-
-const obtenerEndpointAutorizacionConversacion = () => {
-  const baseConfigurada = String(
-    api?.defaults?.baseURL || ''
-  ).trim().replace(/\/+$/, '')
-
-  if (/^https?:\/\//i.test(baseConfigurada)) {
-    return `${baseConfigurada}/broadcasting/auth`
-  }
-
-  return BROADCAST_AUTH_URL
-}
-
-const obtenerCabecerasAutorizacionConversacion = () => {
-  const token = localStorage.getItem('motrix_token') || ''
-
-  return {
-    Accept: 'application/json',
-    ...(token
-      ? { Authorization: `Bearer ${token}` }
-      : {})
-  }
-}
-
-const etiquetaRemitenteConversacion = (mensaje) => {
-  const tipo = String(mensaje?.remitente_tipo || '').toLowerCase()
-
-  if (tipo === 'pasajero') return 'Pasajero'
-  if (tipo === 'conductor') return 'Mototaxista'
-  if (tipo === 'admin') return 'Administrador'
-
-  return 'Usuario'
-}
-
-const iconoRemitenteConversacion = (mensaje) => {
-  const tipo = String(mensaje?.remitente_tipo || '').toLowerCase()
-
-  if (tipo === 'pasajero') return 'person'
-  if (tipo === 'conductor') return 'two_wheeler'
-
-  return 'admin_panel_settings'
-}
-
-const claseFilaMensajeConversacion = (mensaje) => {
-  const tipo = String(mensaje?.remitente_tipo || '').toLowerCase()
-
-  if (tipo === 'conductor') return 'conversacion-fila-conductor'
-  if (tipo === 'admin') return 'conversacion-fila-admin'
-
-  return 'conversacion-fila-pasajero'
-}
-
-const claseBurbujaMensajeConversacion = (mensaje) => {
-  const tipo = String(mensaje?.remitente_tipo || '').toLowerCase()
-
-  if (tipo === 'conductor') return 'conversacion-burbuja-conductor'
-  if (tipo === 'admin') return 'conversacion-burbuja-admin'
-
-  return 'conversacion-burbuja-pasajero'
-}
-
-const formatearFechaHoraConversacion = (fecha) => {
-  if (!fecha) return 'Hora no registrada'
-
-  const valorTexto = String(fecha)
-  const normalizada = valorTexto.includes('T')
-    ? valorTexto
-    : valorTexto.replace(' ', 'T')
-
-  const valor = new Date(normalizada)
-
-  if (Number.isNaN(valor.getTime())) {
-    return valorTexto
-  }
-
-  return new Intl.DateTimeFormat('es-BO', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(valor)
-}
-
-const desplazarConversacionAlFinal = async () => {
-  await nextTick()
-
-  if (conversacionContenedor.value) {
-    conversacionContenedor.value.scrollTop =
-      conversacionContenedor.value.scrollHeight
-  }
-}
-
-const agregarMensajeConversacion = async (mensaje) => {
-  if (!mensaje?.id) return false
-
-  const existe = mensajesConversacion.value.some((item) => {
-    return Number(item.id) === Number(mensaje.id)
-  })
-
-  if (existe) return false
-
-  mensajesConversacion.value.push(mensaje)
-  mensajesConversacion.value.sort((a, b) => Number(a.id) - Number(b.id))
-
-  await desplazarConversacionAlFinal()
-  return true
-}
-
-const cargarConversacion = async (silencioso = false) => {
-  const solicitudId = Number(solicitudConversacion.value?.id)
-
-  if (!solicitudId) {
-    mensajesConversacion.value = []
-    return
-  }
-
-  if (silencioso && cargandoConversacionSilenciosa) {
-    return
-  }
-
-  if (silencioso) {
-    cargandoConversacionSilenciosa = true
-  } else {
-    conversacionLoading.value = true
-  }
-
-  try {
-    const response = await api.get(
-      `/solicitudes/${solicitudId}/mensajes`,
-      { params: { _t: Date.now() } }
-    )
-
-    mensajesConversacion.value = Array.isArray(response.data?.mensajes)
-      ? response.data.mensajes
-      : []
-
-    await desplazarConversacionAlFinal()
-  } catch (error) {
-    if (!silencioso) {
-      const mensaje = (
-        error?.response?.data?.mensaje
-        || error?.response?.data?.message
-        || 'No se pudo cargar la conversación del viaje.'
-      )
-
-      $q.notify({
-        type: 'negative',
-        message: mensaje
-      })
-    }
-  } finally {
-    if (silencioso) {
-      cargandoConversacionSilenciosa = false
-    } else {
-      conversacionLoading.value = false
-    }
-  }
-}
-
-const detenerRespaldoConversacion = () => {
-  if (intervaloConversacion) {
-    window.clearInterval(intervaloConversacion)
-    intervaloConversacion = null
-  }
-}
-
-const desconectarConversacionTiempoReal = () => {
-  if (echoConversacion && canalConversacionId) {
-    echoConversacion.leave(`viajes.chat.${canalConversacionId}`)
-  }
-
-  if (echoConversacion) {
-    echoConversacion.disconnect()
-  }
-
-  echoConversacion = null
-  canalConversacionId = null
-  conversacionEnVivo.value = false
-}
-
-const inicializarConversacionTiempoReal = (solicitudId) => {
-  desconectarConversacionTiempoReal()
-
-  try {
-    echoConversacion = new Echo({
-      ...echoOptions(),
-      authEndpoint: obtenerEndpointAutorizacionConversacion(),
-      auth: {
-        headers: obtenerCabecerasAutorizacionConversacion()
-      }
-    })
-
-    canalConversacionId = Number(solicitudId)
-
-    const conexion = echoConversacion.connector?.pusher?.connection
-
-    conexion?.bind('connected', () => {
-      conversacionEnVivo.value = true
-    })
-
-    conexion?.bind('disconnected', () => {
-      conversacionEnVivo.value = false
-    })
-
-    conexion?.bind('error', (error) => {
-      console.error(
-        'Error en el canal administrativo del chat:',
-        error
-      )
-
-      conversacionEnVivo.value = false
-    })
-
-    echoConversacion
-      .private(`viajes.chat.${solicitudId}`)
-      .listen('.MensajeViajeEnviado', (data) => {
-        agregarMensajeConversacion(data?.mensaje).catch((error) => {
-          console.error(
-            'Error agregando mensaje administrativo:',
-            error
-          )
-        })
-      })
-  } catch (error) {
-    console.error(
-      'No se pudo inicializar el chat administrativo:',
-      error
-    )
-
-    conversacionEnVivo.value = false
-  }
-}
-
-const abrirConversacion = async (solicitud) => {
-  solicitudConversacion.value = solicitud
-  mensajesConversacion.value = []
-  conversacionDialogOpen.value = true
-
-  await cargarConversacion()
-  inicializarConversacionTiempoReal(solicitud.id)
-
-  detenerRespaldoConversacion()
-  intervaloConversacion = window.setInterval(
-    () => cargarConversacion(true),
-    5000
-  )
-}
-
-const alCerrarConversacion = () => {
-  detenerRespaldoConversacion()
-  desconectarConversacionTiempoReal()
-
-  solicitudConversacion.value = null
-  mensajesConversacion.value = []
-  conversacionLoading.value = false
-  cargandoConversacionSilenciosa = false
 }
 
 /* =========================================================
@@ -2074,31 +1574,28 @@ const obtenerDireccionDeCoordenadas = async (lat, lng) => {
 ========================================================= */
 
 const calcularTarifaTrinidad = () => {
-  const ahora = new Date()
-  const hora = ahora.getHours()
-  const esNocturno = hora >= 22 || hora < 6
+  const hora = new Date().getHours()
+  const esNocturno = (
+    hora >= HORA_INICIO_NOCTURNA
+    || hora < HORA_FIN_NOCTURNA
+  )
 
   if (esNocturno) {
-    form.value.precio = 15
+    form.value.precio = TARIFA_NOCTURNA_BS
     return
   }
 
-  if (distanciaKm.value === 0) {
-    form.value.precio = 8
+  if (distanciaKm.value <= TARIFA_CORTA_MAX_KM) {
+    form.value.precio = TARIFA_CORTA_BS
     return
   }
 
-  if (distanciaKm.value <= 1.2) {
-    form.value.precio = 5
+  if (distanciaKm.value <= TARIFA_MEDIA_MAX_KM) {
+    form.value.precio = TARIFA_MEDIA_BS
     return
   }
 
-  if (distanciaKm.value <= 2.8) {
-    form.value.precio = 8
-    return
-  }
-
-  form.value.precio = 10
+  form.value.precio = TARIFA_LARGA_BS
 }
 
 /* =========================================================
@@ -2431,7 +1928,7 @@ const limpiarMapa = () => {
 
   form.value.origen = ''
   form.value.destino = ''
-  form.value.precio = 8
+  form.value.precio = TARIFA_CORTA_BS
 
   mapa?.setView(
     [LAT_TRINIDAD, LNG_TRINIDAD],
@@ -2474,12 +1971,66 @@ const onModalHide = () => {
    CARGA DE DATOS
 ========================================================= */
 
-const cargarSolicitudes = async () => {
-  const response = await solicitudService.getAll()
+const cargarSolicitudes = async (
+  props = null
+) => {
+  const pagina =
+    props?.pagination?.page
+    ?? pagination.value.page
 
-  solicitudes.value = Array.isArray(response?.data)
-    ? response.data
-    : []
+  const porPagina =
+    props?.pagination?.rowsPerPage
+    ?? pagination.value.rowsPerPage
+
+  const response =
+    await solicitudService.getAll({
+      paginated: 1,
+      page: pagina,
+      per_page: porPagina,
+      q: String(
+        filter.value || ''
+      ).trim() || undefined
+    })
+
+  solicitudes.value =
+    Array.isArray(response?.data?.data)
+      ? response.data.data
+      : []
+
+  const meta =
+    response?.data?.meta || {}
+
+  pagination.value = {
+    page:
+      Number(meta.current_page || pagina),
+    rowsPerPage:
+      Number(meta.per_page || porPagina),
+    rowsNumber:
+      Number(meta.total || 0)
+  }
+}
+
+const onRequestSolicitudes = async (
+  props
+) => {
+  loading.value = true
+
+  try {
+    await cargarSolicitudes(props)
+  } catch (error) {
+    console.error(
+      'Error consultando solicitudes:',
+      error
+    )
+
+    $q.notify({
+      type: 'negative',
+      message:
+        'No se pudieron cargar las solicitudes.'
+    })
+  } finally {
+    loading.value = false
+  }
 }
 
 /*
@@ -2530,31 +2081,90 @@ const manejarCambioSolicitudTiempoReal = () => {
     )
 }
 
-const cargarPasajeros = async () => {
-  const response = await pasajeroService.getAll()
+const filtrarPasajeros = async (
+  valor,
+  update
+) => {
+  const texto = String(
+    valor || ''
+  ).trim()
 
-  const pasajeros = Array.isArray(response?.data)
-    ? response.data
-    : []
+  if (texto.length < 2) {
+    secuenciaBusquedaPasajero += 1
+    buscandoPasajeros.value = false
 
-  pasajerosOptions.value = pasajeros.map((pasajero) => {
-    return {
-      id: pasajero.id,
-      nombre_completo:
-        extraerNombrePersona(pasajero)
-        || `Pasajero ID: ${pasajero.id}`
+    update(() => {
+      pasajerosOptions.value = []
+    })
+
+    return
+  }
+
+  const secuencia =
+    ++secuenciaBusquedaPasajero
+
+  buscandoPasajeros.value = true
+
+  try {
+    const response =
+      await pasajeroService.getAll({
+        paginated: 1,
+        page: 1,
+        per_page: 8,
+        q: texto
+      })
+
+    if (
+      secuencia
+      !== secuenciaBusquedaPasajero
+    ) {
+      return
     }
-  })
+
+    const pasajeros =
+      Array.isArray(
+        response?.data?.data
+      )
+        ? response.data.data
+        : []
+
+    update(() => {
+      pasajerosOptions.value =
+        pasajeros.map(
+          (pasajero) => ({
+            id: pasajero.id,
+            nombre_completo:
+              extraerNombrePersona(
+                pasajero
+              )
+              || `Pasajero ID: ${pasajero.id}`
+          })
+        )
+    })
+  } catch (error) {
+    console.error(
+      'Error buscando pasajeros:',
+      error
+    )
+
+    update(() => {
+      pasajerosOptions.value = []
+    })
+  } finally {
+    if (
+      secuencia
+      === secuenciaBusquedaPasajero
+    ) {
+      buscandoPasajeros.value = false
+    }
+  }
 }
 
 const cargarDatos = async () => {
   loading.value = true
 
   try {
-    await Promise.all([
-      cargarSolicitudes(),
-      cargarPasajeros()
-    ])
+    await cargarSolicitudes()
   } catch (error) {
     console.error(
       'Error cargando información:',
@@ -2867,6 +2477,17 @@ const openDialogForm = (solicitud = null) => {
   if (solicitud) {
     isEditing.value = true
 
+    const pasajeroId =
+      getPasajeroId(solicitud)
+
+    pasajerosOptions.value = [
+      {
+        id: pasajeroId,
+        nombre_completo:
+          getPasajeroNombre(solicitud)
+      }
+    ]
+
     form.value = {
       id: solicitud.id,
       origen: solicitud.origen || '',
@@ -2876,7 +2497,7 @@ const openDialogForm = (solicitud = null) => {
         : obtenerFechaActual(),
       estado: solicitud.estado || 'Pendiente',
       id_pasajero: getPasajeroId(solicitud),
-      precio: Number.parseFloat(solicitud.precio) || 8
+      precio: Number.parseFloat(solicitud.precio) || TARIFA_CORTA_BS
     }
 
     const latOrigen = Number.parseFloat(
@@ -2921,6 +2542,7 @@ const openDialogForm = (solicitud = null) => {
     )
   } else {
     isEditing.value = false
+    pasajerosOptions.value = []
     form.value = crearFormularioDefault()
   }
 
@@ -2982,7 +2604,7 @@ const saveSolicitud = async () => {
     estado: form.value.estado,
     id_pasajero: form.value.id_pasajero,
 
-    precio: Number.parseFloat(form.value.precio) || 8,
+    precio: Number.parseFloat(form.value.precio) || TARIFA_CORTA_BS,
     distancia_km: Number.parseFloat(distanciaKm.value) || 0
   }
 
@@ -3087,19 +2709,16 @@ onMounted(async () => {
    * El conductor puede aceptar, iniciar o finalizar
    * un viaje desde otra ventana o dispositivo.
    * Por eso el administrador vuelve a consultar
-   * las solicitudes cada 5 segundos.
+   * las solicitudes cada 30 segundos como respaldo.
    */
   intervaloActualizacionSolicitudes =
     window.setInterval(
       actualizarSolicitudesSilenciosamente,
-      5000
+      30000
     )
 })
 
 onBeforeUnmount(() => {
-  detenerRespaldoConversacion()
-  desconectarConversacionTiempoReal()
-
   window.removeEventListener(
     'motrix:solicitud-cambio',
     manejarCambioSolicitudTiempoReal
@@ -3234,94 +2853,6 @@ onBeforeUnmount(() => {
 }
 
 
-.conversacion-admin-card {
-  width: 860px;
-  max-width: 96vw;
-  height: 760px;
-  max-height: 92vh;
-  border-radius: 18px;
-  overflow: hidden;
-}
-
-.conversacion-resumen-item {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-  height: 100%;
-  min-height: 58px;
-  padding: 9px 10px;
-  border: 1px solid #dde5ec;
-  border-radius: 10px;
-  background: #ffffff;
-}
-
-.conversacion-admin-mensajes {
-  min-height: 280px;
-  overflow-y: auto;
-  padding: 18px;
-  background: #edf2f7;
-}
-
-.conversacion-vacia {
-  min-height: 100%;
-  padding: 48px 20px;
-}
-
-.conversacion-mensaje-fila {
-  display: flex;
-  width: 100%;
-  margin-bottom: 12px;
-}
-
-.conversacion-fila-pasajero {
-  justify-content: flex-start;
-}
-
-.conversacion-fila-conductor {
-  justify-content: flex-end;
-}
-
-.conversacion-fila-admin {
-  justify-content: center;
-}
-
-.conversacion-mensaje-burbuja {
-  width: fit-content;
-  max-width: min(72%, 590px);
-  padding: 10px 12px 8px;
-  border-radius: 14px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-}
-
-.conversacion-burbuja-pasajero {
-  color: #263238;
-  background: #ffffff;
-  border-top-left-radius: 4px;
-}
-
-.conversacion-burbuja-conductor {
-  color: #163e23;
-  background: #d9f7df;
-  border-top-right-radius: 4px;
-}
-
-.conversacion-burbuja-admin {
-  color: #3f2d00;
-  background: #fff2c2;
-}
-
-.conversacion-mensaje-texto {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.conversacion-mensaje-hora {
-  margin-top: 5px;
-  text-align: right;
-  opacity: 0.72;
-}
 
 @media (max-width: 599px) {
   .solicitudes-search {
@@ -3360,22 +2891,6 @@ onBeforeUnmount(() => {
   .historial-item {
     padding-left: 12px;
     padding-right: 12px;
-  }
-
-  .conversacion-admin-card {
-    width: 100%;
-    max-width: 100vw;
-    height: 100%;
-    max-height: 100vh;
-    border-radius: 0;
-  }
-
-  .conversacion-admin-mensajes {
-    padding: 12px;
-  }
-
-  .conversacion-mensaje-burbuja {
-    max-width: 88%;
   }
 }
 

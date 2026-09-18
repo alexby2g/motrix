@@ -54,7 +54,7 @@
                 Personas registradas
               </div>
               <div class="text-h5 text-weight-bold text-green-9">
-                {{ personas.length }}
+                {{ estadisticas.total }}
               </div>
             </div>
           </q-card-section>
@@ -154,7 +154,7 @@
             text-color="green-9"
             icon="groups"
           >
-            {{ personasFiltradas.length }} de {{ personas.length }}
+            {{ personas.length }} en esta página · {{ pagination.rowsNumber }} resultados
           </q-chip>
         </div>
       </q-card-section>
@@ -178,7 +178,10 @@
         <q-item
           v-for="persona in personasFiltradas"
           :key="persona.id"
+          clickable
+          v-ripple
           class="persona-item"
+          @click="abrirDetallePersona(persona)"
         >
           <q-item-section avatar>
             <q-avatar
@@ -240,6 +243,7 @@
               round
               icon="more_vert"
               color="grey-7"
+              @click.stop
             >
               <q-menu>
                 <q-list style="min-width: 190px">
@@ -312,7 +316,112 @@
           No se encontraron personas
         </div>
       </div>
+
+      <q-separator
+        v-if="pagination.lastPage > 1"
+      />
+
+      <div
+        v-if="pagination.lastPage > 1"
+        class="row justify-center q-pa-md"
+      >
+        <q-pagination
+          v-model="pagination.page"
+          :max="pagination.lastPage"
+          :max-pages="7"
+          boundary-numbers
+          direction-links
+          color="green-8"
+          @update:model-value="cargarPersonas"
+        />
+      </div>
     </q-card>
+
+    <!-- DETALLE EN UN PASO -->
+    <q-dialog v-model="detalleDialogOpen">
+      <q-card class="detalle-persona-dialog">
+        <q-card-section class="bg-green-8 text-white row items-center">
+          <q-avatar size="54px" color="white" text-color="green-9" class="q-mr-md">
+            <img
+              v-if="fotoPersona(personaDetalle)"
+              :src="fotoPersona(personaDetalle)"
+              alt="Fotografía de la persona"
+              @error="ocultarImagen($event)"
+            >
+            <span v-else>{{ iniciales(personaDetalle) }}</span>
+          </q-avatar>
+
+          <div class="col min-width-zero">
+            <div class="text-h6 text-weight-bold ellipsis">
+              {{ nombreCompleto(personaDetalle) }}
+            </div>
+            <div class="text-caption text-green-1">
+              Detalle del registro personal
+            </div>
+          </div>
+
+          <q-btn flat round dense icon="close" v-close-popup />
+        </q-card-section>
+
+        <q-card-section v-if="personaDetalle" class="q-pa-lg">
+          <q-list bordered separator class="rounded-borders">
+            <q-item>
+              <q-item-section avatar><q-icon name="fingerprint" color="green-8" /></q-item-section>
+              <q-item-section>
+                <q-item-label caption>Cédula de identidad</q-item-label>
+                <q-item-label class="text-weight-medium">{{ personaDetalle.ci || 'No registrada' }}</q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section avatar><q-icon name="phone" color="green-8" /></q-item-section>
+              <q-item-section>
+                <q-item-label caption>Teléfono / celular</q-item-label>
+                <q-item-label class="text-weight-medium">{{ personaDetalle.telefono || 'No registrado' }}</q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section avatar><q-icon name="home" color="green-8" /></q-item-section>
+              <q-item-section>
+                <q-item-label caption>Dirección</q-item-label>
+                <q-item-label class="text-weight-medium">{{ personaDetalle.direccion || 'No registrada' }}</q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section avatar><q-icon name="photo_camera" color="green-8" /></q-item-section>
+              <q-item-section>
+                <q-item-label caption>Fotografías</q-item-label>
+                <q-item-label class="text-weight-medium">
+                  {{ Array.isArray(personaDetalle.imagenes) ? personaDetalle.imagenes.length : 0 }} registrada(s)
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md bg-grey-1">
+          <q-btn flat color="grey-7" label="Cerrar" v-close-popup />
+          <q-btn
+            outline
+            color="blue-8"
+            icon="photo_camera"
+            label="Fotografías"
+            no-caps
+            @click="fotografiasDesdeDetalle"
+          />
+          <q-btn
+            color="green-8"
+            icon="edit"
+            label="Editar"
+            unelevated
+            no-caps
+            @click="editarDesdeDetallePersona"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <!-- FORMULARIO -->
     <q-dialog
@@ -602,7 +711,8 @@
 import {
   computed,
   onMounted,
-  ref
+  ref,
+  watch
 } from 'vue'
 
 import { useQuasar } from 'quasar'
@@ -616,7 +726,24 @@ const filter = ref('')
 const loading = ref(false)
 const saving = ref(false)
 
+const pagination = ref({
+  page: 1,
+  rowsPerPage: 20,
+  rowsNumber: 0,
+  lastPage: 1
+})
+
+const estadisticas = ref({
+  total: 0,
+  con_foto: 0,
+  con_telefono: 0
+})
+
+let temporizadorBusqueda = null
+
 const dialogOpen = ref(false)
+const detalleDialogOpen = ref(false)
+const personaDetalle = ref(null)
 const isEditing = ref(false)
 const formRef = ref(null)
 const archivoImagen = ref(null)
@@ -644,50 +771,17 @@ const requerido = valor =>
   Boolean(String(valor || '').trim())
   || 'Campo obligatorio'
 
-const personasFiltradas = computed(() => {
-  const texto = normalizar(filter.value)
-
-  if (!texto) {
-    return personas.value
-  }
-
-  return personas.value.filter(persona => {
-    const contenido = [
-      persona.nombre,
-      persona.apellidos,
-      persona.ci,
-      persona.telefono,
-      persona.direccion
-    ]
-      .map(normalizar)
-      .join(' ')
-
-    return contenido.includes(texto)
-  })
-})
-
-const totalConFoto = computed(() =>
-  personas.value.filter(
-    persona =>
-      Array.isArray(persona.imagenes)
-      && persona.imagenes.length > 0
-  ).length
+const personasFiltradas = computed(
+  () => personas.value
 )
 
-const totalConTelefono = computed(() =>
-  personas.value.filter(
-    persona =>
-      Boolean(
-        String(persona.telefono || '').trim()
-      )
-  ).length
+const totalConFoto = computed(
+  () => estadisticas.value.con_foto
 )
 
-function normalizar(valor) {
-  return String(valor || '')
-    .trim()
-    .toLocaleLowerCase('es')
-}
+const totalConTelefono = computed(
+  () => estadisticas.value.con_telefono
+)
 
 function nombreCompleto(persona) {
   if (!persona) return 'Persona'
@@ -764,6 +858,25 @@ function ocultarImagen(evento) {
   }
 }
 
+function abrirDetallePersona(persona) {
+  personaDetalle.value = persona
+  detalleDialogOpen.value = true
+}
+
+function editarDesdeDetallePersona() {
+  if (!personaDetalle.value) return
+  const persona = personaDetalle.value
+  detalleDialogOpen.value = false
+  abrirFormulario(persona)
+}
+
+function fotografiasDesdeDetalle() {
+  if (!personaDetalle.value) return
+  const persona = personaDetalle.value
+  detalleDialogOpen.value = false
+  abrirFotografias(persona)
+}
+
 function extraerMensaje(error) {
   const data = error?.response?.data
 
@@ -794,19 +907,58 @@ function extraerMensaje(error) {
   )
 }
 
-async function cargarPersonas() {
+async function cargarPersonas(
+  pagina = pagination.value.page
+) {
   loading.value = true
 
   try {
     const respuesta = await api.get(
-      '/personas'
+      '/personas',
+      {
+        params: {
+          paginated: 1,
+          page: pagina,
+          per_page:
+            pagination.value.rowsPerPage,
+          q: String(
+            filter.value || ''
+          ).trim() || undefined
+        }
+      }
     )
 
     personas.value = Array.isArray(
-      respuesta.data
+      respuesta.data?.data
     )
-      ? respuesta.data
+      ? respuesta.data.data
       : []
+
+    const meta =
+      respuesta.data?.meta || {}
+
+    pagination.value.page =
+      Number(meta.current_page || pagina)
+
+    pagination.value.lastPage =
+      Math.max(
+        Number(meta.last_page || 1),
+        1
+      )
+
+    pagination.value.rowsNumber =
+      Number(meta.total || 0)
+
+    estadisticas.value = {
+      total:
+        Number(meta.stats?.total || 0),
+      con_foto:
+        Number(meta.stats?.con_foto || 0),
+      con_telefono:
+        Number(
+          meta.stats?.con_telefono || 0
+        )
+    }
   } catch (error) {
     console.error(
       'Error cargando personas:',
@@ -1121,6 +1273,26 @@ function eliminarFoto(imagen) {
   })
 }
 
+watch(
+  filter,
+  () => {
+    if (temporizadorBusqueda) {
+      window.clearTimeout(
+        temporizadorBusqueda
+      )
+    }
+
+    temporizadorBusqueda =
+      window.setTimeout(
+        () => {
+          pagination.value.page = 1
+          cargarPersonas(1)
+        },
+        350
+      )
+  }
+)
+
 onMounted(
   cargarPersonas
 )
@@ -1158,6 +1330,13 @@ onMounted(
   background: #f7fbf5;
 }
 
+.detalle-persona-dialog {
+  width: 680px;
+  max-width: 94vw;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
 .persona-dialog {
   width: 700px;
   max-width: 94vw;
@@ -1176,6 +1355,7 @@ onMounted(
 }
 
 @media (max-width: 599px) {
+  .detalle-persona-dialog,
   .persona-dialog,
   .fotos-dialog {
     width: 100vw;

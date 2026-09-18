@@ -29,7 +29,22 @@ const paginaEscanerQr = () => (
 const routes = [
   {
     path: '/inicio',
+    component: () => import('pages/BienvenidaPage.vue'),
+    meta: { guestOnly: true }
+  },
+  {
+    path: '/presentacion',
     component: () => import('pages/LandingPage.vue')
+  },
+  {
+    path: '/registro-pasajero',
+    component: () => import('pages/RegistroPasajeroPage.vue'),
+    meta: { guestOnly: true }
+  },
+  {
+    path: '/completar-google',
+    component: () => import('pages/CompletarGooglePage.vue'),
+    meta: { guestOnly: true }
   },
   {
     path: '/login',
@@ -37,8 +52,21 @@ const routes = [
     meta: { guestOnly: true }
   },
   {
+    path: '/recuperar-contrasena',
+    component: () => import('pages/RecuperarContrasenaPage.vue'),
+    meta: { guestOnly: true }
+  },
+  {
+    path: '/seguimiento/:token',
+    component: () => import('pages/publico/SeguimientoCompartidoPage.vue')
+  },
+  {
     path: '/verificar/:codigo',
     component: () => import('pages/publico/VerificarPage.vue')
+  },
+  {
+    path: '/eliminar-cuenta',
+    component: () => import('pages/EliminarCuentaPage.vue')
   },
   {
     path: '/',
@@ -55,16 +83,21 @@ const routes = [
         meta: { roles: ['admin_general'] }
       },
       {
+        path: 'registro',
+        component: () => import('pages/registro/RegistroHomePage.vue'),
+        meta: { roles: ['admin_registro'] }
+      },
+      {
         path: 'personas',
         component: () => import('pages/personas/PersonasPage.vue'),
         meta: {
-          roles: ['admin_general', 'secretario', 'admin_servicios']
+          roles: ['admin_general', 'admin_registro', 'secretario']
         }
       },
       {
         path: 'federaciones',
         component: () => import('pages/administracion/FederacionesPage.vue'),
-        meta: { roles: ['admin_general'] }
+        meta: { roles: ['admin_general', 'admin_registro'] }
       },
       {
         path: 'usuarios',
@@ -79,17 +112,17 @@ const routes = [
       {
         path: 'sindicatos',
         component: () => import('pages/administracion/SindicatosPage.vue'),
-        meta: { roles: ['admin_general', 'secretario'] }
+        meta: { roles: ['admin_general', 'admin_registro', 'secretario'] }
       },
       {
         path: 'mototaxistas',
         component: () => import('pages/mototaxistas/MototaxistasPage.vue'),
-        meta: { roles: ['admin_general', 'secretario'] }
+        meta: { roles: ['admin_general', 'admin_registro', 'secretario'] }
       },
       {
         path: 'motocicletas',
         component: () => import('pages/mototaxistas/MotocicletasPage.vue'),
-        meta: { roles: ['admin_general', 'secretario'] }
+        meta: { roles: ['admin_general', 'admin_registro', 'secretario'] }
       },
       {
         path: 'solicitudes',
@@ -109,6 +142,26 @@ const routes = [
       {
         path: 'pagos-sindicales',
         component: () => import('pages/administracion/PagosSindicalesPage.vue'),
+        meta: { roles: ['admin_general', 'admin_registro', 'secretario'] }
+      },
+      {
+        path: 'suscripciones-motrix',
+        component: () => import('pages/administracion/SuscripcionesMotrixPage.vue'),
+        meta: { roles: ['admin_general', 'secretario'] }
+      },
+      {
+        path: 'cobranza-motrix',
+        component: () => import('pages/administracion/CobranzaMotrixPage.vue'),
+        meta: { roles: ['admin_general', 'secretario'] }
+      },
+      {
+        path: 'liquidaciones-motrix',
+        component: () => import('pages/administracion/LiquidacionesMotrixPage.vue'),
+        meta: { roles: ['admin_general', 'secretario'] }
+      },
+      {
+        path: 'reportes-suscripciones-motrix',
+        component: () => import('pages/reportes/ReportesSuscripcionesMotrixPage.vue'),
         meta: { roles: ['admin_general', 'secretario'] }
       },
       {
@@ -142,9 +195,19 @@ const routes = [
         meta: { roles: ['conductor'] }
       },
       {
+        path: 'conductor/suscripcion',
+        component: () => import('pages/servicios/MiSuscripcionMotrixPage.vue'),
+        meta: { roles: ['conductor'] }
+      },
+      {
         path: 'conductor/perfil',
         component: () => import('pages/servicios/PerfilConductorPage.vue'),
         meta: { roles: ['conductor'] }
+      },
+      {
+        path: 'cuenta/cambiar-contrasena',
+        component: () => import('pages/CambiarContrasenaPage.vue'),
+        meta: { roles: ['conductor', 'pasajero'] }
       },
       {
         path: 'pasajero',

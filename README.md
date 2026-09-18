@@ -1,38 +1,36 @@
-# MOTRIX
+# Sistema Mototaxi (mototaxi-front)
 
-Sistema independiente de gestión de mototaxis.
-
-## Estructura
-
-```text
-motrix/
-├── backend/      Laravel 12 / API / Sanctum / Reverb
-├── frontend/     Quasar / Vue / SPA / PWA
-├── docs/         documentación de despliegue
-└── render.yaml   Blueprint para Render
+Sistema web y móvil para mototaxis
+## Install the dependencies
+```bash
+yarn
+# or
+npm install
 ```
 
-## Base de datos
-
-- Desarrollo local: MySQL en Laragon, base `motrix_integrado`.
-- Producción: PostgreSQL en Neon.
-- La estructura oficial se mantiene mediante migraciones Laravel.
-- Los dumps SQL con datos personales, tokens o credenciales no forman parte del repositorio.
-
-## Publicar este paquete en GitHub
-
-En Windows, extrae el ZIP y ejecuta `SUBIR_A_GITHUB.bat`. El asistente conserva el historial remoto de `alexby2g/motrix`, crea un commit con el código limpio y lo publica en `main`.
-
-## Despliegue objetivo
-
-```text
-Vercel (Quasar)
-       |
-       v
-Render API (Laravel) ----> Neon PostgreSQL
-       |
-       v
-Render Reverb (WebSockets)
+### Start the app in development mode (hot-code reloading, error reporting, etc.)
+```bash
+quasar dev
 ```
 
-Consulta [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) para los pasos de instalación y despliegue.
+### Lint the files
+```bash
+yarn lint
+# or
+npm run lint
+```
+
+### Format the files
+```bash
+yarn format
+# or
+npm run format
+```
+
+### Build the app for production
+```bash
+quasar build
+```
+
+### Customize the configuration
+See [Configuring quasar.config.js](https://v2.quasar.dev/quasar-cli-vite/quasar-config-js).

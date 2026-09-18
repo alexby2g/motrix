@@ -27,8 +27,11 @@
               </div>
 
               <div class="text-subtitle2 text-green-2 q-mt-xs">
-                Sistema Web y Aplicación Móvil para el Registro y
-                Solicitud de Mototaxistas
+                {{
+                  esAppNativa
+                    ? 'Aplicación MOTRIX para el Registro y Solicitud de Mototaxistas'
+                    : 'Sistema Web y Aplicación Móvil para el Registro y Solicitud de Mototaxistas'
+                }}
               </div>
 
               <q-list class="q-mt-xl branding-list">
@@ -83,8 +86,7 @@
             </div>
 
             <div class="branding-footer text-green-3 text-caption">
-              Instituto Tecnológico Superior José Castillo
-              · Trinidad - Beni 2026
+              MOTRIX · Movilidad urbana segura · Trinidad, Beni
             </div>
           </section>
 
@@ -105,7 +107,11 @@
                   </div>
 
                   <div class="text-caption text-grey-6">
-                    Plataforma integrada de mototaxis
+                    {{
+                      esAppNativa
+                        ? 'Aplicación MOTRIX'
+                        : 'Plataforma integrada de mototaxis'
+                    }}
                   </div>
                 </div>
               </div>
@@ -115,7 +121,23 @@
               </div>
 
               <div class="text-body2 text-grey-6 q-mb-lg">
-                Ingresa con tu correo electrónico o nickname.
+                Ingresa con tu número de celular. También puedes usar correo o usuario si tu cuenta lo tiene.
+              </div>
+
+              <div
+                v-if="mostrarGoogleWeb"
+                class="google-login-block q-mb-md"
+              >
+                <div
+                  ref="googleButton"
+                  class="google-button-host"
+                />
+
+                <div class="google-divider">
+                  <span />
+                  <small>O INGRESA CON TUS CREDENCIALES</small>
+                  <span />
+                </div>
               </div>
 
               <q-form
@@ -124,7 +146,7 @@
               >
                 <q-input
                   v-model.trim="form.login"
-                  label="Correo o nickname"
+                  label="Celular, correo o usuario"
                   outlined
                   autocomplete="username"
                   class="q-mb-md"
@@ -183,7 +205,34 @@
                   size="md"
                   :loading="cargando"
                 />
+
+                <div class="text-right q-mt-sm">
+                  <q-btn
+                    flat
+                    dense
+                    no-caps
+                    color="green-8"
+                    icon="lock_reset"
+                    label="¿Olvidaste tu contraseña?"
+                    to="/recuperar-contrasena"
+                  />
+                </div>
               </q-form>
+
+              <div class="registro-pasajero q-mt-lg text-center">
+                <div class="text-caption text-grey-6 q-mb-xs">
+                  ¿Primera vez en MOTRIX?
+                </div>
+
+                <q-btn
+                  flat
+                  no-caps
+                  color="green-8"
+                  icon="person_add"
+                  label="Crear cuenta de pasajero"
+                  to="/registro-pasajero"
+                />
+              </div>
 
               <q-banner
                 rounded
@@ -214,11 +263,19 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { nextTick, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 
 import { api } from '../boot/axios.js'
+import {
+  autenticarConGoogle,
+  esContenedorNativo,
+  googleClientConfigurado,
+  guardarGooglePendiente,
+  guardarSesionMotrix,
+  renderizarBotonGoogle
+} from '../services/googleAuth.js'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -226,6 +283,29 @@ const router = useRouter()
 
 const cargando = ref(false)
 const mostrarPassword = ref(false)
+const googleButton = ref(null)
+const esAppNativa = esContenedorNativo()
+
+const mostrarGoogleWeb = ref(
+  googleClientConfigurado() && !esAppNativa
+)
+
+onMounted(async () => {
+  if (!mostrarGoogleWeb.value) return
+
+  await nextTick()
+
+  try {
+    await renderizarBotonGoogle(
+      googleButton.value,
+      manejarGoogle
+    )
+  } catch (error) {
+    console.error('No se pudo inicializar Google:', error)
+    mostrarGoogleWeb.value = false
+  }
+})
+
 
 const form = reactive({
   login: '',
@@ -235,7 +315,7 @@ const form = reactive({
 const reglasLogin = [
   valor =>
     Boolean(String(valor || '').trim())
-    || 'El correo o nickname es obligatorio'
+    || 'El celular, correo o usuario es obligatorio'
 ]
 
 const reglasPassword = [
@@ -261,6 +341,10 @@ function rutaInicialPorRol(role) {
     return '/monitoreo'
   }
 
+  if (rol === 'admin_registro') {
+    return '/registro'
+  }
+
   if (rol === 'admin_servicios') {
     return '/solicitudes'
   }
@@ -278,6 +362,54 @@ function rutaInicialPorRol(role) {
   }
 
   return '/'
+}
+
+async function manejarGoogle(respuestaGoogle) {
+  const credential = respuestaGoogle?.credential
+  if (!credential) return
+
+  try {
+    const respuesta = await autenticarConGoogle(credential)
+
+    if (respuesta.data?.needs_profile) {
+      guardarGooglePendiente(
+        respuesta.data.registration_token,
+        respuesta.data.profile
+      )
+      await router.push('/completar-google')
+      return
+    }
+
+    guardarSesionMotrix(respuesta.data)
+
+    $q.notify({
+      type: 'positive',
+      position: 'top',
+      icon: 'check_circle',
+      message: `Bienvenido, ${respuesta.data.user?.persona_nombre || respuesta.data.user?.name || 'Pasajero MOTRIX'}`
+    })
+
+    const destinoGoogle =
+      typeof route.query.redirect === 'string'
+      && route.query.redirect.startsWith('/pasajero')
+        ? route.query.redirect
+        : '/pasajero'
+
+    await router.replace(destinoGoogle)
+  } catch (error) {
+    const mensaje = error.response?.data?.message
+      || Object.values(error.response?.data?.errors || {})
+        .flat()
+        .find(Boolean)
+      || 'No se pudo continuar con Google.'
+
+    $q.notify({
+      type: 'negative',
+      position: 'top',
+      icon: 'error',
+      message: mensaje
+    })
+  }
 }
 
 async function iniciarSesion() {
@@ -529,5 +661,33 @@ async function iniciarSesion() {
   .login-mobile-logo {
     display: flex;
   }
+}
+
+.google-button-host {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  justify-content: center;
+}
+
+.google-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  color: #9e9e9e;
+}
+
+.google-divider span {
+  flex: 1;
+  height: 1px;
+  background: #e0e0e0;
+}
+
+.google-divider small {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-align: center;
 }
 </style>

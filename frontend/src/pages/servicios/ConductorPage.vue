@@ -182,28 +182,6 @@
           </div>
         </q-card-section>
 
-        <!-- CHAT CON EL PASAJERO -->
-        <q-card-section class="q-py-sm bg-blue-1">
-          <q-btn
-            v-if="chatDisponible"
-            color="primary"
-            icon="chat"
-            label="Chat con el pasajero"
-            class="full-width text-weight-bold"
-            unelevated
-            @click="abrirChatViaje"
-          >
-            <q-badge
-              v-if="chatNoLeidos > 0"
-              color="negative"
-              floating
-              rounded
-            >
-              {{ chatNoLeidos > 99 ? '99+' : chatNoLeidos }}
-            </q-badge>
-          </q-btn>
-        </q-card-section>
-
         <!-- SOS E INCIDENCIAS DEL VIAJE -->
         <q-card-section
           v-if="sosDisponible"
@@ -693,7 +671,7 @@
                   dense
                   class="text-weight-bold"
                 >
-                  {{ tiempoRestante(viaje.expira_en) }}
+                  {{ tiempoRespuestaRestante(viaje) }}
                 </q-chip>
               </div>
             </q-card-section>
@@ -784,6 +762,7 @@
                     label="Rechazar"
                     class="full-width"
                     :loading="accionando === `rechazar-${viaje.id}`"
+                    :disable="Boolean(accionando) || turnoRespuestaVencido(viaje)"
                     @click="rechazarViaje(viaje)"
                   />
                 </div>
@@ -795,6 +774,7 @@
                     label="Aceptar viaje"
                     class="full-width text-weight-bold"
                     :loading="accionando === `aceptar-${viaje.id}`"
+                    :disable="Boolean(accionando) || turnoRespuestaVencido(viaje)"
                     @click="aceptarViaje(viaje)"
                   />
                 </div>
@@ -1001,6 +981,16 @@
                       {{ item.metodo || 'No especificado' }}
                     </strong>
                   </div>
+
+                  <div
+                    v-if="item.metodo === 'Mixto'"
+                    class="text-caption text-grey-7 q-mt-xs"
+                  >
+                    Efectivo:
+                    <strong>{{ formatearMonto(item.monto_efectivo) }}</strong>
+                    · QR:
+                    <strong>{{ formatearMonto(item.monto_qr) }}</strong>
+                  </div>
                 </div>
               </div>
 
@@ -1116,7 +1106,7 @@
               icon="timer"
               class="text-weight-bold"
             >
-              {{ tiempoRestante(solicitudDestacada.expira_en) }}
+              {{ tiempoRespuestaRestante(solicitudDestacada) }}
             </q-chip>
           </div>
         </q-card-section>
@@ -1206,7 +1196,7 @@
                 label="Rechazar"
                 class="full-width"
                 :loading="accionando === `rechazar-${solicitudDestacada.id}`"
-                :disable="Boolean(accionando)"
+                :disable="Boolean(accionando) || turnoRespuestaVencido(solicitudDestacada)"
                 @click="rechazarViaje(solicitudDestacada)"
               />
             </div>
@@ -1218,7 +1208,7 @@
                 label="Aceptar viaje"
                 class="full-width text-weight-bold"
                 :loading="accionando === `aceptar-${solicitudDestacada.id}`"
-                :disable="Boolean(accionando)"
+                :disable="Boolean(accionando) || turnoRespuestaVencido(solicitudDestacada)"
                 @click="aceptarViaje(solicitudDestacada)"
               />
             </div>
@@ -1361,181 +1351,6 @@
       </q-card>
     </q-dialog>
 
-
-    <!-- CHAT EN TIEMPO REAL CON EL PASAJERO -->
-    <q-dialog
-      v-model="dialogChat"
-      :maximized="$q.screen.lt.sm"
-      transition-show="slide-up"
-      transition-hide="slide-down"
-      @hide="alCerrarChat"
-    >
-      <q-card class="chat-dialog-card column no-wrap">
-        <q-card-section class="bg-primary text-white row items-center no-wrap">
-          <q-avatar
-            color="white"
-            text-color="primary"
-            icon="chat"
-            size="46px"
-            class="q-mr-md"
-          />
-
-          <div class="col min-width-zero">
-            <div class="text-h6 text-weight-bold ellipsis">
-              Chat con {{ getPasajeroNombre(viajeActivo || {}) }}
-            </div>
-            <div class="text-caption text-blue-1">
-              Viaje #{{ viajeActivo?.id || '—' }} · {{ viajeActivo?.estado || 'Sin estado' }}
-            </div>
-          </div>
-
-          <q-chip
-            :color="websocketConectado ? 'positive' : 'orange-8'"
-            text-color="white"
-            :icon="websocketConectado ? 'sensors' : 'sync_problem'"
-            dense
-            class="q-mr-sm"
-          >
-            {{ websocketConectado ? 'EN VIVO' : 'RESPALDO' }}
-          </q-chip>
-
-          <q-btn
-            flat
-            round
-            dense
-            icon="close"
-            aria-label="Cerrar chat"
-            @click="dialogChat = false"
-          />
-        </q-card-section>
-
-        <q-linear-progress
-          v-if="chatCargando"
-          indeterminate
-          color="primary"
-        />
-
-        <div
-          ref="chatContenedor"
-          class="chat-messages col"
-        >
-          <div
-            v-if="!chatCargando && chatMensajes.length === 0"
-            class="column items-center justify-center text-center text-grey-6 chat-empty"
-          >
-            <q-icon name="forum" size="54px" color="grey-5" />
-            <div class="text-subtitle1 text-weight-bold q-mt-sm">
-              Todavía no hay mensajes
-            </div>
-            <div class="text-caption">
-              Escribe al pasajero para coordinar el punto de recogida.
-            </div>
-          </div>
-
-          <div
-            v-for="mensaje in chatMensajes"
-            :key="mensaje.id"
-            class="chat-row"
-            :class="esMensajeChatPropio(mensaje) ? 'chat-row-own' : 'chat-row-other'"
-          >
-            <div
-              class="chat-bubble"
-              :class="esMensajeChatPropio(mensaje) ? 'chat-bubble-own' : 'chat-bubble-other'"
-            >
-              <div
-                v-if="!esMensajeChatPropio(mensaje)"
-                class="text-caption text-weight-bold text-primary q-mb-xs"
-              >
-                {{ mensaje.remitente_nombre || 'Pasajero' }}
-              </div>
-
-              <div class="text-body2 chat-message-text">
-                {{ mensaje.mensaje }}
-              </div>
-
-              <div class="chat-message-time">
-                {{ formatearHoraChat(mensaje.creado_en) }}
-                <q-icon
-                  v-if="esMensajeChatPropio(mensaje)"
-                  :name="mensaje.leido_pasajero_en ? 'done_all' : 'done'"
-                  :color="mensaje.leido_pasajero_en ? 'light-blue-7' : 'grey-6'"
-                  size="16px"
-                  class="q-ml-xs"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <q-separator />
-
-        <q-card-section class="q-py-sm bg-grey-1">
-          <div class="text-caption text-grey-7 q-mb-xs">
-            Mensajes rápidos
-          </div>
-
-          <div class="row q-gutter-xs no-wrap chat-quick-scroll">
-            <q-btn
-              v-for="texto in mensajesRapidosConductor"
-              :key="texto"
-              outline
-              rounded
-              no-caps
-              dense
-              color="primary"
-              :label="texto"
-              :disable="chatEnviando || !chatHabilitado"
-              @click="enviarMensajeChat(texto)"
-            />
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-sm">
-          <q-banner
-            v-if="!chatHabilitado"
-            rounded
-            class="bg-orange-1 text-orange-10 q-mb-sm"
-          >
-            El chat está cerrado porque el viaje finalizó o fue cancelado.
-          </q-banner>
-
-          <div class="row items-end q-col-gutter-sm">
-            <div class="col">
-              <q-input
-                v-model="chatTexto"
-                outlined
-                autogrow
-                type="textarea"
-                maxlength="1000"
-                counter
-                label="Escribe un mensaje"
-                :disable="!chatHabilitado || chatEnviando"
-                @keydown.enter.exact.prevent="enviarMensajeChat()"
-              >
-                <template #prepend>
-                  <q-icon name="message" color="primary" />
-                </template>
-              </q-input>
-            </div>
-
-            <div class="col-auto">
-              <q-btn
-                round
-                color="primary"
-                icon="send"
-                size="lg"
-                :loading="chatEnviando"
-                :disable="!chatHabilitado || !chatTexto.trim()"
-                @click="enviarMensajeChat()"
-              >
-                <q-tooltip>Enviar mensaje</q-tooltip>
-              </q-btn>
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
-
     <!-- MODAL DE COBRO -->
     <q-dialog v-model="dialogCobro" persistent position="bottom">
       <q-card class="q-pa-sm border-radius-lg cobro-dialog">
@@ -1558,7 +1373,7 @@
           </div>
         </q-card-section>
 
-        <q-card-section class="q-py-md">
+        <q-card-section class="q-py-md cobro-dialog-body">
           <div class="column q-gutter-sm">
             <q-btn
               color="green-7"
@@ -1574,10 +1389,159 @@
               icon="qr_code_2"
               label="Transferencia / QR"
               class="text-bold q-py-md text-subtitle1"
-              :loading="procesandoCobro"
-              @click="procesarFinalizacionConPago('Transferencia / QR')"
+              :disable="procesandoCobro"
+              @click="activarPagoQr"
+            />
+
+            <q-btn
+              outline
+              color="orange-9"
+              icon="account_balance_wallet"
+              label="Pago mixto: efectivo + QR"
+              class="text-bold q-py-md text-subtitle1"
+              :disable="procesandoCobro"
+              @click="activarPagoMixto"
             />
           </div>
+
+          <q-slide-transition>
+            <div
+              v-if="pagoQrActivo"
+              class="q-mt-md q-pa-md bg-indigo-1 rounded-borders"
+            >
+              <div class="text-subtitle2 text-weight-bold text-indigo-10 text-center">
+                QR de cobro del mototaxista
+              </div>
+
+              <div class="text-caption text-grey-7 text-center q-mb-md">
+                Muestra este QR al pasajero y confirma el pago cuando lo recibas.
+              </div>
+
+              <img
+                v-if="qrPagoConductorUrl"
+                :src="qrPagoConductorUrl"
+                alt="QR de cobro MOTRIX"
+                class="cobro-qr-image"
+              >
+
+              <q-banner
+                v-else
+                rounded
+                class="bg-orange-2 text-orange-10"
+              >
+                No tienes un QR de cobro registrado. Cárgalo desde Mi perfil
+                antes de registrar un pago digital.
+              </q-banner>
+
+              <div
+                v-if="qrPagoConductorUrl"
+                class="text-center q-mt-sm"
+              >
+                <div class="text-weight-bold">
+                  {{ qrPagoMetodoConductor }}
+                </div>
+                <div class="text-caption text-grey-7">
+                  Titular: {{ qrPagoTitularConductor }}
+                </div>
+              </div>
+
+              <q-btn
+                v-if="qrPagoConductorUrl"
+                color="indigo-7"
+                icon="check_circle"
+                label="Confirmar pago QR"
+                class="full-width text-bold q-mt-md"
+                :loading="procesandoCobro"
+                @click="procesarFinalizacionConPago('Transferencia / QR')"
+              />
+
+              <q-btn
+                v-else
+                flat
+                color="green-8"
+                icon="account_circle"
+                label="Ir a Mi perfil"
+                class="full-width q-mt-sm"
+                @click="irAPerfilQr"
+              />
+            </div>
+          </q-slide-transition>
+
+          <q-slide-transition>
+            <div
+              v-if="pagoMixtoActivo"
+              class="q-mt-md q-pa-md bg-orange-1 rounded-borders"
+            >
+              <div class="text-subtitle2 text-weight-bold text-orange-10 q-mb-sm">
+                Divide la tarifa entre efectivo y QR
+              </div>
+
+              <q-input
+                v-model.number="montoEfectivoMixto"
+                outlined
+                dense
+                type="number"
+                min="0.01"
+                :max="montoTotalCobro - 0.01"
+                step="0.50"
+                prefix="Bs."
+                label="Monto recibido en efectivo"
+              />
+
+              <q-input
+                :model-value="montoQrMixto.toFixed(2)"
+                outlined
+                dense
+                readonly
+                prefix="Bs."
+                label="Monto restante por QR"
+                class="q-mt-sm"
+              />
+
+              <div class="q-mt-md text-center">
+                <img
+                  v-if="qrPagoConductorUrl"
+                  :src="qrPagoConductorUrl"
+                  alt="QR de cobro MOTRIX"
+                  class="cobro-qr-image"
+                >
+
+                <q-banner
+                  v-else
+                  rounded
+                  class="bg-orange-2 text-orange-10 text-left"
+                >
+                  Registra tu QR de cobro en Mi perfil para utilizar pago mixto.
+                </q-banner>
+
+                <div
+                  v-if="qrPagoConductorUrl"
+                  class="q-mt-sm"
+                >
+                  <div class="text-weight-bold">
+                    {{ qrPagoMetodoConductor }}
+                  </div>
+                  <div class="text-caption text-grey-7">
+                    Titular: {{ qrPagoTitularConductor }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-caption text-grey-7 q-mt-sm">
+                Total: {{ formatearMonto(montoTotalCobro) }}
+              </div>
+
+              <q-btn
+                color="orange-9"
+                icon="check_circle"
+                label="Confirmar pago mixto"
+                class="full-width text-bold q-mt-md"
+                :loading="procesandoCobro"
+                :disable="!pagoMixtoValido || !qrPagoConductorUrl"
+                @click="procesarFinalizacionMixta"
+              />
+            </div>
+          </q-slide-transition>
         </q-card-section>
 
         <q-card-actions align="center" class="q-pb-md">
@@ -1595,6 +1559,8 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY, fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   nextTick,
@@ -1613,7 +1579,6 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../../boot/axios.js'
 import { BROADCAST_AUTH_URL, echoOptions } from '../../config/runtime.js'
-
 window.Pusher = Pusher
 
 const $q = useQuasar()
@@ -1662,14 +1627,6 @@ const dialogNuevaSolicitud = ref(false)
 const solicitudDestacada = ref(null)
 const websocketConectado = ref(false)
 
-const dialogChat = ref(false)
-const chatMensajes = ref([])
-const chatTexto = ref('')
-const chatCargando = ref(false)
-const chatEnviando = ref(false)
-const chatHabilitado = ref(false)
-const chatNoLeidos = ref(0)
-const chatContenedor = ref(null)
 
 const dialogSos = ref(false)
 const sosTipo = ref('')
@@ -1694,12 +1651,6 @@ const tiposIncidenciaConductor = [
   'Otro'
 ]
 
-const mensajesRapidosConductor = [
-  'Ya estoy llegando',
-  'Estoy en el punto de recogida',
-  'No encuentro la ubicación',
-  'Espérame un momento'
-]
 
 const ganancias = ref({
   viajes_totales: 0,
@@ -1713,6 +1664,53 @@ const ganancias = ref({
 const dialogCobro = ref(false)
 const viajeSeleccionado = ref(null)
 const procesandoCobro = ref(false)
+const pagoQrActivo = ref(false)
+const pagoMixtoActivo = ref(false)
+const montoEfectivoMixto = ref(null)
+
+const montoTotalCobro = computed(() => {
+  const monto = Number.parseFloat(
+    viajeSeleccionado.value?.precio
+  )
+
+  return Number.isFinite(monto)
+    ? Math.max(0, monto)
+    : 0
+})
+
+const montoQrMixto = computed(() => {
+  const efectivo = Number.parseFloat(
+    montoEfectivoMixto.value
+  )
+
+  if (!Number.isFinite(efectivo)) {
+    return montoTotalCobro.value
+  }
+
+  return Math.max(
+    0,
+    Number(
+      (montoTotalCobro.value - efectivo).toFixed(2)
+    )
+  )
+})
+
+const pagoMixtoValido = computed(() => {
+  const efectivo = Number.parseFloat(
+    montoEfectivoMixto.value
+  )
+
+  return Boolean(
+    Number.isFinite(efectivo)
+    && efectivo > 0
+    && montoQrMixto.value > 0
+    && Math.abs(
+      efectivo
+      + montoQrMixto.value
+      - montoTotalCobro.value
+    ) <= 0.01
+  )
+})
 const gpsEstado = ref('inactivo')
 const gpsMensaje = ref('GPS desactivado')
 const ultimaUbicacion = ref(null)
@@ -1725,9 +1723,11 @@ const navegacionError = ref(null)
 
 let gpsWatchId = null
 let intervaloActualizacion = null
+let intervaloIncidencias = null
+let refrescoOperacionEnCurso = false
+let ultimaSincronizacionOperacion = 0
+let ultimaSincronizacionGanancias = 0
 let intervaloReloj = null
-let intervaloChat = null
-let canalChatSolicitudId = null
 let canalIncidenciasSolicitudId = null
 let ultimaUbicacionEnviada = 0
 let echoInstance = null
@@ -1751,11 +1751,37 @@ const nombreMototaxista = computed(() => {
   return mototaxista.value?.persona?.nombre || `Mototaxista #${MOTOTAXISTA_ID}`
 })
 
-/*
- * El chat se conserva programado, pero permanece oculto
- * temporalmente por decisión de alcance del proyecto.
- */
-const chatDisponible = computed(() => false)
+
+const qrPagoConductorUrl = computed(() => {
+  return String(
+    mototaxista.value?.qr_pago_ruta || ''
+  ).trim()
+})
+
+const qrPagoMetodoConductor = computed(() => {
+  return String(
+    mototaxista.value?.qr_pago_metodo
+    || 'QR / billetera móvil'
+  )
+})
+
+const qrPagoTitularConductor = computed(() => {
+  const persona = mototaxista.value?.persona
+  const nombre = [
+    persona?.nombre,
+    persona?.apellidos
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+
+  return String(
+    mototaxista.value?.qr_pago_titular
+    || nombre
+    || nombreMototaxista.value
+  )
+})
+
 
 const sosDisponible = computed(() => {
   const estado = String(viajeActivo.value?.estado || '')
@@ -1766,7 +1792,13 @@ const sosDisponible = computed(() => {
   )
 })
 
-const solicitudesVisibles = computed(() => solicitudes.value)
+const solicitudesVisibles = computed(() => {
+  ahora.value
+
+  return solicitudes.value.filter(
+    (solicitud) => !turnoRespuestaVencido(solicitud)
+  )
+})
 
 const promedioEstrellas = computed(() => {
   const promedio = Number(
@@ -1909,7 +1941,14 @@ const convertirFechaJavaScript = (fecha) => {
     return Number.isNaN(fecha.getTime()) ? null : fecha
   }
 
-  const textoFecha = String(fecha).trim().replace(' ', 'T')
+  let textoFecha = String(fecha).trim().replace(' ', 'T')
+
+  if (
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(textoFecha)
+  ) {
+    textoFecha += 'Z'
+  }
+
   const objetoFecha = new Date(textoFecha)
   return Number.isNaN(objetoFecha.getTime()) ? null : objetoFecha
 }
@@ -1996,66 +2035,17 @@ const formatearDistancia = (distancia) => {
  * CORRECCIÓN: las fechas tipo YYYY-MM-DD se muestran directamente,
  * sin convertirlas a UTC ni restar un día en Bolivia.
  */
-const formatearFecha = (fecha) => {
-  if (!fecha) {
-    return 'Sin fecha'
-  }
+const formatearFecha = (fecha) =>
+  fechaDDMMYYYY(fecha, 'Sin fecha')
 
-  const fechaLimpia = String(fecha).slice(0, 10)
-  const partes = fechaLimpia.split('-')
-
-  if (partes.length !== 3) {
-    return String(fecha)
-  }
-
-  const [anio, mes, dia] = partes
-  const numeroMes = Number(mes)
-
-  const meses = [
-    'ene',
-    'feb',
-    'mar',
-    'abr',
-    'may',
-    'jun',
-    'jul',
-    'ago',
-    'sep',
-    'oct',
-    'nov',
-    'dic'
-  ]
-
-  if (
-    !/^\d{4}$/.test(anio)
-    || !/^\d{2}$/.test(mes)
-    || !/^\d{2}$/.test(dia)
-    || numeroMes < 1
-    || numeroMes > 12
-  ) {
-    return String(fecha)
-  }
-
-  return `${dia} ${meses[numeroMes - 1]} ${anio}`
-}
-
-const formatearFechaHora = (fecha) => {
-  if (!fecha) return 'Sin registro'
-
-  const objetoFecha = convertirFechaJavaScript(fecha)
-  if (!objetoFecha) return String(fecha)
-
-  return new Intl.DateTimeFormat('es-BO', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(objetoFecha)
-}
+const formatearFechaHora = (fecha) =>
+  fechaHoraDDMMYYYY(fecha, 'Sin registro')
 
 const getMetodoPagoIcono = (metodo) => {
   if (!metodo) return 'account_balance_wallet'
-  return metodo === 'Efectivo' ? 'payments' : 'qr_code_2'
+  if (metodo === 'Efectivo') return 'payments'
+  if (metodo === 'Mixto') return 'account_balance_wallet'
+  return 'qr_code_2'
 }
 
 const getEstadoColor = (estado) => {
@@ -2073,21 +2063,41 @@ const getEstadoColor = (estado) => {
   return 'grey-7'
 }
 
-const tiempoRestante = (fechaExpiracion) => {
+const segundosRespuestaRestantes = (solicitud) => {
   ahora.value
 
-  if (!fechaExpiracion) return 'Disponible'
+  const vencimiento = convertirFechaJavaScript(
+    solicitud?.respuesta_expira_en
+  )
 
-  const vencimiento = convertirFechaJavaScript(fechaExpiracion)
-  if (!vencimiento) return 'Disponible'
+  if (!vencimiento) {
+    const segundosBackend = Number(
+      solicitud?.segundos_respuesta_restantes
+    )
 
-  const diferencia = vencimiento.getTime() - ahora.value
-  if (diferencia <= 0) return 'Expirada'
+    return Number.isFinite(segundosBackend)
+      ? Math.max(0, Math.ceil(segundosBackend))
+      : 0
+  }
 
-  const minutos = Math.floor(diferencia / 60000)
-  const segundos = Math.floor((diferencia % 60000) / 1000)
+  return Math.max(
+    0,
+    Math.ceil(
+      (vencimiento.getTime() - ahora.value) / 1000
+    )
+  )
+}
 
-  return `${minutos}:${String(segundos).padStart(2, '0')}`
+const turnoRespuestaVencido = (solicitud) => {
+  return segundosRespuestaRestantes(solicitud) <= 0
+}
+
+const tiempoRespuestaRestante = (solicitud) => {
+  const segundos = segundosRespuestaRestantes(solicitud)
+  const minutos = Math.floor(segundos / 60)
+  const restoSegundos = segundos % 60
+
+  return `${minutos}:${String(restoSegundos).padStart(2, '0')}`
 }
 
 const numeroSeguro = (valor) => {
@@ -2587,7 +2597,42 @@ const sincronizarSolicitudRecibida = async (solicitudEvento) => {
 }
 
 
-const obtenerEndpointAutorizacionChat = () => {
+const procesarEventoSolicitudConductor = async (data) => {
+  const solicitud = data?.solicitud || null
+
+  if (
+    !solicitud?.id
+    || Number(solicitud?.mototaxista_id || 0) !== MOTOTAXISTA_ID
+  ) {
+    return
+  }
+
+  ultimaSincronizacionOperacion = Date.now()
+
+  const estado = String(solicitud?.estado || '')
+    .trim()
+    .toLowerCase()
+
+  if (
+    estado === 'pendiente'
+    || estado === 'buscando conductor'
+  ) {
+    await sincronizarSolicitudRecibida(solicitud)
+    return
+  }
+
+  await refrescarOperacion()
+
+  if (
+    estado === 'finalizado'
+    || estado === 'cancelado'
+  ) {
+    await obtenerGanancias()
+  }
+}
+
+
+const obtenerEndpointAutorizacionRealtime = () => {
   const baseConfigurada = String(
     api?.defaults?.baseURL || ''
   ).trim().replace(/\/+$/, '')
@@ -2599,7 +2644,7 @@ const obtenerEndpointAutorizacionChat = () => {
   return BROADCAST_AUTH_URL
 }
 
-const obtenerCabecerasAutorizacionChat = () => {
+const obtenerCabecerasAutorizacionRealtime = () => {
   const token = localStorage.getItem('motrix_token') || ''
 
   return {
@@ -2608,251 +2653,6 @@ const obtenerCabecerasAutorizacionChat = () => {
       ? { Authorization: `Bearer ${token}` }
       : {})
   }
-}
-
-const esMensajeChatPropio = (mensaje) => {
-  return String(mensaje?.remitente_tipo || '').toLowerCase() === 'conductor'
-}
-
-const formatearHoraChat = (fecha) => {
-  if (!fecha) return ''
-
-  const normalizada = String(fecha).includes('T')
-    ? String(fecha)
-    : String(fecha).replace(' ', 'T')
-
-  const valor = new Date(normalizada)
-
-  if (Number.isNaN(valor.getTime())) {
-    return String(fecha).slice(11, 16)
-  }
-
-  return valor.toLocaleTimeString('es-BO', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-const desplazarChatAlFinal = async () => {
-  await nextTick()
-
-  if (chatContenedor.value) {
-    chatContenedor.value.scrollTop = chatContenedor.value.scrollHeight
-  }
-}
-
-const agregarMensajeChat = async (mensaje) => {
-  if (!mensaje?.id) return false
-
-  const existe = chatMensajes.value.some(
-    (item) => Number(item.id) === Number(mensaje.id)
-  )
-
-  if (existe) return false
-
-  chatMensajes.value.push(mensaje)
-  await desplazarChatAlFinal()
-  return true
-}
-
-const marcarMensajesChatLeidos = async () => {
-  if (!viajeActivo.value?.id) return
-
-  try {
-    await api.post(
-      `/conductor/solicitudes/${viajeActivo.value.id}/mensajes/leidos`
-    )
-
-    const fechaLectura = new Date().toISOString()
-
-    chatMensajes.value = chatMensajes.value.map((mensaje) => {
-      if (
-        String(mensaje.remitente_tipo).toLowerCase() === 'pasajero'
-        && !mensaje.leido_conductor_en
-      ) {
-        return {
-          ...mensaje,
-          leido_conductor_en: fechaLectura
-        }
-      }
-
-      return mensaje
-    })
-
-    chatNoLeidos.value = 0
-  } catch (error) {
-    console.warn('No se pudieron marcar los mensajes como leídos:', error)
-  }
-}
-
-const cargarChatViaje = async (silencioso = false) => {
-  if (!viajeActivo.value?.id) {
-    chatMensajes.value = []
-    chatNoLeidos.value = 0
-    chatHabilitado.value = false
-    return
-  }
-
-  if (!silencioso) {
-    chatCargando.value = true
-  }
-
-  try {
-    const response = await api.get(
-      `/conductor/solicitudes/${viajeActivo.value.id}/mensajes`,
-      { params: { _t: Date.now() } }
-    )
-
-    chatMensajes.value = Array.isArray(response.data?.mensajes)
-      ? response.data.mensajes
-      : []
-
-    chatHabilitado.value = Boolean(response.data?.chat_habilitado)
-    chatNoLeidos.value = Number(response.data?.no_leidos || 0)
-
-    if (dialogChat.value) {
-      await marcarMensajesChatLeidos()
-    }
-
-    await desplazarChatAlFinal()
-  } catch (error) {
-    if (!silencioso) {
-      $q.notify({
-        type: 'negative',
-        message: obtenerMensajeError(
-          error,
-          'No se pudo cargar el chat del viaje.'
-        )
-      })
-    }
-  } finally {
-    if (!silencioso) {
-      chatCargando.value = false
-    }
-  }
-}
-
-const reproducirSonidoChat = async () => {
-  const disponibleAudio = await prepararAudioNotificaciones()
-
-  if (!disponibleAudio || !audioContexto) return
-
-  try {
-    const inicio = audioContexto.currentTime
-    const tonos = [740, 988]
-
-    tonos.forEach((frecuencia, indice) => {
-      const oscilador = audioContexto.createOscillator()
-      const ganancia = audioContexto.createGain()
-      const empieza = inicio + (indice * 0.16)
-      const termina = empieza + 0.12
-
-      oscilador.type = 'sine'
-      oscilador.frequency.setValueAtTime(frecuencia, empieza)
-      ganancia.gain.setValueAtTime(0.0001, empieza)
-      ganancia.gain.exponentialRampToValueAtTime(0.20, empieza + 0.02)
-      ganancia.gain.exponentialRampToValueAtTime(0.0001, termina)
-
-      oscilador.connect(ganancia)
-      ganancia.connect(audioContexto.destination)
-      oscilador.start(empieza)
-      oscilador.stop(termina)
-    })
-  } catch (error) {
-    console.warn('No se pudo reproducir el sonido del chat:', error)
-  }
-}
-
-const abrirChatViaje = async () => {
-  if (!chatDisponible.value) {
-    $q.notify({
-      type: 'warning',
-      message: 'El chat estará disponible cuando el viaje sea aceptado.'
-    })
-    return
-  }
-
-  dialogChat.value = true
-  await cargarChatViaje()
-  await marcarMensajesChatLeidos()
-}
-
-const alCerrarChat = () => {
-  chatTexto.value = ''
-}
-
-const enviarMensajeChat = async (mensajeRapido = null) => {
-  const texto = String(
-    mensajeRapido ?? chatTexto.value
-  ).trim()
-
-  if (!texto || !viajeActivo.value?.id || chatEnviando.value) {
-    return
-  }
-
-  chatEnviando.value = true
-
-  try {
-    const response = await api.post(
-      `/conductor/solicitudes/${viajeActivo.value.id}/mensajes`,
-      { mensaje: texto }
-    )
-
-    await agregarMensajeChat(response.data?.chat_mensaje)
-    chatTexto.value = ''
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: obtenerMensajeError(
-        error,
-        'No se pudo enviar el mensaje.'
-      )
-    })
-  } finally {
-    chatEnviando.value = false
-  }
-}
-
-const procesarMensajeChatRecibido = async (data) => {
-  const mensaje = data?.mensaje
-
-  if (
-    !mensaje
-    || Number(mensaje.solicitud_id) !== Number(viajeActivo.value?.id)
-  ) {
-    return
-  }
-
-  const agregado = await agregarMensajeChat(mensaje)
-
-  if (!agregado || esMensajeChatPropio(mensaje)) {
-    return
-  }
-
-  if (dialogChat.value) {
-    await marcarMensajesChatLeidos()
-    return
-  }
-
-  chatNoLeidos.value += 1
-  await reproducirSonidoChat()
-
-  $q.notify({
-    color: 'primary',
-    textColor: 'white',
-    icon: 'chat',
-    message: mensaje.remitente_nombre || 'Nuevo mensaje del pasajero',
-    caption: mensaje.mensaje,
-    position: 'top',
-    timeout: 7000,
-    actions: [
-      {
-        label: 'ABRIR',
-        color: 'white',
-        handler: abrirChatViaje
-      }
-    ]
-  })
 }
 
 const normalizarIncidenciaActiva = () => {
@@ -3092,51 +2892,15 @@ const sincronizarCanalIncidencias = async () => {
   await cargarIncidenciasViaje(true)
 }
 
-const salirCanalChat = () => {
-  if (!echoInstance || !canalChatSolicitudId) return
-
-  echoInstance.leave(`viajes.chat.${canalChatSolicitudId}`)
-  canalChatSolicitudId = null
-}
-
-const sincronizarCanalChat = async () => {
-  const solicitudId = Number(viajeActivo.value?.id || 0)
-
-  if (!echoInstance || !solicitudId) {
-    salirCanalChat()
-    chatNoLeidos.value = 0
-    chatMensajes.value = []
-    chatHabilitado.value = false
-    return
-  }
-
-  if (Number(canalChatSolicitudId) === solicitudId) {
-    return
-  }
-
-  salirCanalChat()
-  canalChatSolicitudId = solicitudId
-
-  echoInstance
-    .private(`viajes.chat.${solicitudId}`)
-    .listen('.MensajeViajeEnviado', (data) => {
-      procesarMensajeChatRecibido(data).catch((error) => {
-        console.error('Error procesando mensaje del chat:', error)
-      })
-    })
-
-  await cargarChatViaje(true)
-}
-
 const inicializarWebsocket = () => {
   if (echoInstance) return
 
   try {
     echoInstance = new Echo({
       ...echoOptions(),
-      authEndpoint: obtenerEndpointAutorizacionChat(),
+      authEndpoint: obtenerEndpointAutorizacionRealtime(),
       auth: {
-        headers: obtenerCabecerasAutorizacionChat()
+        headers: obtenerCabecerasAutorizacionRealtime()
       }
     })
 
@@ -3144,6 +2908,7 @@ const inicializarWebsocket = () => {
 
     conexion?.bind('connected', () => {
       websocketConectado.value = true
+      refrescarOperacion().catch(() => {})
     })
 
     conexion?.bind('disconnected', () => {
@@ -3156,10 +2921,15 @@ const inicializarWebsocket = () => {
     })
 
     echoInstance
-      .channel('solicitudes')
+      .private(`conductor.${MOTOTAXISTA_ID}.solicitudes`)
       .listen('.SolicitudCreada', (data) => {
-        sincronizarSolicitudRecibida(data?.solicitud).catch((error) => {
+        procesarEventoSolicitudConductor(data).catch((error) => {
           console.error('Error procesando solicitud en tiempo real:', error)
+        })
+      })
+      .listen('.SolicitudActualizada', (data) => {
+        procesarEventoSolicitudConductor(data).catch((error) => {
+          console.error('Error procesando estado de viaje en tiempo real:', error)
         })
       })
   } catch (error) {
@@ -3171,9 +2941,8 @@ const inicializarWebsocket = () => {
 const desconectarWebsocket = () => {
   if (!echoInstance) return
 
-  salirCanalChat()
   salirCanalIncidencias()
-  echoInstance.leaveChannel('solicitudes')
+  echoInstance.leave(`conductor.${MOTOTAXISTA_ID}.solicitudes`)
   echoInstance.disconnect()
   echoInstance = null
   websocketConectado.value = false
@@ -3317,15 +3086,26 @@ const obtenerGanancias = async () => {
     historial.value = Array.isArray(response.data?.detalles_pagos)
       ? response.data.detalles_pagos
       : []
+
+    ultimaSincronizacionGanancias = Date.now()
   } catch (error) {
     console.error('Error cargando ganancias:', error)
   }
 }
 
 const refrescarOperacion = async () => {
-  await cargarMototaxista()
-  await obtenerViajeActivo()
-  await cargarSolicitudesDisponibles()
+  if (refrescoOperacionEnCurso) return
+
+  refrescoOperacionEnCurso = true
+
+  try {
+    await cargarMototaxista()
+    await obtenerViajeActivo()
+    await cargarSolicitudesDisponibles()
+    ultimaSincronizacionOperacion = Date.now()
+  } finally {
+    refrescoOperacionEnCurso = false
+  }
 }
 
 const cargarTodo = async (mostrarCarga = false) => {
@@ -3519,6 +3299,19 @@ const detenerSeguimientoGPS = () => {
 }
 
 const aceptarViaje = async (viaje) => {
+  if (turnoRespuestaVencido(viaje)) {
+    cerrarAlertaSolicitud(viaje.id)
+
+    $q.notify({
+      type: 'info',
+      message: 'Tu tiempo para responder terminó. La solicitud pasará al siguiente conductor.',
+      position: 'top'
+    })
+
+    await cargarSolicitudesDisponibles()
+    return
+  }
+
   accionando.value = `aceptar-${viaje.id}`
 
   try {
@@ -3554,6 +3347,12 @@ const aceptarViaje = async (viaje) => {
 }
 
 const rechazarViaje = async (viaje) => {
+  if (turnoRespuestaVencido(viaje)) {
+    cerrarAlertaSolicitud(viaje.id)
+    await cargarSolicitudesDisponibles()
+    return
+  }
+
   accionando.value = `rechazar-${viaje.id}`
 
   try {
@@ -3705,10 +3504,68 @@ const confirmarCancelacion = (viaje) => {
 
 const abrirModalCobro = (viaje) => {
   viajeSeleccionado.value = viaje
+  pagoQrActivo.value = ['QR', 'Transferencia / QR'].includes(
+    String(viaje?.metodo_pago || '')
+  )
+  pagoMixtoActivo.value = String(
+    viaje?.metodo_pago || ''
+  ) === 'Mixto'
+  montoEfectivoMixto.value = null
   dialogCobro.value = true
 }
 
-const procesarFinalizacionConPago = async (metodoPago) => {
+const activarPagoQr = () => {
+  pagoQrActivo.value = true
+  pagoMixtoActivo.value = false
+  montoEfectivoMixto.value = null
+}
+
+const activarPagoMixto = () => {
+  pagoMixtoActivo.value = !pagoMixtoActivo.value
+  pagoQrActivo.value = false
+
+  if (!pagoMixtoActivo.value) {
+    montoEfectivoMixto.value = null
+  }
+}
+
+const irAPerfilQr = () => {
+  dialogCobro.value = false
+  router.push('/conductor/perfil')
+}
+
+const procesarFinalizacionMixta = async () => {
+  if (!qrPagoConductorUrl.value) {
+    $q.notify({
+      type: 'warning',
+      message: 'Registra primero tu QR de cobro desde Mi perfil.'
+    })
+    return
+  }
+
+  if (!pagoMixtoValido.value) {
+    $q.notify({
+      type: 'warning',
+      message: 'Indica cuánto recibió en efectivo. El resto se calculará automáticamente para QR.'
+    })
+    return
+  }
+
+  await procesarFinalizacionConPago(
+    'Mixto',
+    {
+      monto_efectivo: Number(
+        Number.parseFloat(montoEfectivoMixto.value).toFixed(2)
+      ),
+      monto_qr: montoQrMixto.value
+    }
+  )
+}
+
+const procesarFinalizacionConPago = async (
+  metodoPago,
+  desglose = {}
+) => {
   if (!viajeSeleccionado.value?.id) return
 
   procesandoCobro.value = true
@@ -3717,11 +3574,17 @@ const procesarFinalizacionConPago = async (metodoPago) => {
     await cambiarEstadoViaje(
       viajeSeleccionado.value,
       'Finalizado',
-      { metodo_pago: metodoPago }
+      {
+        metodo_pago: metodoPago,
+        ...desglose
+      }
     )
 
     dialogCobro.value = false
     viajeSeleccionado.value = null
+    pagoQrActivo.value = false
+    pagoMixtoActivo.value = false
+    montoEfectivoMixto.value = null
 
     $q.notify({
       type: 'positive',
@@ -3813,13 +3676,35 @@ watch(
 
 
 watch(
+  () => {
+    if (!solicitudDestacada.value?.id) return null
+
+    return segundosRespuestaRestantes(solicitudDestacada.value)
+  },
+  (segundos, anteriores) => {
+    if (
+      segundos !== 0
+      || anteriores === 0
+      || !solicitudDestacada.value?.id
+    ) {
+      return
+    }
+
+    const solicitudId = solicitudDestacada.value.id
+    cerrarAlertaSolicitud(solicitudId)
+
+    cargarSolicitudesDisponibles().catch((error) => {
+      console.error('Error reasignando solicitud vencida:', error)
+    })
+  }
+)
+
+watch(
   () => viajeActivo.value?.id || null,
   async () => {
-    await sincronizarCanalChat()
     await sincronizarCanalIncidencias()
 
     if (!viajeActivo.value?.id) {
-      dialogChat.value = false
       dialogSos.value = false
     }
   }
@@ -3838,7 +3723,6 @@ onMounted(async () => {
 
   inicializarWebsocket()
   await cargarTodo(true)
-  await sincronizarCanalChat()
   await sincronizarCanalIncidencias()
 
   if (disponible.value || tieneViajeActivo.value) {
@@ -3851,25 +3735,34 @@ onMounted(async () => {
 
   intervaloActualizacion = window.setInterval(async () => {
     try {
-      /*
-       * Refresca tanto el viaje como las ganancias y la reputación.
-       * Así, cuando el pasajero califica, el conductor ve la nueva
-       * puntuación automáticamente sin recargar toda la página.
-       */
-      await refrescarOperacion()
-      await obtenerGanancias()
+      const ahoraMs = Date.now()
+      const operacionActiva = disponible.value || tieneViajeActivo.value
+      const esperaOperacion = websocketConectado.value
+        ? 30000
+        : (operacionActiva ? 2000 : 10000)
+
+      if (
+        ahoraMs - ultimaSincronizacionOperacion >= esperaOperacion
+      ) {
+        await refrescarOperacion()
+      }
+
+      if (
+        ahoraMs - ultimaSincronizacionGanancias >= 30000
+      ) {
+        await obtenerGanancias()
+      }
     } catch (error) {
       console.error('Error en actualización automática:', error)
     }
-  }, 8000)
+  }, 1000)
 
   intervaloReloj = window.setInterval(() => {
     ahora.value = Date.now()
   }, 1000)
 
-  intervaloChat = window.setInterval(() => {
+  intervaloIncidencias = window.setInterval(() => {
     if (viajeActivo.value?.id) {
-      cargarChatViaje(true).catch(() => {})
       cargarIncidenciasViaje(true).catch(() => {})
     }
   }, 15000)
@@ -3895,8 +3788,8 @@ onBeforeUnmount(() => {
     window.clearInterval(intervaloReloj)
   }
 
-  if (intervaloChat) {
-    window.clearInterval(intervaloChat)
+  if (intervaloIncidencias) {
+    window.clearInterval(intervaloIncidencias)
   }
 })
 </script>
@@ -4186,6 +4079,18 @@ onBeforeUnmount(() => {
 .cobro-dialog {
   width: 100%;
   max-width: 460px;
+  max-height: calc(100vh - 24px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cobro-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 @media (max-width: 599px) {
@@ -4207,90 +4112,17 @@ onBeforeUnmount(() => {
   }
 }
 
-.chat-dialog-card {
-  width: min(720px, 96vw);
-  height: min(760px, 92vh);
-  max-width: 720px;
-  border-radius: 18px;
-  overflow: hidden;
-}
 
-.chat-messages {
-  min-height: 280px;
-  padding: 16px;
-  overflow-y: auto;
-  background: #eef2f5;
-  scroll-behavior: smooth;
-}
-
-.chat-empty {
-  min-height: 100%;
-  padding: 42px 20px;
-}
-
-.chat-row {
-  display: flex;
-  width: 100%;
-  margin-bottom: 10px;
-}
-
-.chat-row-own {
-  justify-content: flex-end;
-}
-
-.chat-row-other {
-  justify-content: flex-start;
-}
-
-.chat-bubble {
-  max-width: 82%;
-  padding: 9px 12px 6px;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-}
-
-.chat-bubble-own {
-  color: #1b4332;
-  background: #d8f3dc;
-  border-bottom-right-radius: 5px;
-}
-
-.chat-bubble-other {
-  color: #263238;
-  background: #ffffff;
-  border-bottom-left-radius: 5px;
-}
-
-.chat-message-text {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.chat-message-time {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: 3px;
-  color: #78909c;
-  font-size: 11px;
-}
-
-.chat-quick-scroll {
-  padding-bottom: 4px;
-  overflow-x: auto;
-}
-
-@media (max-width: 599px) {
-  .chat-dialog-card {
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    border-radius: 0;
-  }
-
-  .chat-bubble {
-    max-width: 90%;
-  }
+.cobro-qr-image {
+  display: block;
+  width: min(100%, 320px);
+  max-height: 360px;
+  object-fit: contain;
+  margin: 0 auto;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid #dfe3eb;
+  background: #fff;
 }
 
 </style>

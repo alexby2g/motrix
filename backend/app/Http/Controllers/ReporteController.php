@@ -38,21 +38,27 @@ class ReporteController extends Controller
 
                     DB::raw(
                         "SUM(
-                            CASE
-                                WHEN pagos.metodo = 'Efectivo'
-                                THEN pagos.monto
-                                ELSE 0
-                            END
+                            COALESCE(
+                                pagos.monto_efectivo,
+                                CASE
+                                    WHEN pagos.metodo = 'Efectivo'
+                                    THEN pagos.monto
+                                    ELSE 0
+                                END
+                            )
                         ) as efectivo"
                     ),
 
                     DB::raw(
                         "SUM(
-                            CASE
-                                WHEN pagos.metodo != 'Efectivo'
-                                THEN pagos.monto
-                                ELSE 0
-                            END
+                            COALESCE(
+                                pagos.monto_qr,
+                                CASE
+                                    WHEN pagos.metodo != 'Efectivo'
+                                    THEN pagos.monto
+                                    ELSE 0
+                                END
+                            )
                         ) as digital"
                     )
                 )
@@ -224,6 +230,7 @@ class ReporteController extends Controller
                 ->select(
                     'mototaxistas.id',
                     'personas.nombre',
+                    'personas.apellidos',
 
                     DB::raw(
                         'COUNT(
@@ -242,7 +249,8 @@ class ReporteController extends Controller
                 )
                 ->groupBy(
                     'mototaxistas.id',
-                    'personas.nombre'
+                    'personas.nombre',
+                    'personas.apellidos'
                 )
                 ->orderByDesc(
                     'promedio_calificacion'
@@ -253,42 +261,75 @@ class ReporteController extends Controller
                 ->orderBy(
                     'personas.nombre'
                 )
+                ->limit(20)
                 ->get();
 
-            $ranking->transform(
-                function ($mototaxista) {
-                    $ultimoComentario = DB::table(
-                        'solicitudes'
-                    )
-                        ->where(
-                            'mototaxista_id',
-                            $mototaxista->id
-                        )
-                        ->where(
-                            'estado',
-                            'Finalizado'
-                        )
-                        ->whereNotNull(
-                            'comentario_calificacion'
-                        )
-                        ->where(
-                            'comentario_calificacion',
-                            '<>',
-                            ''
-                        )
-                        ->orderByDesc(
-                            'calificado_en'
-                        )
-                        ->first([
-                            'comentario_calificacion',
-                            'calificado_en',
-                        ]);
+            $rankingIds = $ranking
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->values();
 
-                    $mototaxista->nombre = (
-                        $mototaxista->nombre
-                        ?: 'Mototaxista #'
-                            . $mototaxista->id
+            $ultimosComentarios = collect();
+
+            if ($rankingIds->isNotEmpty()) {
+                $ultimosComentarios = DB::table(
+                    'solicitudes'
+                )
+                    ->whereIn(
+                        'mototaxista_id',
+                        $rankingIds
+                    )
+                    ->where(
+                        'estado',
+                        'Finalizado'
+                    )
+                    ->whereNotNull(
+                        'comentario_calificacion'
+                    )
+                    ->where(
+                        'comentario_calificacion',
+                        '<>',
+                        ''
+                    )
+                    ->orderByDesc(
+                        'calificado_en'
+                    )
+                    ->orderByDesc('id')
+                    ->get([
+                        'mototaxista_id',
+                        'comentario_calificacion',
+                        'calificado_en',
+                    ])
+                    ->groupBy('mototaxista_id')
+                    ->map(
+                        fn ($items) => $items->first()
                     );
+            }
+
+            $ranking->transform(
+                function ($mototaxista) use (
+                    $ultimosComentarios
+                ) {
+                    $ultimoComentario =
+                        $ultimosComentarios->get(
+                            (int) $mototaxista->id
+                        );
+
+                    $nombreCompleto = trim(
+                        (string) (
+                            ($mototaxista->nombre ?? '')
+                            . ' '
+                            . ($mototaxista->apellidos ?? '')
+                        )
+                    );
+
+                    $mototaxista->nombre =
+                        $nombreCompleto !== ''
+                            ? $nombreCompleto
+                            : 'Mototaxista #'
+                                . $mototaxista->id;
+
+                    unset($mototaxista->apellidos);
 
                     $mototaxista
                         ->promedio_calificacion =

@@ -16,6 +16,12 @@ class MototaxistaRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $ci = trim((string) $this->input('ci', ''));
+
+        $this->merge([
+            'ci' => $ci !== '' ? $ci : null,
+        ]);
+
         $usuario = $this->user();
 
         if (
@@ -83,6 +89,20 @@ class MototaxistaRequest extends FormRequest
                 'max:20',
             ],
 
+            'ci' => [
+                'nullable',
+                'string',
+                'max:20',
+                Rule::unique(
+                    'personas',
+                    'ci'
+                )->ignore(
+                    (int) $this->input(
+                        'id_persona'
+                    )
+                ),
+            ],
+
             'estado' => [
                 'required',
                 Rule::in([
@@ -102,6 +122,23 @@ class MototaxistaRequest extends FormRequest
                     $fail
                 ) use ($id) {
                     $usuario = $this->user();
+
+                    $personaSeleccionada = Persona::query()->find((int) $value);
+
+                    if (! $personaSeleccionada) {
+                        return;
+                    }
+
+                    if (
+                        trim((string) $personaSeleccionada->ci) === ''
+                        && trim((string) $this->input('ci', '')) === ''
+                    ) {
+                        $fail(
+                            'El CI es obligatorio para afiliar a una persona como mototaxista.'
+                        );
+
+                        return;
+                    }
 
                     if (
                         strtolower(
@@ -138,8 +175,22 @@ class MototaxistaRequest extends FormRequest
                                     ) use (
                                         $sindicatoId
                                     ) {
+                                        /*
+                                         * Una persona todavía no afiliada puede ser
+                                         * incorporada por el secretario de su sindicato.
+                                         *
+                                         * También se permite una persona que ya esté
+                                         * vinculada al mismo sindicato.
+                                         *
+                                         * Una persona vinculada a otro sindicato continúa
+                                         * fuera del ámbito del secretario y requiere una
+                                         * gestión de traslado/reasignación administrativa.
+                                         */
                                         $query
-                                            ->where(
+                                            ->whereNull(
+                                                'sindicato_registro_id'
+                                            )
+                                            ->orWhere(
                                                 'sindicato_registro_id',
                                                 $sindicatoId
                                             )
@@ -163,7 +214,7 @@ class MototaxistaRequest extends FormRequest
 
                         if (! $personaVisible) {
                             $fail(
-                                'La persona seleccionada no pertenece al ámbito de tu sindicato.'
+                                'La persona seleccionada ya está vinculada a otro sindicato.'
                             );
 
                             return;

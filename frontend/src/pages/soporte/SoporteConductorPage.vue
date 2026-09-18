@@ -388,6 +388,8 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY, fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   onMounted,
@@ -403,10 +405,7 @@ import {
   useRouter
 } from 'vue-router'
 
-import {
-  api
-} from 'src/boot/axios.js'
-
+import { api } from 'src/boot/axios.js'
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
@@ -622,7 +621,8 @@ const columnas = [
     name: 'fecha',
     label: 'Fecha',
     field: 'fecha',
-    align: 'left'
+    align: 'left',
+    format: valor => fechaDDMMYYYY(valor)
   },
   {
     name: 'pasajero',
@@ -731,25 +731,7 @@ function colorEstado(estado) {
 }
 
 function formatearFechaHora(valor) {
-  if (!valor) {
-    return 'No registrada'
-  }
-
-  const fecha = new Date(
-    String(valor).replace(' ', 'T')
-  )
-
-  if (Number.isNaN(fecha.getTime())) {
-    return String(valor)
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    }
-  ).format(fecha)
+  return fechaHoraDDMMYYYY(valor)
 }
 
 function volver() {

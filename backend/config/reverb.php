@@ -1,5 +1,12 @@
 <?php
 
+$csv = static function (string $key, string $default = ''): array {
+    return array_values(array_filter(array_map(
+        static fn (string $value): string => trim($value),
+        explode(',', (string) env($key, $default))
+    )));
+};
+
 return [
 
     /*
@@ -82,7 +89,10 @@ return [
                     'scheme' => env('REVERB_SCHEME', 'https'),
                     'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
                 ],
-                'allowed_origins' => ['*'],
+                'allowed_origins' => $csv(
+                    'REVERB_ALLOWED_ORIGINS',
+                    'http://localhost:9000,http://127.0.0.1:9000,capacitor://localhost'
+                ),
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),
                 'activity_timeout' => env('REVERB_APP_ACTIVITY_TIMEOUT', 30),
                 'max_connections' => env('REVERB_APP_MAX_CONNECTIONS'),

@@ -33,64 +33,230 @@ class PagoSindicalController extends Controller
     public function index(
         Request $request
     ): JsonResponse {
-        $query = PagoSindical::query()
-            ->with([
-                'sindicato:id,nombre',
-                'mototaxista:id,id_persona,id_sindicato,nro_chaleco,estado',
-                'mototaxista.persona:id,nombre,apellidos,ci,telefono',
-                'registradoPor:id,name,email',
-            ]);
+        $datos = $request->validate([
+            'paginated' => ['nullable', 'boolean'],
+            'q' => ['nullable', 'string', 'max:100'],
+            'id_sindicato' => ['nullable', 'integer'],
+            'id_mototaxista' => ['nullable', 'integer'],
+            'tipo_pago' => ['nullable', 'string', 'max:50'],
+            'estado_pago' => ['nullable', 'string', 'max:50'],
+            'periodo' => ['nullable', 'string', 'max:20'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => [
+                'nullable',
+                'integer',
+                'min:5',
+                'max:100',
+            ],
+            'sort_by' => [
+                'nullable',
+                'string',
+                Rule::in([
+                    'fecha',
+                    'monto',
+                    'id',
+                ]),
+            ],
+            'descending' => ['nullable', 'boolean'],
+        ]);
+
+        $query = PagoSindical::query();
 
         $this->aplicarAlcanceSindicato(
             $request,
             $query
         );
 
-        if ($request->filled('id_sindicato')) {
+        $baseVisible = clone $query;
+
+        $texto = trim(
+            (string) ($datos['q'] ?? '')
+        );
+
+        if ($texto !== '') {
+            $terminos = array_values(
+                array_filter(
+                    preg_split('/\\s+/u', $texto) ?: []
+                )
+            );
+
+            foreach (
+                array_slice($terminos, 0, 5)
+                as $termino
+            ) {
+                $query->where(
+                    function ($consulta) use (
+                        $termino
+                    ) {
+                        $patron = '%' . $termino . '%';
+
+                        $consulta
+                            ->where(
+                                'tipo_pago',
+                                'like',
+                                $patron
+                            )
+                            ->orWhere(
+                                'periodo',
+                                'like',
+                                $patron
+                            )
+                            ->orWhere(
+                                'forma_pago',
+                                'like',
+                                $patron
+                            )
+                            ->orWhereHas(
+                                'sindicato',
+                                function ($sindicato) use (
+                                    $patron
+                                ) {
+                                    $sindicato->where(
+                                        'nombre',
+                                        'like',
+                                        $patron
+                                    );
+                                }
+                            )
+                            ->orWhereHas(
+                                'mototaxista',
+                                function ($mototaxista) use (
+                                    $patron
+                                ) {
+                                    $mototaxista
+                                        ->where(
+                                            'nro_chaleco',
+                                            'like',
+                                            $patron
+                                        )
+                                        ->orWhereHas(
+                                            'persona',
+                                            function ($persona) use (
+                                                $patron
+                                            ) {
+                                                $persona
+                                                    ->where(
+                                                        'nombre',
+                                                        'like',
+                                                        $patron
+                                                    )
+                                                    ->orWhere(
+                                                        'apellidos',
+                                                        'like',
+                                                        $patron
+                                                    )
+                                                    ->orWhere(
+                                                        'ci',
+                                                        'like',
+                                                        $patron
+                                                    );
+                                            }
+                                        );
+                                }
+                            );
+                    }
+                );
+            }
+        }
+
+        if (isset($datos['id_sindicato'])) {
             $query->where(
                 'id_sindicato',
-                (int) $request->input(
-                    'id_sindicato'
-                )
+                (int) $datos['id_sindicato']
             );
         }
 
-        if ($request->filled('id_mototaxista')) {
+        if (isset($datos['id_mototaxista'])) {
             $query->where(
                 'id_mototaxista',
-                (int) $request->input(
-                    'id_mototaxista'
-                )
+                (int) $datos['id_mototaxista']
             );
         }
 
-        if ($request->filled('tipo_pago')) {
+        if (! empty($datos['tipo_pago'])) {
             $query->where(
                 'tipo_pago',
-                $request->input('tipo_pago')
+                $datos['tipo_pago']
             );
         }
 
-        if ($request->filled('estado_pago')) {
+        if (! empty($datos['estado_pago'])) {
             $query->where(
                 'estado_pago',
-                $request->input('estado_pago')
+                $datos['estado_pago']
             );
         }
 
-        if ($request->filled('periodo')) {
+        if (! empty($datos['periodo'])) {
             $query->where(
                 'periodo',
-                $request->input('periodo')
+                $datos['periodo']
             );
         }
 
-        $pagos = $query
-            ->orderByDesc('fecha')
-            ->orderByDesc('id')
-            ->get();
+        $sortBy = $datos['sort_by'] ?? 'fecha';
+        $direccion = $request->boolean(
+            'descending',
+            true
+        )
+            ? 'desc'
+            : 'asc';
 
-        return response()->json($pagos);
+        $query
+            ->with([
+                'sindicato:id,nombre',
+                'mototaxista:id,id_persona,id_sindicato,nro_chaleco,estado',
+                'mototaxista.persona:id,nombre,apellidos,ci,telefono',
+                'registradoPor:id,name,email',
+            ])
+            ->orderBy($sortBy, $direccion)
+            ->orderByDesc('id');
+
+        if (! $request->boolean('paginated')) {
+            return response()->json(
+                $query->get()
+            );
+        }
+
+        $pagados = (clone $baseVisible)
+            ->where('estado_pago', 'Pagado');
+
+        $estadisticas = [
+            'total_recaudado' => (float) (clone $pagados)
+                ->sum('monto'),
+            'total_afiliaciones' => (float) (clone $pagados)
+                ->whereIn(
+                    'tipo_pago',
+                    [
+                        'Afiliación',
+                        'Inscripción',
+                    ]
+                )
+                ->sum('monto'),
+            'total_aportes' => (float) (clone $pagados)
+                ->where('tipo_pago', 'Aporte')
+                ->sum('monto'),
+            'pendientes' => (clone $baseVisible)
+                ->where('estado_pago', 'Pendiente')
+                ->count(),
+        ];
+
+        $paginador = $query->paginate(
+            (int) ($datos['per_page'] ?? 10)
+        );
+
+        return response()->json([
+            'data' => $paginador->items(),
+            'meta' => [
+                'current_page' => $paginador->currentPage(),
+                'last_page' => $paginador->lastPage(),
+                'per_page' => $paginador->perPage(),
+                'total' => $paginador->total(),
+                'from' => $paginador->firstItem(),
+                'to' => $paginador->lastItem(),
+                'stats' => $estadisticas,
+            ],
+        ]);
     }
 
     public function store(

@@ -1,4 +1,22 @@
-/* Identidad visual global de MOTRIX */
+/* =========================================================
+   MOTRIX · IDENTIDAD VISUAL NEUTRA
+   Base: gris claro + blanco + verde sobrio.
+========================================================= */
+
+:root {
+  --motrix-primary: #2e7d32;
+  --motrix-primary-dark: #244e36;
+  --motrix-sidebar: #183c2b;
+  --motrix-sidebar-deep: #123524;
+  --motrix-bg: #f5f6f7;
+  --motrix-surface: #ffffff;
+  --motrix-text: #30353b;
+  --motrix-muted: #707780;
+  --motrix-border: #dfe3e6;
+  --motrix-info: #3974a8;
+  --motrix-warning: #d97706;
+  --motrix-danger: #c43d3d;
+}
 
 html,
 body,
@@ -9,326 +27,244 @@ body,
 html,
 body {
   margin: 0;
-  background: #f1f8e9;
-  color: #263326;
+  background: var(--motrix-bg);
+  color: var(--motrix-text);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
+body {
+  font-feature-settings: "kern";
+}
+
+/* Superficies */
+.q-page {
+  background-color: var(--motrix-bg);
+}
+
 .q-card {
   border-radius: 14px;
+  background: var(--motrix-surface);
 }
 
+.q-card.q-card--bordered {
+  border-color: var(--motrix-border);
+}
+
+.shadow-1,
+.shadow-2,
+.shadow-3,
+.shadow-4 {
+  box-shadow:
+    0 6px 20px rgba(34, 47, 40, 0.07) !important;
+}
+
+/* Botones */
 .q-btn {
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-.q-field--outlined .q-field__control {
+  font-weight: 650;
+  letter-spacing: 0;
   border-radius: 9px;
 }
 
+.q-btn.bg-primary {
+  background: var(--motrix-primary) !important;
+}
+
+.q-btn.text-primary {
+  color: var(--motrix-primary) !important;
+}
+
+.q-btn.bg-negative {
+  background: var(--motrix-danger) !important;
+}
+
+/* Campos */
+.q-field--outlined .q-field__control {
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.q-field--outlined .q-field__control::before {
+  border-color: #d6dcda;
+}
+
+.q-field--outlined .q-field__control:hover::before {
+  border-color: #92a79a;
+}
+
+.q-field--focused .q-field__control::after {
+  color: var(--motrix-primary);
+}
+
+/* Tablas y listas */
+.q-table__container {
+  border-radius: 14px;
+}
+
+.q-table thead tr,
+.q-table th {
+  color: #58615c;
+  background: #f8f9f9;
+}
+
+.q-table tbody tr:hover {
+  background: #f7faf8;
+}
+
+.q-separator {
+  background: #e8ebea;
+}
+
+/* Menús emergentes */
+.q-menu,
+.account-menu {
+  border: 1px solid var(--motrix-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(34, 47, 40, 0.13);
+}
+
+/* Diálogos */
 .q-dialog__inner > .q-card {
   overflow: hidden;
+  border: 1px solid var(--motrix-border);
+  box-shadow: 0 20px 60px rgba(25, 37, 30, 0.18);
 }
 
-/* =========================================================
-   MENÚ LATERAL MOTRIX
-   Geometría simple: sin posiciones absolutas, sin left,
-   sin transformaciones y sin pseudo-elementos.
-========================================================= */
-html body #q-app .q-drawer.motrix-drawer,
-html body #q-app .q-drawer.motrix-drawer .q-drawer__content {
-  background: #08350d !important;
-  color: #fff !important;
-  overflow-x: hidden !important;
+/* Chips */
+.q-chip {
+  font-weight: 650;
 }
 
-html body #q-app .q-drawer.motrix-drawer {
-  border-right: 1px solid rgba(102, 187, 106, 0.25) !important;
+/* Clases Quasar utilizadas por páginas existentes */
+.bg-grey-2 {
+  background: var(--motrix-bg) !important;
 }
 
-html body #q-app .q-drawer.motrix-drawer .drawer-content {
-  display: flex !important;
-  flex-direction: column !important;
-  height: 100% !important;
-  min-width: 0 !important;
+.text-primary {
+  color: var(--motrix-primary) !important;
 }
 
-/* Marca */
-html body #q-app .q-drawer.motrix-drawer .drawer-brand {
-  padding: 22px 16px 18px !important;
-  text-align: center !important;
-}
+/* Scrollbar web discreta */
+@media (min-width: 700px) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #aeb9b2 transparent;
+  }
 
-html body #q-app .q-drawer.motrix-drawer .drawer-logo {
-  color: #66bb6a !important;
-  font-size: 42px !important;
-  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.28));
-}
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
 
-html body #q-app .q-drawer.motrix-drawer .drawer-brand-caption {
-  max-width: 210px !important;
-  margin: 4px auto 0 !important;
-  color: #8bd18e !important;
-  line-height: 1.35 !important;
-}
-
-/* Usuario */
-html body #q-app .q-drawer.motrix-drawer .drawer-user {
-  display: flex !important;
-  align-items: center !important;
-  min-height: 72px !important;
-  margin: 10px 12px 6px !important;
-  padding: 12px !important;
-  gap: 4px !important;
-  color: #fff !important;
-  background: rgba(255, 255, 255, 0.065) !important;
-  border: 1px solid rgba(129, 199, 132, 0.18) !important;
-  border-radius: 14px !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .drawer-user > .col {
-  min-width: 0 !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .drawer-user .text-body2 {
-  display: -webkit-box !important;
-  overflow: hidden !important;
-  white-space: normal !important;
-  text-overflow: clip !important;
-  -webkit-box-orient: vertical !important;
-  -webkit-line-clamp: 2 !important;
-  max-height: 2.5em !important;
-  font-size: 12.5px !important;
-  line-height: 1.25 !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .drawer-user-name {
-  margin-top: 3px !important;
-  color: #8bd18e !important;
-  font-size: 12px !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .drawer-separator {
-  margin: 7px 14px 0 !important;
-  background: rgba(102, 187, 106, 0.28) !important;
-}
-
-/* Scroll y secciones */
-html body #q-app .q-drawer.motrix-drawer .q-scrollarea__content,
-html body #q-app .q-drawer.motrix-drawer .q-scrollarea__container {
-  min-width: 100% !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .q-list {
-  padding: 10px 10px 16px !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .drawer-section-title {
-  min-height: auto !important;
-  padding: 13px 10px 7px !important;
-  color: #70c875 !important;
-  font-size: 11px !important;
-  font-weight: 800 !important;
-  line-height: 1.2 !important;
-  letter-spacing: 0.055em !important;
-}
-
-/*
- * Cada opción conserva icono y texto dentro del flujo flex normal.
- * Esto evita que cualquier icono pueda aparecer fuera del drawer.
- */
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item {
-  position: relative !important;
-  display: flex !important;
-  align-items: center !important;
-  box-sizing: border-box !important;
-  width: 100% !important;
-  min-height: 48px !important;
-  margin: 0 0 6px !important;
-  padding: 0 14px !important;
-  overflow: hidden !important;
-  color: #fff !important;
-  border: 0 !important;
-  border-radius: 12px !important;
-  background: transparent !important;
-  transform: none !important;
-  transition: background-color .16s ease, box-shadow .16s ease !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item > .q-item__section--avatar,
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item > .q-item__section--side {
-  position: static !important;
-  display: flex !important;
-  flex: 0 0 34px !important;
-  width: 34px !important;
-  min-width: 34px !important;
-  max-width: 34px !important;
-  height: auto !important;
-  min-height: 0 !important;
-  margin: 0 12px 0 0 !important;
-  padding: 0 !important;
-  align-items: center !important;
-  justify-content: center !important;
-  inset: auto !important;
-  transform: none !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item > .q-item__section--avatar > .q-icon,
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item > .q-item__section--side > .q-icon {
-  position: static !important;
-  display: inline-flex !important;
-  width: 24px !important;
-  height: 24px !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  color: #6dca73 !important;
-  font-size: 21px !important;
-  line-height: 24px !important;
-  inset: auto !important;
-  transform: none !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item > .q-item__section--main {
-  position: static !important;
-  flex: 1 1 auto !important;
-  min-width: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  color: #fff !important;
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  line-height: 1.25 !important;
-  transform: none !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item .q-item__label {
-  color: #fff !important;
-  opacity: 1 !important;
-}
-
-/* Hover: no mueve nada */
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item:hover {
-  background: rgba(67, 160, 71, 0.20) !important;
-  box-shadow: inset 0 0 0 1px rgba(129, 199, 132, 0.08) !important;
-  transform: none !important;
-}
-
-/* Estado activo: borde interno, no altera el ancho ni la posición */
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.menu-item-active,
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--active,
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--exact-active {
-  margin: 0 0 6px !important;
-  padding: 0 14px !important;
-  color: #fff !important;
-  border: 0 !important;
-  border-left: 0 !important;
-  background: rgba(67, 160, 71, 0.34) !important;
-  box-shadow:
-    inset 4px 0 0 #ef4444,
-    inset 0 0 0 1px rgba(165, 214, 167, 0.10),
-    0 5px 14px rgba(0, 0, 0, 0.12) !important;
-  transform: none !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item::before,
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item::after,
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.menu-item-active::before,
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.menu-item-active::after,
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--active::before,
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--active::after {
-  content: none !important;
-  display: none !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.menu-item-active > .q-item__section--main,
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--active > .q-item__section--main,
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--exact-active > .q-item__section--main {
-  font-weight: 750 !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.menu-item-active .q-icon,
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--active .q-icon,
-html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item.q-router-link--exact-active .q-icon {
-  color: #c8e6c9 !important;
-}
-
-/* Footer */
-html body #q-app .q-drawer.motrix-drawer .drawer-footer {
-  padding: 11px 11px 13px !important;
-  background: rgba(0, 0, 0, 0.15) !important;
-  border-top: 1px solid rgba(102, 187, 106, 0.20) !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .logout-button {
-  min-height: 40px !important;
-  border-radius: 10px !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .drawer-footer-text {
-  margin-top: 10px !important;
-  color: #70c875 !important;
-  font-size: 11.5px !important;
-  line-height: 1.35 !important;
-}
-
-html body #q-app .q-drawer.motrix-drawer .q-scrollarea__thumb {
-  width: 4px !important;
-  opacity: .38 !important;
-  background: #81c784 !important;
-}
-
-/* =========================================================
-   RESPONSIVE
-========================================================= */
-@media (max-width: 1023px) {
-  html body #q-app .q-drawer.motrix-drawer .q-list .q-item.menu-item {
-    min-height: 50px !important;
+  *::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: #aeb9b2;
+    background-clip: padding-box;
   }
 }
 
+/* Móvil */
 @media (max-width: 599px) {
   .q-card {
     border-radius: 12px;
   }
 
-  html body #q-app .q-drawer.motrix-drawer .drawer-brand {
-    padding: 16px 14px !important;
-  }
-
-  html body #q-app .q-drawer.motrix-drawer .drawer-user {
-    margin-top: 8px !important;
-  }
-
-  html body #q-app .q-drawer.motrix-drawer .q-list {
-    padding: 8px 10px 14px !important;
+  .q-page {
+    padding-right: 12px;
+    padding-left: 12px;
   }
 }
 
-/* =========================================================
-   MODO OSCURO
-========================================================= */
+/* Modo oscuro: se mantiene legible si Quasar lo activa */
 body.body--dark {
-  background: #121812;
+  --motrix-bg: #171c19;
+  --motrix-surface: #212823;
+  --motrix-text: #eef3ef;
+  --motrix-muted: #abb5ae;
+  --motrix-border: #354039;
 
-  .text-green-9 {
-    color: #81c784 !important;
+  background: var(--motrix-bg);
+  color: var(--motrix-text);
+
+  .q-card,
+  .q-field--outlined .q-field__control {
+    background: var(--motrix-surface);
   }
 
-  .text-green-8 {
-    color: #66bb6a !important;
+  .q-table thead tr,
+  .q-table th {
+    background: #252e28;
   }
 
-  .q-icon.text-green-9 {
-    color: #81c784 !important;
+  .q-table tbody tr:hover {
+    background: #28322c;
   }
+}
 
-  .q-icon.text-green-8 {
-    color: #66bb6a !important;
-  }
 
-  .bg-grey-3 {
-    background-color: #2a2a2a !important;
-  }
+/* =========================================================
+   DRAWER GLOBAL MOTRIX
+   Se declara aquí (sin scoped) para dominar el fondo interno
+   que genera QDrawer y evitar que Quasar lo pinte de blanco.
+========================================================= */
+html body #q-app .q-drawer.motrix-drawer,
+html body #q-app .q-drawer.motrix-drawer .q-drawer__content,
+html body #q-app .q-drawer.motrix-drawer .drawer-content {
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #183c2b 0%, #123524 100%) !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .drawer-brand,
+html body #q-app .q-drawer.motrix-drawer .drawer-user,
+html body #q-app .q-drawer.motrix-drawer .drawer-footer,
+html body #q-app .q-drawer.motrix-drawer .q-list {
+  background: transparent !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .drawer-brand-caption,
+html body #q-app .q-drawer.motrix-drawer .drawer-user-name,
+html body #q-app .q-drawer.motrix-drawer .drawer-footer-text {
+  color: #b8d9c0 !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .drawer-section-title {
+  color: #8fd39a !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .menu-item,
+html body #q-app .q-drawer.motrix-drawer .menu-item .q-item__label {
+  color: #f7faf8 !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .menu-item .q-icon {
+  color: #c6dfcb !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .menu-item:hover {
+  background: rgba(255, 255, 255, 0.07) !important;
+}
+
+html body #q-app .q-drawer.motrix-drawer .menu-item.menu-item-active,
+html body #q-app .q-drawer.motrix-drawer .menu-item.q-router-link--active,
+html body #q-app .q-drawer.motrix-drawer .menu-item.q-router-link--exact-active {
+  color: #ffffff !important;
+  background: rgba(84, 151, 96, 0.34) !important;
+  box-shadow: inset 3px 0 0 #6bc778 !important;
+}
+
+/* =========================================================
+   ACCESIBILIDAD TÁCTIL MOTRIX
+   Botones de acción más cómodos sin agrandar iconos, tablas
+   ni controles densos/round.
+========================================================= */
+.q-btn:not(.q-btn--round):not(.q-btn--dense) {
+  min-height: 44px;
+}
+
+.q-card__actions .q-btn:not(.q-btn--round):not(.q-btn--dense),
+.motrix-action-btn {
+  min-height: 44px;
+  padding-right: 16px;
+  padding-left: 16px;
 }

@@ -9,22 +9,26 @@ use App\Models\Mototaxista;
 use App\Models\Pago;
 use App\Models\Servicio;
 use App\Models\Solicitud;
+use App\Models\User;
 use App\Services\AsignacionConductorService;
+use App\Services\FcmPushService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SolicitudController extends Controller
 {
     public function __construct(
-        private readonly AsignacionConductorService $asignacionService
+        private readonly AsignacionConductorService $asignacionService,
+        private readonly FcmPushService $pushService
     ) {
     }
 
     /**
-     * Las solicitudes nuevas estarán disponibles durante 15 minutos.
+     * Las solicitudes nuevas buscarán conductor durante un máximo de 3 minutos.
      */
-    private const MINUTOS_EXPIRACION = 15;
+    private const MINUTOS_EXPIRACION = 3;
 
     /**
      * Tarifa oficial del pasajero.
@@ -40,15 +44,15 @@ class SolicitudController extends Controller
             'America/La_Paz'
         )->hour;
 
-        if ($hora >= 22 || $hora < 6) {
+        if ($hora >= 23 || $hora < 6) {
             return 15.00;
         }
 
-        if ($distanciaKm <= 1.2) {
-            return 5.00;
+        if ($distanciaKm <= 2.0) {
+            return 6.00;
         }
 
-        if ($distanciaKm <= 2.8) {
+        if ($distanciaKm <= 4.0) {
             return 8.00;
         }
 
@@ -63,35 +67,323 @@ class SolicitudController extends Controller
 
     public function index(Request $request)
     {
+        $datos = $request->validate([
+            'paginated' => ['nullable', 'boolean'],
+            'q' => ['nullable', 'string', 'max:120'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => [
+                'nullable',
+                'integer',
+                'min:5',
+                'max:100',
+            ],
+            'id_pasajero' => [
+                'nullable',
+                'integer',
+                'exists:pasajeros,id',
+            ],
+        ]);
+
         $consulta = Solicitud::query()
             ->with([
                 'pasajero.persona',
                 'mototaxista.persona',
+                'mototaxista.persona.imagenes',
+                'mototaxista.sindicato',
             ]);
 
-        /*
-         * El administrador de servicios puede abrir el expediente
-         * de un pasajero concreto sin recibir solicitudes ajenas.
-         */
-        if ($request->filled('id_pasajero')) {
-            $request->validate([
-                'id_pasajero' => [
-                    'integer',
-                    'exists:pasajeros,id',
-                ],
-            ]);
-
+        if (! empty($datos['id_pasajero'])) {
             $consulta->where(
                 'id_pasajero',
-                (int) $request->input(
-                    'id_pasajero'
-                )
+                (int) $datos['id_pasajero']
             );
         }
 
-        return $consulta
-            ->orderByDesc('id')
-            ->get();
+        $texto = trim(
+            (string) ($datos['q'] ?? '')
+        );
+
+        if ($texto !== '') {
+            $terminos = array_values(
+                array_filter(
+                    preg_split('/\\s+/u', $texto) ?: []
+                )
+            );
+
+            foreach (
+                array_slice($terminos, 0, 5)
+                as $termino
+            ) {
+                $consulta->where(
+                    function ($query) use (
+                        $termino
+                    ) {
+                        $patron =
+                            '%' . $termino . '%';
+
+                        $query
+                            ->where(
+                                'origen',
+                                'like',
+                                $patron
+                            )
+                            ->orWhere(
+                                'destino',
+                                'like',
+                                $patron
+                            )
+                            ->orWhere(
+                                'estado',
+                                'like',
+                                $patron
+                            )
+                            ->orWhere(
+                                'metodo_pago',
+                                'like',
+                                $patron
+                            )
+                            ->orWhereHas(
+                                'pasajero.persona',
+                                function (
+                                    $persona
+                                ) use (
+                                    $patron
+                                ) {
+                                    $persona
+                                        ->where(
+                                            'nombre',
+                                            'like',
+                                            $patron
+                                        )
+                                        ->orWhere(
+                                            'apellidos',
+                                            'like',
+                                            $patron
+                                        )
+                                        ->orWhere(
+                                            'ci',
+                                            'like',
+                                            $patron
+                                        );
+                                }
+                            )
+                            ->orWhereHas(
+                                'mototaxista.persona',
+                                function (
+                                    $persona
+                                ) use (
+                                    $patron
+                                ) {
+                                    $persona
+                                        ->where(
+                                            'nombre',
+                                            'like',
+                                            $patron
+                                        )
+                                        ->orWhere(
+                                            'apellidos',
+                                            'like',
+                                            $patron
+                                        )
+                                        ->orWhere(
+                                            'ci',
+                                            'like',
+                                            $patron
+                                        );
+                                }
+                            );
+                    }
+                );
+            }
+        }
+
+        $consulta->orderByDesc('id');
+
+        if (! $request->boolean('paginated')) {
+            return $consulta->get();
+        }
+
+        $porPagina = (int) (
+            $datos['per_page'] ?? 12
+        );
+
+        $paginador = $consulta->paginate(
+            $porPagina
+        );
+
+        return response()->json([
+            'data' => $paginador->items(),
+            'meta' => [
+                'current_page' =>
+                    $paginador->currentPage(),
+                'last_page' =>
+                    $paginador->lastPage(),
+                'per_page' =>
+                    $paginador->perPage(),
+                'total' =>
+                    $paginador->total(),
+                'from' =>
+                    $paginador->firstItem(),
+                'to' =>
+                    $paginador->lastItem(),
+            ],
+        ]);
+    }
+
+    /**
+     * Opciones ligeras para vincular un servicio manualmente.
+     *
+     * No se devuelve todo el padrón. La búsqueda requiere texto
+     * y excluye solicitudes que ya tienen un servicio asociado,
+     * salvo la solicitud actualmente editada.
+     */
+    public function opcionesServicio(
+        Request $request
+    ) {
+        $datos = $request->validate([
+            'q' => [
+                'nullable',
+                'string',
+                'max:120',
+            ],
+            'include_id' => [
+                'nullable',
+                'integer',
+                'exists:solicitudes,id',
+            ],
+        ]);
+
+        $texto = trim(
+            (string) ($datos['q'] ?? '')
+        );
+
+        $includeId = isset($datos['include_id'])
+            ? (int) $datos['include_id']
+            : null;
+
+        if (
+            mb_strlen($texto) < 2
+            && ! $includeId
+        ) {
+            return response()->json([], 200);
+        }
+
+        $consulta = Solicitud::query()
+            ->with([
+                'pasajero.persona:id,nombre,apellidos,ci',
+                'mototaxista.persona:id,nombre,apellidos,ci',
+            ])
+            ->where(
+                function ($query) use (
+                    $includeId
+                ) {
+                    $query->whereNotExists(
+                        function ($subquery) {
+                            $subquery
+                                ->selectRaw('1')
+                                ->from('servicios')
+                                ->whereColumn(
+                                    'servicios.id_solicitud',
+                                    'solicitudes.id'
+                                );
+                        }
+                    );
+
+                    if ($includeId) {
+                        $query->orWhere(
+                            'solicitudes.id',
+                            $includeId
+                        );
+                    }
+                }
+            );
+
+        if ($texto !== '') {
+            $terminos = array_values(
+                array_filter(
+                    preg_split('/\\s+/u', $texto) ?: []
+                )
+            );
+
+            foreach (
+                array_slice($terminos, 0, 5)
+                as $termino
+            ) {
+                $consulta->where(
+                    function ($query) use (
+                        $termino
+                    ) {
+                        $patron =
+                            '%' . $termino . '%';
+
+                        if (ctype_digit($termino)) {
+                            $query->orWhere(
+                                'solicitudes.id',
+                                (int) $termino
+                            );
+                        }
+
+                        $query
+                            ->orWhere(
+                                'origen',
+                                'like',
+                                $patron
+                            )
+                            ->orWhere(
+                                'destino',
+                                'like',
+                                $patron
+                            )
+                            ->orWhere(
+                                'estado',
+                                'like',
+                                $patron
+                            )
+                            ->orWhereHas(
+                                'pasajero.persona',
+                                function (
+                                    $persona
+                                ) use (
+                                    $patron
+                                ) {
+                                    $persona
+                                        ->where(
+                                            'nombre',
+                                            'like',
+                                            $patron
+                                        )
+                                        ->orWhere(
+                                            'apellidos',
+                                            'like',
+                                            $patron
+                                        )
+                                        ->orWhere(
+                                            'ci',
+                                            'like',
+                                            $patron
+                                        );
+                                }
+                            );
+                    }
+                );
+            }
+        }
+
+        return response()->json(
+            $consulta
+                ->select([
+                    'id',
+                    'origen',
+                    'destino',
+                    'estado',
+                    'id_pasajero',
+                    'mototaxista_id',
+                ])
+                ->orderByDesc('id')
+                ->limit(10)
+                ->get(),
+            200
+        );
     }
 
     /**
@@ -332,6 +624,8 @@ class SolicitudController extends Controller
             'solicitud' => $solicitud->load([
                 'pasajero.persona',
                 'mototaxista.persona',
+                'mototaxista.persona.imagenes',
+                'mototaxista.sindicato',
             ]),
 
             'conductores' => $conductores,
@@ -465,9 +759,17 @@ class SolicitudController extends Controller
                         $solicitud->id
                     );
 
+                $this->asignacionService
+                    ->registrarSeguimientoAsignacion(
+                        $solicitud->id,
+                        $mototaxista->id
+                    );
+
                 return $solicitud->load([
                     'pasajero.persona',
                     'mototaxista.persona',
+                'mototaxista.persona.imagenes',
+                'mototaxista.sindicato',
                 ]);
             }
         );
@@ -565,7 +867,7 @@ class SolicitudController extends Controller
             'metodo_pago' => [
                 'nullable',
                 'string',
-                'in:Efectivo,QR,Transferencia / QR',
+                'in:Efectivo,QR,Transferencia / QR,Mixto',
             ],
         ]);
 
@@ -608,6 +910,8 @@ class SolicitudController extends Controller
                 'solicitud' => $solicitudActiva->load([
                     'pasajero.persona',
                     'mototaxista.persona',
+                'mototaxista.persona.imagenes',
+                'mototaxista.sindicato',
                 ]),
             ], 409);
         }
@@ -636,12 +940,24 @@ class SolicitudController extends Controller
 
         $solicitud->load([
             'pasajero.persona',
-            'mototaxista.persona',
+            'mototaxista.persona.imagenes',
+            'mototaxista.sindicato',
         ]);
+
+        $this->adjuntarReputacionConductor($solicitud);
 
         broadcast(
             new SolicitudCreada($solicitud)
         )->toOthers();
+
+        if ($solicitud->mototaxista_id) {
+            $this->notificarPushConductor(
+                $solicitud,
+                'Nueva solicitud de viaje',
+                'Tienes 30 segundos para aceptar la solicitud #' . $solicitud->id . '.',
+                'nueva_solicitud'
+            );
+        }
 
         return response()->json([
             'mensaje' => 'Solicitud creada correctamente.',
@@ -672,6 +988,8 @@ class SolicitudController extends Controller
             ->with([
                 'pasajero.persona',
                 'mototaxista.persona',
+                'mototaxista.persona.imagenes',
+                'mototaxista.sindicato',
             ])
             ->where('id_pasajero', $pasajeroId)
             ->orderByDesc('id')
@@ -703,6 +1021,8 @@ class SolicitudController extends Controller
             ->with([
                 'pasajero.persona',
                 'mototaxista.persona',
+                'mototaxista.persona.imagenes',
+                'mototaxista.sindicato',
             ])
             ->where('id', $id)
             ->where('id_pasajero', $pasajeroId)
@@ -713,6 +1033,8 @@ class SolicitudController extends Controller
                 'mensaje' => 'La solicitud no existe o no te pertenece.',
             ], 404);
         }
+
+        $this->adjuntarReputacionConductor($solicitud);
 
         return response()->json(
             $solicitud,
@@ -739,10 +1061,65 @@ class SolicitudController extends Controller
             $pasajeroId
         );
 
+        $solicitudPendiente = Solicitud::query()
+            ->where('id_pasajero', $pasajeroId)
+            ->whereIn(
+                'estado',
+                ['Pendiente', 'Buscando conductor']
+            )
+            ->orderByDesc('id')
+            ->first();
+
+        if ($solicitudPendiente) {
+            $resultadoAsignacion = $this->asignacionService
+                ->revisarAsignacionPendiente(
+                    $solicitudPendiente->id
+                );
+
+            if (
+                $resultadoAsignacion['cambio']
+                && $resultadoAsignacion['conductor'] !== null
+            ) {
+                $solicitudActualizada = Solicitud::query()
+                    ->with([
+                        'pasajero.persona',
+                        'mototaxista.persona',
+                        'mototaxista.persona.imagenes',
+                        'mototaxista.sindicato',
+                    ])
+                    ->find($solicitudPendiente->id);
+
+                if ($solicitudActualizada) {
+                    $tipoEvento = $resultadoAsignacion['motivo']
+                        === 'conductor_asignado'
+                            ? 'conductor_asignado'
+                            : 'conductor_reasignado';
+
+                    $this->adjuntarReputacionConductor($solicitudActualizada);
+
+                    broadcast(
+                        new SolicitudActualizada(
+                            $solicitudActualizada,
+                            $tipoEvento
+                        )
+                    )->toOthers();
+
+                    $this->notificarPushConductor(
+                        $solicitudActualizada,
+                        'Nueva solicitud de viaje',
+                        'Tienes 30 segundos para aceptar la solicitud #' . $solicitudActualizada->id . '.',
+                        $tipoEvento
+                    );
+                }
+            }
+        }
+
         $solicitud = Solicitud::query()
             ->with([
                 'pasajero.persona',
                 'mototaxista.persona',
+                'mototaxista.persona.imagenes',
+                'mototaxista.sindicato',
             ])
             ->where('id_pasajero', $pasajeroId)
             ->whereIn('estado', [
@@ -754,6 +1131,10 @@ class SolicitudController extends Controller
             ])
             ->orderByDesc('id')
             ->first();
+
+        if ($solicitud) {
+            $this->adjuntarReputacionConductor($solicitud);
+        }
 
         return response()->json([
             'solicitud' => $solicitud,
@@ -781,12 +1162,18 @@ class SolicitudController extends Controller
             ->with([
                 'pasajero.persona',
                 'mototaxista.persona',
+                'mototaxista.persona.imagenes',
+                'mototaxista.sindicato',
             ])
             ->where('id_pasajero', $pasajeroId)
             ->where('estado', 'Finalizado')
             ->whereNull('calificacion')
             ->orderByDesc('id')
             ->first();
+
+        if ($solicitud) {
+            $this->adjuntarReputacionConductor($solicitud);
+        }
 
         return response()->json([
             'solicitud' => $solicitud,
@@ -924,6 +1311,8 @@ class SolicitudController extends Controller
                     'solicitud' => $solicitud->load([
                         'pasajero.persona',
                         'mototaxista.persona',
+                'mototaxista.persona.imagenes',
+                'mototaxista.sindicato',
                     ]),
 
                     'promedio_mototaxista' =>
@@ -1042,7 +1431,11 @@ class SolicitudController extends Controller
                     );
 
                     if ($mototaxista) {
-                        $mototaxista->disponible = 1;
+                        $mototaxista->loadMissing('usuarioConductor');
+                        $mototaxista->disponible = (
+                            $mototaxista->habilitadoSindicalmente()
+                            && $mototaxista->usuarioConductor !== null
+                        );
                         $mototaxista->save();
                     }
                 }
@@ -1050,9 +1443,16 @@ class SolicitudController extends Controller
                 $this->asignacionService
                     ->olvidarRechazos($solicitud->id);
 
+                $this->asignacionService
+                    ->olvidarSeguimientoAsignacion(
+                        $solicitud->id
+                    );
+
                 $solicitud->load([
                     'pasajero.persona',
                     'mototaxista.persona',
+                'mototaxista.persona.imagenes',
+                'mototaxista.sindicato',
                 ]);
 
                 broadcast(
@@ -1097,6 +1497,14 @@ class SolicitudController extends Controller
                 $datos['mototaxista_id'] ?? null
             );
 
+        /*
+         * También se valida el límite de respuesta al momento de aceptar.
+         * Así un conductor no puede aceptar una reserva cuyo turno de
+         * 30 segundos ya venció aunque el pasajero todavía no haya hecho poll.
+         */
+        $this->asignacionService
+            ->revisarAsignacionPendiente((int) $id);
+
         return DB::transaction(
             function () use (
                 $mototaxistaId,
@@ -1110,15 +1518,34 @@ class SolicitudController extends Controller
                     ->lockForUpdate()
                     ->findOrFail($mototaxistaId);
 
+                $mototaxista->loadMissing('usuarioConductor');
+
                 if (
-                    $solicitud->mototaxista_id !== null
-                    && (int) $solicitud->mototaxista_id
+                    ! $mototaxista->habilitadoSindicalmente()
+                    || $mototaxista->usuarioConductor === null
+                ) {
+                    $mototaxista->disponible = false;
+                    $mototaxista->save();
+
+                    $motivo = $mototaxista->usuarioConductor === null
+                        ? 'No existe una cuenta MOTRIX de conductor vinculada.'
+                        : ($mototaxista->motivoInhabilitacionSindical()
+                            ?: 'La afiliación sindical no está habilitada.');
+
+                    return response()->json([
+                        'mensaje' => 'No puedes aceptar viajes: ' . $motivo,
+                        'motivo_inhabilitacion' => $motivo,
+                    ], 409);
+                }
+
+                if (
+                    (int) ($solicitud->mototaxista_id ?? 0)
                         !== (int) $mototaxista->id
                 ) {
                     return response()->json([
                         'mensaje' => (
-                            'La solicitud está reservada '
-                            . 'para otro conductor.'
+                            'La solicitud ya no está reservada '
+                            . 'para este conductor.'
                         ),
                     ], 403);
                 }
@@ -1211,10 +1638,18 @@ class SolicitudController extends Controller
                         $solicitud->id
                     );
 
+                $this->asignacionService
+                    ->olvidarSeguimientoAsignacion(
+                        $solicitud->id
+                    );
+
                 $solicitud->load([
                     'pasajero.persona',
-                    'mototaxista.persona',
+                    'mototaxista.persona.imagenes',
+                    'mototaxista.sindicato',
                 ]);
+
+                $this->adjuntarReputacionConductor($solicitud);
 
                 broadcast(
                     new SolicitudActualizada(
@@ -1222,6 +1657,13 @@ class SolicitudController extends Controller
                         'conductor_acepto'
                     )
                 )->toOthers();
+
+                $this->notificarPushPasajero(
+                    $solicitud,
+                    'Conductor en camino',
+                    'Tu mototaxista aceptó el viaje y se dirige al punto de recogida.',
+                    'conductor_acepto'
+                );
 
                 return response()->json(
                     $solicitud,
@@ -1252,6 +1694,9 @@ class SolicitudController extends Controller
                 $request,
                 $datos['mototaxista_id'] ?? null
             );
+
+        $this->asignacionService
+            ->revisarAsignacionPendiente((int) $id);
 
         $solicitud = Solicitud::query()
             ->findOrFail($id);
@@ -1293,8 +1738,12 @@ class SolicitudController extends Controller
             ->with([
                 'pasajero.persona',
                 'mototaxista.persona',
+                'mototaxista.persona.imagenes',
+                'mototaxista.sindicato',
             ])
             ->findOrFail($id);
+
+        $this->adjuntarReputacionConductor($solicitudActualizada);
 
         broadcast(
             new SolicitudActualizada(
@@ -1305,6 +1754,15 @@ class SolicitudController extends Controller
             )
         )->toOthers();
 
+        if ($resultado['conductor'] !== null) {
+            $this->notificarPushConductor(
+                $solicitudActualizada,
+                'Nueva solicitud de viaje',
+                'Tienes 30 segundos para aceptar la solicitud #' . $solicitudActualizada->id . '.',
+                'conductor_reasignado'
+            );
+        }
+
         return response()->json([
             'mensaje' => $resultado['mensaje'],
 
@@ -1314,7 +1772,10 @@ class SolicitudController extends Controller
             'nuevo_conductor' =>
                 $resultado['conductor']
                     ? $resultado['conductor']
-                        ->load('persona')
+                        ->load([
+                            'persona.imagenes',
+                            'sindicato',
+                        ])
                     : null,
 
         ], $resultado['ok'] ? 200 : 409);
@@ -1343,7 +1804,19 @@ class SolicitudController extends Controller
             'metodo_pago' => [
                 'nullable',
                 'string',
-                'in:Efectivo,QR,Transferencia / QR',
+                'in:Efectivo,QR,Transferencia / QR,Mixto',
+            ],
+
+            'monto_efectivo' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
+            'monto_qr' => [
+                'nullable',
+                'numeric',
+                'min:0',
             ],
 
             'motivo_cancelacion' => [
@@ -1514,8 +1987,24 @@ class SolicitudController extends Controller
                         );
 
                         if ($monto <= 0) {
-                            $monto = 8.00;
+                            $monto = 6.00;
                         }
+
+                        $metodoPago = (string) (
+                            $datos['metodo_pago']
+                            ?? $solicitud->metodo_pago
+                            ?? 'Efectivo'
+                        );
+
+                        [
+                            $montoEfectivo,
+                            $montoQr,
+                        ] = $this->resolverDesglosePagoFinal(
+                            $monto,
+                            $metodoPago,
+                            $datos['monto_efectivo'] ?? null,
+                            $datos['monto_qr'] ?? null
+                        );
 
                         Pago::updateOrCreate(
                             [
@@ -1524,14 +2013,12 @@ class SolicitudController extends Controller
                             ],
                             [
                                 'monto' => $monto,
-
-                                'metodo' => (
-                                    $datos['metodo_pago']
-                                    ?? $solicitud
-                                        ->metodo_pago
-                                    ?? 'Efectivo'
-                                ),
-
+                                'monto_efectivo' =>
+                                    $montoEfectivo,
+                                'monto_qr' =>
+                                    $montoQr,
+                                'metodo' =>
+                                    $metodoPago,
                                 'estado' =>
                                     'Completado',
                             ]
@@ -1543,15 +2030,25 @@ class SolicitudController extends Controller
                     );
 
                     if ($mototaxista) {
-                        $mototaxista->disponible = 1;
+                        $tieneCuentaConductor = User::query()
+                            ->where('mototaxista_id', $mototaxista->id)
+                            ->where('role', 'conductor')
+                            ->exists();
+
+                        $mototaxista->disponible =
+                            $mototaxista->habilitadoSindicalmente()
+                            && $tieneCuentaConductor;
                         $mototaxista->save();
                     }
                 }
 
                 $solicitud->load([
                     'pasajero.persona',
-                    'mototaxista.persona',
+                    'mototaxista.persona.imagenes',
+                    'mototaxista.sindicato',
                 ]);
+
+                $this->adjuntarReputacionConductor($solicitud);
 
                 $tipoEvento = match ($nuevoEstado) {
                     'Llegó' => 'conductor_llego',
@@ -1567,6 +2064,36 @@ class SolicitudController extends Controller
                         $tipoEvento
                     )
                 )->toOthers();
+
+                [$pushTitulo, $pushMensaje] = match ($nuevoEstado) {
+                    'Llegó' => [
+                        'Tu mototaxista llegó',
+                        'El conductor ya se encuentra en el punto de recogida.',
+                    ],
+                    'En Curso' => [
+                        'Viaje iniciado',
+                        'Tu viaje MOTRIX está en curso.',
+                    ],
+                    'Finalizado' => [
+                        'Viaje finalizado',
+                        'El viaje terminó. Ya puedes calificar la atención del mototaxista.',
+                    ],
+                    'Cancelado' => [
+                        'Viaje cancelado',
+                        'El conductor canceló el viaje. Revisa la aplicación para más detalles.',
+                    ],
+                    default => [
+                        'Actualización de viaje',
+                        'El estado de tu viaje MOTRIX cambió.',
+                    ],
+                };
+
+                $this->notificarPushPasajero(
+                    $solicitud,
+                    $pushTitulo,
+                    $pushMensaje,
+                    $tipoEvento
+                );
 
                 return response()->json(
                     $solicitud,
@@ -1621,6 +2148,8 @@ class SolicitudController extends Controller
             ->select(
                 'pagos.id',
                 'pagos.monto',
+                'pagos.monto_efectivo',
+                'pagos.monto_qr',
                 'pagos.metodo',
 
                 'solicitudes.id as solicitud_id',
@@ -1640,7 +2169,15 @@ class SolicitudController extends Controller
         $digital = 0.0;
 
         foreach ($pagos as $pago) {
-            if ($pago->metodo === 'Efectivo') {
+            if ($pago->metodo === 'Mixto') {
+                $efectivo += (float) (
+                    $pago->monto_efectivo ?? 0
+                );
+
+                $digital += (float) (
+                    $pago->monto_qr ?? 0
+                );
+            } elseif ($pago->metodo === 'Efectivo') {
                 $efectivo += (float) $pago->monto;
             } else {
                 $digital += (float) $pago->monto;
@@ -1738,6 +2275,87 @@ class SolicitudController extends Controller
     |--------------------------------------------------------------------------
     */
 
+    private function adjuntarReputacionConductor(?Solicitud $solicitud): void
+    {
+        $mototaxista = $solicitud?->mototaxista;
+
+        if (! $mototaxista?->id) {
+            return;
+        }
+
+        $consulta = Solicitud::query()
+            ->where('mototaxista_id', $mototaxista->id)
+            ->where('estado', 'Finalizado')
+            ->whereNotNull('calificacion');
+
+        $mototaxista->setAttribute(
+            'promedio_calificacion',
+            round((float) ((clone $consulta)->avg('calificacion') ?? 0), 2)
+        );
+        $mototaxista->setAttribute(
+            'total_calificaciones',
+            (clone $consulta)->count()
+        );
+    }
+
+    private function notificarPushConductor(
+        Solicitud $solicitud,
+        string $titulo,
+        string $mensaje,
+        string $tipo
+    ): void {
+        $mototaxistaId = (int) ($solicitud->mototaxista_id ?? 0);
+
+        if ($mototaxistaId <= 0) {
+            return;
+        }
+
+        $userId = User::query()
+            ->where('mototaxista_id', $mototaxistaId)
+            ->where('role', 'conductor')
+            ->value('id');
+
+        $this->pushService->sendToUser(
+            $userId ? (int) $userId : null,
+            $titulo,
+            $mensaje,
+            [
+                'tipo' => $tipo,
+                'solicitud_id' => $solicitud->id,
+                'route' => '/conductor',
+            ]
+        );
+    }
+
+    private function notificarPushPasajero(
+        Solicitud $solicitud,
+        string $titulo,
+        string $mensaje,
+        string $tipo
+    ): void {
+        $pasajeroId = (int) ($solicitud->id_pasajero ?? 0);
+
+        if ($pasajeroId <= 0) {
+            return;
+        }
+
+        $userId = User::query()
+            ->where('pasajero_id', $pasajeroId)
+            ->where('role', 'pasajero')
+            ->value('id');
+
+        $this->pushService->sendToUser(
+            $userId ? (int) $userId : null,
+            $titulo,
+            $mensaje,
+            [
+                'tipo' => $tipo,
+                'solicitud_id' => $solicitud->id,
+                'route' => '/pasajero/solicitar',
+            ]
+        );
+    }
+
     /**
      * Distancia aproximada entre dos coordenadas,
      * utilizando la fórmula de Haversine.
@@ -1772,6 +2390,49 @@ class SolicitudController extends Controller
                 ),
             2
         );
+    }
+
+    private function resolverDesglosePagoFinal(
+        float $monto,
+        string $metodo,
+        mixed $montoEfectivo,
+        mixed $montoQr
+    ): array {
+        if ($metodo === 'Mixto') {
+            $efectivo = round(
+                (float) $montoEfectivo,
+                2
+            );
+
+            $qr = round(
+                (float) $montoQr,
+                2
+            );
+
+            if ($efectivo <= 0 || $qr <= 0) {
+                throw ValidationException::withMessages([
+                    'metodo_pago' => [
+                        'El pago mixto requiere un monto mayor a cero en efectivo y otro en QR.',
+                    ],
+                ]);
+            }
+
+            if (abs(($efectivo + $qr) - $monto) > 0.01) {
+                throw ValidationException::withMessages([
+                    'metodo_pago' => [
+                        'La suma de efectivo y QR debe coincidir con la tarifa total del viaje.',
+                    ],
+                ]);
+            }
+
+            return [$efectivo, $qr];
+        }
+
+        if ($metodo === 'Efectivo') {
+            return [round($monto, 2), 0.00];
+        }
+
+        return [0.00, round($monto, 2)];
     }
 
     /**

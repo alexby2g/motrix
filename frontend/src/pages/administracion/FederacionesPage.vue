@@ -47,7 +47,7 @@
 
       <div v-if="!cargando && federaciones.length" class="row q-col-gutter-md">
         <div v-for="federacion in federaciones" :key="federacion.id" class="col-12 col-sm-6 col-md-4 col-lg-3">
-          <q-card flat bordered class="federacion-card full-height">
+          <q-card flat bordered class="federacion-card full-height cursor-pointer" @click="abrirDetalle(federacion)">
             <q-card-section class="row items-start no-wrap">
               <q-avatar size="64px" color="green-1" text-color="green-8" class="q-mr-md">
                 <img
@@ -69,9 +69,13 @@
                 </q-chip>
               </div>
 
-              <q-btn flat round dense icon="more_vert" color="grey-7">
+              <q-btn flat round dense icon="more_vert" color="grey-7" @click.stop>
                 <q-menu>
                   <q-list style="min-width: 175px">
+                    <q-item clickable v-close-popup @click="abrirDetalle(federacion)">
+                      <q-item-section avatar><q-icon name="visibility" color="blue-8" /></q-item-section>
+                      <q-item-section>Ver detalles</q-item-section>
+                    </q-item>
                     <q-item clickable v-close-popup @click="irSindicatos(federacion)">
                       <q-item-section avatar><q-icon name="groups" color="green-8" /></q-item-section>
                       <q-item-section>Ver sindicatos</q-item-section>
@@ -105,6 +109,52 @@
         </q-card-section>
       </q-card>
     </div>
+
+    <q-dialog v-model="dialogoDetalle">
+      <q-card class="detalle-card">
+        <q-card-section class="dialog-header row items-center">
+          <q-icon name="account_tree" color="green-8" size="30px" class="q-mr-md" />
+          <div class="col">
+            <div class="text-h6 text-weight-bold">Detalle de la federación</div>
+            <div class="text-caption text-grey-6">Información y logotipo registrado.</div>
+          </div>
+          <q-btn flat round dense icon="close" v-close-popup />
+        </q-card-section>
+
+        <q-card-section v-if="seleccionada" class="q-pa-lg">
+          <div class="row q-col-gutter-lg items-center">
+            <div class="col-12 col-sm-auto text-center">
+              <q-avatar size="130px" color="green-1" text-color="green-8" class="logo-detalle">
+                <img
+                  v-if="seleccionada.logo && !logosFallidos.has(seleccionada.id)"
+                  :src="archivoPublico(seleccionada.logo)"
+                  alt="Logo de federación"
+                  @error="marcarLogoFallido(seleccionada.id)"
+                >
+                <q-icon v-else name="account_tree" size="64px" />
+              </q-avatar>
+            </div>
+            <div class="col min-width-zero">
+              <div class="text-h5 text-weight-bold text-green-9">
+                {{ seleccionada.nombre }}
+              </div>
+              <q-chip dense color="blue-1" text-color="blue-9" icon="groups" class="q-mt-md">
+                {{ seleccionada.sindicatos_count || 0 }} sindicato{{ Number(seleccionada.sindicatos_count || 0) === 1 ? '' : 's' }} afiliado{{ Number(seleccionada.sindicatos_count || 0) === 1 ? '' : 's' }}
+              </q-chip>
+              <div class="row q-gutter-sm q-mt-md">
+                <q-btn color="purple-7" icon="image" label="Cambiar logo" no-caps unelevated @click="cambiarLogoDesdeDetalle" />
+                <q-btn outline color="green-8" icon="groups" label="Ver sindicatos" no-caps @click="irSindicatos(seleccionada)" />
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md bg-grey-1">
+          <q-btn flat color="grey-7" label="Cerrar" v-close-popup />
+          <q-btn color="green-8" icon="edit" label="Editar datos" unelevated @click="editarDesdeDetalle" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <q-dialog v-model="dialogoForm">
       <q-card class="dialog-card">
@@ -188,6 +238,8 @@ const logosFallidos = ref(new Set())
 
 const dialogoForm = ref(false)
 const dialogoLogo = ref(false)
+const dialogoDetalle = ref(false)
+const seleccionada = ref(null)
 const editando = ref(null)
 const federacionLogo = ref(null)
 const logoNuevo = ref(null)
@@ -227,6 +279,24 @@ async function cargarFederaciones() {
   } finally {
     cargando.value = false
   }
+}
+
+function abrirDetalle(federacion) {
+  seleccionada.value = federacion
+  dialogoDetalle.value = true
+}
+
+function cambiarLogoDesdeDetalle() {
+  if (!seleccionada.value) return
+  dialogoDetalle.value = false
+  abrirLogo(seleccionada.value)
+}
+
+function editarDesdeDetalle() {
+  if (!seleccionada.value) return
+  const item = seleccionada.value
+  dialogoDetalle.value = false
+  abrirEditar(item)
 }
 
 function abrirCrear() {
@@ -299,6 +369,9 @@ async function subirLogo() {
     $q.notify({ type: 'positive', position: 'top', message: 'Logo actualizado correctamente.' })
     dialogoLogo.value = false
     await cargarFederaciones()
+    if (seleccionada.value) {
+      seleccionada.value = federaciones.value.find(item => item.id === seleccionada.value.id) || seleccionada.value
+    }
   } catch (error) {
     $q.notify({ type: 'negative', position: 'top', message: mensajeError(error, 'No se pudo subir el logo.') })
   } finally {
@@ -342,6 +415,8 @@ onMounted(cargarFederaciones)
 .federacion-card { transition: transform .18s ease, box-shadow .18s ease; }
 .federacion-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(27,94,32,.12); }
 .dialog-card { width: min(520px, 94vw); border-top: 4px solid #2e7d32; border-radius: 14px; }
+.detalle-card { width: min(700px, 95vw); border-top: 4px solid #2e7d32; border-radius: 16px; overflow: hidden; }
+.logo-detalle { border: 4px solid #e8f5e9; box-shadow: 0 6px 18px rgba(27,94,32,.12); overflow: hidden; }
 .dialog-header { background: #f1f8e9; }
 .min-width-zero { min-width: 0; }
 .ellipsis-2-lines { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

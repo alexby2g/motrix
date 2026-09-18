@@ -44,7 +44,7 @@
 
       <div v-if="!cargando && sindicatosFiltrados.length" class="row q-col-gutter-md">
         <div v-for="sindicato in sindicatosFiltrados" :key="sindicato.id" class="col-12 col-sm-6 col-lg-4">
-          <q-card flat bordered class="sindicato-card full-height">
+          <q-card flat bordered class="sindicato-card full-height cursor-pointer" @click="abrirDetalle(sindicato)">
             <q-card-section class="row no-wrap items-start">
               <q-avatar size="62px" color="green-1" text-color="green-8" class="q-mr-md">
                 <img
@@ -68,18 +68,19 @@
                 </div>
                 <div class="text-caption text-grey-7 q-mt-xs">
                   <q-icon name="calendar_month" size="14px" class="q-mr-xs" />
-                  {{ sindicato.fecha_creacion || 'Sin fecha registrada' }}
+                  {{ fechaDDMMYYYY(sindicato.fecha_creacion, 'Sin fecha registrada') }}
                 </div>
               </div>
             </q-card-section>
 
             <q-separator />
 
-            <q-card-section class="row items-center q-py-sm">
+            <q-card-section class="row items-center q-py-sm" @click.stop>
               <q-chip dense color="blue-1" text-color="blue-9" icon="two_wheeler">
                 {{ sindicato.mototaxistas_count || 0 }} afiliado{{ Number(sindicato.mototaxistas_count || 0) === 1 ? '' : 's' }}
               </q-chip>
               <q-space />
+              <q-btn flat round dense icon="visibility" color="blue-8" @click="abrirDetalle(sindicato)"><q-tooltip>Ver detalles</q-tooltip></q-btn>
               <q-btn flat round dense icon="edit" color="green-8" @click="abrirEditar(sindicato)"><q-tooltip>Editar</q-tooltip></q-btn>
               <q-btn flat round dense icon="image" color="purple-7" @click="abrirLogo(sindicato)"><q-tooltip>Cambiar logo</q-tooltip></q-btn>
               <q-btn v-if="!esSecretario" flat round dense icon="delete" color="negative" @click="confirmarEliminar(sindicato)"><q-tooltip>Eliminar</q-tooltip></q-btn>
@@ -95,6 +96,102 @@
         </q-card-section>
       </q-card>
     </div>
+
+    <q-dialog v-model="dialogoDetalle">
+      <q-card class="detalle-card">
+        <q-card-section class="dialog-header row items-center">
+          <q-icon name="groups" color="green-8" size="30px" class="q-mr-md" />
+          <div class="col">
+            <div class="text-h6 text-weight-bold">Detalle del sindicato</div>
+            <div class="text-caption text-grey-6">Información, afiliación y logotipo.</div>
+          </div>
+          <q-btn flat round dense icon="close" v-close-popup />
+        </q-card-section>
+
+        <q-card-section v-if="seleccionado" class="q-pa-lg">
+          <div class="row q-col-gutter-lg items-center">
+            <div class="col-12 col-sm-auto text-center">
+              <q-avatar size="130px" color="green-1" text-color="green-8" class="logo-detalle">
+                <img
+                  v-if="seleccionado.logo && !logosFallidos.has(seleccionado.id)"
+                  :src="archivoPublico(seleccionado.logo)"
+                  alt="Logo del sindicato"
+                  @error="marcarLogoFallido(seleccionado.id)"
+                >
+                <q-icon v-else name="groups" size="64px" />
+              </q-avatar>
+            </div>
+
+            <div class="col min-width-zero">
+              <div class="text-h5 text-weight-bold text-green-9">
+                {{ seleccionado.nombre }}
+              </div>
+
+              <q-list bordered separator class="detalle-lista q-mt-md">
+                <q-item>
+                  <q-item-section avatar><q-icon name="account_tree" color="green-8" /></q-item-section>
+                  <q-item-section>
+                    <q-item-label caption>Federación</q-item-label>
+                    <q-item-label>{{ seleccionado.federacion?.nombre || 'Sin federación' }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section avatar><q-icon name="place" color="green-8" /></q-item-section>
+                  <q-item-section>
+                    <q-item-label caption>Dirección</q-item-label>
+                    <q-item-label>{{ seleccionado.direccion || 'No registrada' }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section avatar><q-icon name="calendar_month" color="green-8" /></q-item-section>
+                  <q-item-section>
+                    <q-item-label caption>Fecha de creación</q-item-label>
+                    <q-item-label>{{ fechaDDMMYYYY(seleccionado.fecha_creacion, 'No registrada') }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section avatar><q-icon name="two_wheeler" color="green-8" /></q-item-section>
+                  <q-item-section>
+                    <q-item-label caption>Mototaxistas afiliados</q-item-label>
+                    <q-item-label>{{ seleccionado.mototaxistas_count || 0 }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+
+              <div class="row q-col-gutter-sm q-mt-md">
+                <div class="col-12 col-sm-7">
+                  <q-btn
+                    color="green-8"
+                    icon="two_wheeler"
+                    :label="`Ver afiliados (${seleccionado.mototaxistas_count || 0})`"
+                    no-caps
+                    unelevated
+                    class="full-width"
+                    @click="verMototaxistasAfiliados"
+                  />
+                </div>
+                <div class="col-12 col-sm-5">
+                  <q-btn
+                    outline
+                    color="purple-7"
+                    icon="image"
+                    label="Cambiar logo"
+                    no-caps
+                    class="full-width"
+                    @click="cambiarLogoDesdeDetalle"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md bg-grey-1">
+          <q-btn flat color="grey-7" label="Cerrar" v-close-popup />
+          <q-btn color="green-8" icon="edit" label="Editar datos" unelevated @click="editarDesdeDetalle" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <q-dialog v-model="dialogoForm">
       <q-card class="dialog-card">
@@ -159,13 +256,15 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from 'src/boot/axios.js'
-
 const $q = useQuasar()
 const route = useRoute()
+const router = useRouter()
 
 function leerUsuarioActual() {
   try {
@@ -193,6 +292,8 @@ const logosFallidos = ref(new Set())
 
 const dialogoForm = ref(false)
 const dialogoLogo = ref(false)
+const dialogoDetalle = ref(false)
+const seleccionado = ref(null)
 const editando = ref(null)
 const sindicatoLogo = ref(null)
 const logoNuevo = ref(null)
@@ -227,6 +328,33 @@ async function cargar() {
   } finally {
     cargando.value = false
   }
+}
+
+function abrirDetalle(item) {
+  seleccionado.value = item
+  dialogoDetalle.value = true
+}
+
+function verMototaxistasAfiliados() {
+  if (!seleccionado.value?.id) return
+  dialogoDetalle.value = false
+  router.push({
+    path: '/mototaxistas',
+    query: { sindicato: seleccionado.value.id }
+  })
+}
+
+function cambiarLogoDesdeDetalle() {
+  if (!seleccionado.value) return
+  dialogoDetalle.value = false
+  abrirLogo(seleccionado.value)
+}
+
+function editarDesdeDetalle() {
+  if (!seleccionado.value) return
+  const item = seleccionado.value
+  dialogoDetalle.value = false
+  abrirEditar(item)
 }
 
 function limpiarForm() {
@@ -302,6 +430,9 @@ async function subirLogo() {
     $q.notify({ type: 'positive', position: 'top', message: 'Logo actualizado correctamente.' })
     dialogoLogo.value = false
     await cargar()
+    if (seleccionado.value) {
+      seleccionado.value = sindicatos.value.find(item => item.id === seleccionado.value.id) || seleccionado.value
+    }
   } catch (error) {
     $q.notify({ type: 'negative', position: 'top', message: mensajeError(error, 'No se pudo subir el logo.') })
   } finally { subiendoLogo.value = false }
@@ -338,6 +469,9 @@ onMounted(async () => {
 .sindicato-card { border-left: 4px solid #2e7d32; transition: transform .18s ease, box-shadow .18s ease; }
 .sindicato-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(27,94,32,.12); }
 .dialog-card { width: min(580px, 95vw); border-top: 4px solid #2e7d32; border-radius: 14px; }
+.detalle-card { width: min(760px, 95vw); border-top: 4px solid #2e7d32; border-radius: 16px; overflow: hidden; }
+.logo-detalle { border: 4px solid #e8f5e9; box-shadow: 0 6px 18px rgba(27,94,32,.12); overflow: hidden; }
+.detalle-lista { border-radius: 12px; overflow: hidden; border-color: #dce8da; }
 .dialog-header { background: #f1f8e9; }
 .min-width-zero { min-width: 0; }
 </style>

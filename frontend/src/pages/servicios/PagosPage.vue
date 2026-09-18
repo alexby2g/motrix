@@ -69,21 +69,24 @@
           row-key="id"
           :filter="filter"
           :loading="loading"
+          v-model:pagination="pagination"
           :grid="$q.screen.lt.xl"
           :hide-header="$q.screen.lt.xl"
-          :rows-per-page-options="[6, 12, 24, 0]"
+          :rows-per-page-options="[6, 12, 24, 50]"
           rows-per-page-label="Registros por página"
           no-data-label="No se registran transacciones de pago"
           no-results-label="No se encontraron resultados"
           loading-label="Cargando pagos..."
           flat
           binary-state-sort
+          @request="onRequestPagos"
+          @row-click="(_, row) => openDetail(row)"
         >
           <template #top>
             <div class="row items-center full-width q-col-gutter-sm q-pa-sm">
               <div class="col-12 col-sm">
                 <div class="text-subtitle1 text-weight-bold text-grey-8">
-                  {{ pagos.length }} pagos registrados
+                  {{ pagination.rowsNumber }} pagos registrados
                 </div>
               </div>
 
@@ -156,7 +159,7 @@
           </template>
 
           <template #body-cell-actions="props">
-            <q-td :props="props" class="text-center">
+            <q-td :props="props" class="text-center" @click.stop>
               <q-btn flat round dense icon="more_vert" color="grey-8" aria-label="Acciones del pago">
                 <q-menu auto-close anchor="bottom right" self="top right">
                   <q-list style="min-width: 210px">
@@ -182,7 +185,7 @@
           <!-- TARJETAS RESPONSIVAS -->
           <template #item="props">
             <div class="q-pa-sm col-12 col-md-6">
-              <q-card class="payment-card border-radius-md shadow-1 full-height">
+              <q-card class="payment-card border-radius-md shadow-1 full-height cursor-pointer" @click="openDetail(props.row)">
                 <q-card-section class="q-pb-sm">
                   <div class="row items-start no-wrap">
                     <q-avatar
@@ -202,7 +205,7 @@
                       </div>
                     </div>
 
-                    <q-btn flat round dense icon="more_vert" color="grey-8">
+                    <q-btn flat round dense icon="more_vert" color="grey-8" @click.stop>
                       <q-menu auto-close anchor="bottom right" self="top right">
                         <q-list style="min-width: 210px">
                           <q-item clickable @click="openDetail(props.row)">
@@ -335,6 +338,35 @@
               {{ selectedPayment.estado || 'Sin estado' }}
             </q-chip>
           </div>
+
+          <q-card
+            v-if="normalizar(selectedPayment.metodo) === 'mixto'"
+            flat
+            bordered
+            class="bg-orange-1"
+          >
+            <q-card-section class="q-pa-md">
+              <div class="text-subtitle2 text-weight-bold text-orange-10 q-mb-sm">
+                Desglose del pago mixto
+              </div>
+
+              <div class="row q-col-gutter-md">
+                <div class="col-6">
+                  <div class="text-caption text-grey-7">Efectivo</div>
+                  <div class="text-h6 text-weight-bold text-positive">
+                    {{ formatearMonto(selectedPayment.monto_efectivo) }}
+                  </div>
+                </div>
+
+                <div class="col-6">
+                  <div class="text-caption text-grey-7">QR</div>
+                  <div class="text-h6 text-weight-bold text-indigo-7">
+                    {{ formatearMonto(selectedPayment.monto_qr) }}
+                  </div>
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md bg-grey-1">
@@ -375,6 +407,41 @@
               label="Método de Pago *"
             />
 
+            <div
+              v-if="normalizar(form.metodo) === 'mixto'"
+              class="row q-col-gutter-sm"
+            >
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model.number="form.monto_efectivo"
+                  outlined
+                  dense
+                  type="number"
+                  min="0.01"
+                  step="0.10"
+                  prefix="Bs."
+                  label="Efectivo *"
+                />
+              </div>
+
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model.number="form.monto_qr"
+                  outlined
+                  dense
+                  type="number"
+                  min="0.01"
+                  step="0.10"
+                  prefix="Bs."
+                  label="QR *"
+                />
+              </div>
+
+              <div class="col-12 text-caption text-grey-7">
+                Efectivo + QR debe ser igual al monto total.
+              </div>
+            </div>
+
             <q-select
               v-model="form.estado"
               :options="estadoOptions"
@@ -393,7 +460,21 @@
               map-options
               option-value="id"
               option-label="detalles"
-            />
+              use-input
+              fill-input
+              hide-selected
+              input-debounce="300"
+              :loading="buscandoServicios"
+              @filter="filtrarServiciosPago"
+            >
+              <template #no-option>
+                <q-item>
+                  <q-item-section class="text-grey-7">
+                    Escribe un número de servicio, conductor o ruta.
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md bg-grey-1">
@@ -427,17 +508,35 @@ const filter = ref('')
 const loading = ref(false)
 const saving = ref(false)
 
+const pagination = ref({
+  page: 1,
+  rowsPerPage: 12,
+  rowsNumber: 0
+})
+
+const estadisticas = ref({
+  completados: 0,
+  total_recaudado: 0,
+  total_efectivo: 0,
+  total_digital: 0
+})
+
+const buscandoServicios = ref(false)
+let secuenciaBusquedaServicio = 0
+
 const dialogOpen = ref(false)
 const detailDialogOpen = ref(false)
 const isEditing = ref(false)
 const selectedPayment = ref(null)
 
-const metodoOptions = ['Efectivo', 'QR', 'Transferencia / QR']
+const metodoOptions = ['Efectivo', 'QR', 'Transferencia / QR', 'Mixto']
 const estadoOptions = ['Pendiente', 'Completado', 'Reembolsado']
 
 const formDefault = {
   id: null,
   monto: 0,
+  monto_efectivo: null,
+  monto_qr: null,
   metodo: 'Efectivo',
   estado: 'Completado',
   id_servicio: null
@@ -446,28 +545,22 @@ const formDefault = {
 const form = ref({ ...formDefault })
 
 const normalizar = (valor) => String(valor || '').trim().toLowerCase()
-const esCompletado = (pago) => normalizar(pago.estado) === 'completado'
-const esEfectivo = (pago) => normalizar(pago.metodo) === 'efectivo'
+const pagosCompletados = computed(
+  () => estadisticas.value.completados
+)
 
-const pagosCompletados = computed(() => pagos.value.filter(esCompletado).length)
+const totalRecaudado = computed(
+  () => estadisticas.value.total_recaudado
+)
 
-const totalRecaudado = computed(() => {
-  return pagos.value
-    .filter(esCompletado)
-    .reduce((total, pago) => total + (Number.parseFloat(pago.monto) || 0), 0)
-})
+const totalEfectivo = computed(
+  () => estadisticas.value.total_efectivo
+)
 
-const totalEfectivo = computed(() => {
-  return pagos.value
-    .filter((pago) => esCompletado(pago) && esEfectivo(pago))
-    .reduce((total, pago) => total + (Number.parseFloat(pago.monto) || 0), 0)
-})
+const totalDigital = computed(
+  () => estadisticas.value.total_digital
+)
 
-const totalDigital = computed(() => {
-  return pagos.value
-    .filter((pago) => esCompletado(pago) && !esEfectivo(pago))
-    .reduce((total, pago) => total + (Number.parseFloat(pago.monto) || 0), 0)
-})
 
 const getConductorNombre = (pago) => {
   return pago?.servicio?.mototaxista?.persona?.nombre
@@ -484,10 +577,33 @@ const formatearMonto = (monto) => {
   return `Bs. ${Number.isFinite(numero) ? numero.toFixed(2) : '0.00'}`
 }
 
-const getMetodoIcono = (metodo) => normalizar(metodo) === 'efectivo' ? 'payments' : 'qr_code_2'
-const getMetodoColor = (metodo) => normalizar(metodo) === 'efectivo' ? 'positive' : 'indigo-7'
-const getMetodoLightColor = (metodo) => normalizar(metodo) === 'efectivo' ? 'green-1' : 'indigo-1'
-const getMetodoTextColor = (metodo) => normalizar(metodo) === 'efectivo' ? 'positive' : 'indigo-7'
+const getMetodoIcono = (metodo) => {
+  const valor = normalizar(metodo)
+  if (valor === 'efectivo') return 'payments'
+  if (valor === 'mixto') return 'account_balance_wallet'
+  return 'qr_code_2'
+}
+
+const getMetodoColor = (metodo) => {
+  const valor = normalizar(metodo)
+  if (valor === 'efectivo') return 'positive'
+  if (valor === 'mixto') return 'orange-9'
+  return 'indigo-7'
+}
+
+const getMetodoLightColor = (metodo) => {
+  const valor = normalizar(metodo)
+  if (valor === 'efectivo') return 'green-1'
+  if (valor === 'mixto') return 'orange-1'
+  return 'indigo-1'
+}
+
+const getMetodoTextColor = (metodo) => {
+  const valor = normalizar(metodo)
+  if (valor === 'efectivo') return 'positive'
+  if (valor === 'mixto') return 'orange-10'
+  return 'indigo-7'
+}
 
 const getEstadoColor = (estado) => {
   const valor = normalizar(estado)
@@ -508,27 +624,185 @@ const columns = [
   { name: 'actions', label: '', align: 'center', field: 'actions' }
 ]
 
-const cargarDatos = async () => {
+const cargarDatos = async (
+  props = null
+) => {
   loading.value = true
 
   try {
-    const [resPagos, resServicios] = await Promise.all([
-      api.get('/pagos'),
-      api.get('/servicios')
-    ])
+    const pagina =
+      props?.pagination?.page
+      ?? pagination.value.page
 
-    pagos.value = Array.isArray(resPagos?.data) ? resPagos.data : []
+    const porPagina =
+      props?.pagination?.rowsPerPage
+      ?? pagination.value.rowsPerPage
 
-    const servicios = Array.isArray(resServicios?.data) ? resServicios.data : []
-    serviciosOptions.value = servicios.map((servicio) => ({
-      id: servicio.id,
-      detalles: `Servicio #${servicio.id} - ${servicio?.mototaxista?.persona?.nombre || `Mototaxista ${servicio.id_mototaxista || 'sin asignar'}`}`
-    }))
+    const resPagos = await api.get(
+      '/pagos',
+      {
+        params: {
+          paginated: 1,
+          page: pagina,
+          per_page: porPagina,
+          q: String(
+            filter.value || ''
+          ).trim() || undefined
+        }
+      }
+    )
+
+    pagos.value =
+      Array.isArray(
+        resPagos?.data?.data
+      )
+        ? resPagos.data.data
+        : []
+
+    const meta =
+      resPagos?.data?.meta || {}
+
+    pagination.value = {
+      page:
+        Number(meta.current_page || pagina),
+      rowsPerPage:
+        Number(meta.per_page || porPagina),
+      rowsNumber:
+        Number(meta.total || 0)
+    }
+
+    estadisticas.value = {
+      completados:
+        Number(
+          meta.stats?.completados || 0
+        ),
+      total_recaudado:
+        Number(
+          meta.stats?.total_recaudado || 0
+        ),
+      total_efectivo:
+        Number(
+          meta.stats?.total_efectivo || 0
+        ),
+      total_digital:
+        Number(
+          meta.stats?.total_digital || 0
+        )
+    }
   } catch (error) {
-    console.error('Error cargando pagos:', error)
-    $q.notify({ type: 'negative', message: 'No se pudo cargar la información de pagos.' })
+    console.error(
+      'Error cargando pagos:',
+      error
+    )
+
+    $q.notify({
+      type: 'negative',
+      message:
+        'No se pudo cargar la información de pagos.'
+    })
   } finally {
     loading.value = false
+  }
+}
+
+const onRequestPagos = (props) => {
+  cargarDatos(props)
+}
+
+const detalleServicioOpcion = (
+  servicio
+) => {
+  const persona =
+    servicio?.mototaxista?.persona
+
+  const conductor = [
+    persona?.nombre,
+    persona?.apellidos
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+
+  return (
+    `Servicio #${servicio?.id || '—'}`
+    + (
+      conductor
+        ? ` - ${conductor}`
+        : ''
+    )
+  )
+}
+
+const filtrarServiciosPago = async (
+  valor,
+  update
+) => {
+  const texto = String(
+    valor || ''
+  ).trim()
+
+  const secuencia =
+    ++secuenciaBusquedaServicio
+
+  buscandoServicios.value = true
+
+  try {
+    const response = await api.get(
+      '/servicios/opciones-pago',
+      {
+        params: {
+          q:
+            texto !== ''
+              ? texto
+              : undefined,
+          include_id:
+            isEditing.value
+              ? form.value.id_servicio
+              : undefined
+        }
+      }
+    )
+
+    if (
+      secuencia
+      !== secuenciaBusquedaServicio
+    ) {
+      return
+    }
+
+    const lista =
+      Array.isArray(response.data)
+        ? response.data
+        : []
+
+    update(() => {
+      serviciosOptions.value =
+        lista.map(
+          (servicio) => ({
+            id: servicio.id,
+            detalles:
+              detalleServicioOpcion(
+                servicio
+              )
+          })
+        )
+    })
+  } catch (error) {
+    console.error(
+      'Error buscando servicios:',
+      error
+    )
+
+    update(() => {
+      serviciosOptions.value = []
+    })
+  } finally {
+    if (
+      secuencia
+      === secuenciaBusquedaServicio
+    ) {
+      buscandoServicios.value = false
+    }
   }
 }
 
@@ -540,15 +814,33 @@ const openDetail = (row) => {
 const openDialogForm = (row = null) => {
   if (row) {
     isEditing.value = true
+
+    serviciosOptions.value = [
+      {
+        id:
+          row.id_servicio
+          ?? row.servicio?.id,
+        detalles:
+          `Servicio #${
+            row.id_servicio
+            ?? row.servicio?.id
+            ?? '—'
+          } - ${getConductorNombre(row)}`
+      }
+    ]
+
     form.value = {
       id: row.id,
       monto: Number.parseFloat(row.monto) || 0,
+      monto_efectivo: row.monto_efectivo ?? null,
+      monto_qr: row.monto_qr ?? null,
       metodo: row.metodo || 'Efectivo',
       estado: row.estado || 'Completado',
       id_servicio: row.id_servicio ?? row.servicio?.id ?? null
     }
   } else {
     isEditing.value = false
+    serviciosOptions.value = []
     form.value = { ...formDefault }
   }
 
@@ -561,11 +853,35 @@ const savePago = async () => {
     return
   }
 
+  const monto = Number.parseFloat(form.value.monto)
+  const esMixto = normalizar(form.value.metodo) === 'mixto'
+  const efectivo = Number.parseFloat(form.value.monto_efectivo)
+  const qr = Number.parseFloat(form.value.monto_qr)
+
+  if (
+    esMixto
+    && (
+      !Number.isFinite(efectivo)
+      || !Number.isFinite(qr)
+      || efectivo <= 0
+      || qr <= 0
+      || Math.abs((efectivo + qr) - monto) > 0.01
+    )
+  ) {
+    $q.notify({
+      type: 'negative',
+      message: 'En un pago mixto, efectivo + QR debe coincidir exactamente con el monto total.'
+    })
+    return
+  }
+
   const payload = {
-    monto: Number.parseFloat(form.value.monto),
+    monto,
     metodo: form.value.metodo,
     estado: form.value.estado,
-    id_servicio: form.value.id_servicio
+    id_servicio: form.value.id_servicio,
+    monto_efectivo: esMixto ? efectivo : null,
+    monto_qr: esMixto ? qr : null
   }
 
   saving.value = true

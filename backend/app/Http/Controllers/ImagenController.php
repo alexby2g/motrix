@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\ImagenPersona;
+use App\Models\Mototaxista;
 use App\Models\Persona;
+use Cloudinary\Cloudinary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class ImagenController extends Controller
@@ -18,21 +21,19 @@ class ImagenController extends Controller
                 'required',
                 'image',
                 'mimes:jpg,jpeg,png,gif,webp,bmp',
-                'max:2048',
+                'max:4096',
             ],
         ]);
 
-        $ruta = $request
-            ->file('imagen')
-            ->store(
-                'personas',
-                'public'
-            );
+        $subida = $this->subirImagenCloudinary(
+            $request->file('imagen'),
+            'motrix/personas'
+        );
 
         return response()->json([
             'mensaje' =>
                 'Imagen subida correctamente.',
-            'ruta' => $ruta,
+            'ruta' => $subida['ruta'],
         ], 200);
     }
 
@@ -41,7 +42,7 @@ class ImagenController extends Controller
     ) {
         $datos = $request->validate([
             'ci' => [
-                'required',
+                'nullable',
                 'string',
                 'max:20',
                 'unique:personas,ci',
@@ -71,7 +72,7 @@ class ImagenController extends Controller
                 'required',
                 'image',
                 'mimes:jpg,jpeg,png,gif,webp,bmp',
-                'max:2048',
+                'max:4096',
             ],
         ]);
 
@@ -84,15 +85,15 @@ class ImagenController extends Controller
                     $datos,
                     &$ruta
                 ) {
-                    $ruta = $request
-                        ->file('imagen')
-                        ->store(
-                            'personas',
-                            'public'
-                        );
+                    $subida = $this->subirImagenCloudinary(
+                        $request->file('imagen'),
+                        'motrix/personas'
+                    );
+
+                    $ruta = $subida['ruta'];
 
                     $personaDatos = [
-                        'ci' => $datos['ci'],
+                        'ci' => $datos['ci'] ?? null,
                         'nombre' =>
                             $datos['nombre'],
                         'apellidos' =>
@@ -146,13 +147,10 @@ class ImagenController extends Controller
                 }
             );
         } catch (\Throwable $error) {
-            if (
-                $ruta
-                && Storage::disk('public')
-                    ->exists($ruta)
-            ) {
-                Storage::disk('public')
-                    ->delete($ruta);
+            if ($ruta) {
+                $this->eliminarArchivoImagen(
+                    $ruta
+                );
             }
 
             throw $error;
@@ -174,20 +172,18 @@ class ImagenController extends Controller
                 'required',
                 'image',
                 'mimes:jpg,jpeg,png,gif,webp,bmp',
-                'max:2048',
+                'max:4096',
             ],
         ]);
 
-        $ruta = $request
-            ->file('imagen')
-            ->store(
-                'personas',
-                'public'
-            );
+        $subida = $this->subirImagenCloudinary(
+            $request->file('imagen'),
+            'motrix/personas'
+        );
 
         $imagen =
             ImagenPersona::create([
-                'ruta' => $ruta,
+                'ruta' => $subida['ruta'],
                 'tipo' => $request
                     ->file('imagen')
                     ->getClientOriginalExtension(),
@@ -200,6 +196,185 @@ class ImagenController extends Controller
                 'Fotografía agregada correctamente.',
             'imagen' => $imagen,
         ], 201);
+    }
+
+
+    public function guardarQrPagoConductor(
+        Request $request
+    ) {
+        $datos = $request->validate([
+            'imagen' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:4096',
+            ],
+            'metodo' => [
+                'nullable',
+                'string',
+                'max:80',
+            ],
+            'titular' => [
+                'nullable',
+                'string',
+                'max:120',
+            ],
+        ]);
+
+        $mototaxista =
+            $this->resolverMototaxistaConductor(
+                $request
+            );
+
+        if (
+            ! $request->hasFile('imagen')
+            && ! $mototaxista->qr_pago_ruta
+        ) {
+            return response()->json([
+                'message' =>
+                    'Selecciona una imagen QR para registrar el cobro digital.',
+            ], 422);
+        }
+
+        $rutaAnterior =
+            $mototaxista->qr_pago_ruta;
+
+        $rutaNueva = null;
+
+        if ($request->hasFile('imagen')) {
+            $subida =
+                $this->subirImagenCloudinary(
+                    $request->file('imagen'),
+                    'motrix/qr-pagos'
+                );
+
+            $rutaNueva =
+                $subida['ruta'];
+        }
+
+        $metodo = trim(
+            (string) (
+                $datos['metodo']
+                ?? $mototaxista->qr_pago_metodo
+                ?? ''
+            )
+        );
+
+        $titular = trim(
+            (string) (
+                $datos['titular']
+                ?? $mototaxista->qr_pago_titular
+                ?? ''
+            )
+        );
+
+        if ($titular === '') {
+            $mototaxista->loadMissing('persona');
+
+            $titular = trim(
+                (string) (
+                    ($mototaxista->persona?->nombre ?? '')
+                    . ' '
+                    . ($mototaxista->persona?->apellidos ?? '')
+                )
+            );
+        }
+
+        $mototaxista->qr_pago_ruta =
+            $rutaNueva ?: $rutaAnterior;
+
+        $mototaxista->qr_pago_metodo =
+            $metodo !== ''
+                ? $metodo
+                : 'QR / billetera móvil';
+
+        $mototaxista->qr_pago_titular =
+            $titular !== ''
+                ? $titular
+                : null;
+
+        $mototaxista->qr_pago_actualizado_en =
+            now();
+
+        $mototaxista->save();
+
+        if (
+            $rutaNueva
+            && $rutaAnterior
+            && $rutaAnterior !== $rutaNueva
+        ) {
+            try {
+                $this->eliminarArchivoImagen(
+                    $rutaAnterior
+                );
+            } catch (\Throwable $error) {
+                Log::warning(
+                    'No se pudo eliminar el QR de cobro anterior del conductor.',
+                    [
+                        'mototaxista_id' =>
+                            $mototaxista->id,
+                        'error' =>
+                            $error->getMessage(),
+                    ]
+                );
+            }
+        }
+
+        return response()->json([
+            'message' =>
+                'QR de cobro actualizado correctamente.',
+            'data' => [
+                'ruta' =>
+                    $mototaxista->qr_pago_ruta,
+                'metodo' =>
+                    $mototaxista->qr_pago_metodo,
+                'titular' =>
+                    $mototaxista->qr_pago_titular,
+                'actualizado_en' =>
+                    $mototaxista->qr_pago_actualizado_en,
+            ],
+        ], 200);
+    }
+
+    public function eliminarQrPagoConductor(
+        Request $request
+    ) {
+        $mototaxista =
+            $this->resolverMototaxistaConductor(
+                $request
+            );
+
+        $ruta =
+            $mototaxista->qr_pago_ruta;
+
+        $mototaxista->qr_pago_ruta = null;
+        $mototaxista->qr_pago_metodo = null;
+        $mototaxista->qr_pago_titular = null;
+        $mototaxista->qr_pago_actualizado_en = null;
+        $mototaxista->save();
+
+        if ($ruta) {
+            try {
+                $this->eliminarArchivoImagen(
+                    $ruta
+                );
+            } catch (\Throwable $error) {
+                Log::warning(
+                    'No se pudo eliminar el archivo QR de cobro del conductor.',
+                    [
+                        'mototaxista_id' =>
+                            $mototaxista->id,
+                        'error' =>
+                            $error->getMessage(),
+                    ]
+                );
+            }
+        }
+
+        return response()->json([
+            'message' =>
+                'QR de cobro eliminado correctamente.',
+        ], 200);
     }
 
     public function destroy(
@@ -223,17 +398,10 @@ class ImagenController extends Controller
             (int) $imagen->id_persona
         );
 
-        if (
-            $imagen->ruta
-            && Storage::disk('public')
-                ->exists(
-                    $imagen->ruta
-                )
-        ) {
-            Storage::disk('public')
-                ->delete(
-                    $imagen->ruta
-                );
+        if ($imagen->ruta) {
+            $this->eliminarArchivoImagen(
+                $imagen->ruta
+            );
         }
 
         $imagen->delete();
@@ -244,6 +412,228 @@ class ImagenController extends Controller
         ], 200);
     }
 
+    private function subirImagenCloudinary(
+        $archivo,
+        string $carpeta
+    ): array {
+        $cloudinaryUrl = (string) config('cloudinary.url', '');
+
+        if (trim($cloudinaryUrl) === '') {
+            abort(
+                500,
+                'No se configuró CLOUDINARY_URL.'
+            );
+        }
+
+        $cloudinary =
+            new Cloudinary(
+                $cloudinaryUrl
+            );
+
+        $resultado =
+            $cloudinary
+                ->uploadApi()
+                ->upload(
+                    $archivo->getRealPath(),
+                    [
+                        'folder' => $carpeta,
+                        'resource_type' => 'image',
+                    ]
+                );
+
+        $ruta =
+            $resultado['secure_url']
+            ?? $resultado['url']
+            ?? null;
+
+        if (! $ruta) {
+            throw new \RuntimeException(
+                'Cloudinary no devolvió una URL válida para la imagen.'
+            );
+        }
+
+        return [
+            'ruta' => $ruta,
+            'public_id' =>
+                $resultado['public_id']
+                ?? null,
+        ];
+    }
+
+    private function eliminarArchivoImagen(
+        string $ruta
+    ): void {
+        if (
+            str_starts_with(
+                $ruta,
+                'http://'
+            )
+            || str_starts_with(
+                $ruta,
+                'https://'
+            )
+        ) {
+            $this->eliminarDesdeCloudinary(
+                $ruta
+            );
+            return;
+        }
+
+        if (
+            Storage::disk('public')
+                ->exists($ruta)
+        ) {
+            Storage::disk('public')
+                ->delete($ruta);
+        }
+    }
+
+    private function eliminarDesdeCloudinary(
+        string $ruta
+    ): void {
+        $publicId =
+            $this->extraerPublicIdCloudinary(
+                $ruta
+            );
+
+        if (! $publicId) {
+            return;
+        }
+
+        $cloudinaryUrl = (string) config('cloudinary.url', '');
+
+        if (trim($cloudinaryUrl) === '') {
+            return;
+        }
+
+        $cloudinary =
+            new Cloudinary(
+                $cloudinaryUrl
+            );
+
+        $cloudinary
+            ->uploadApi()
+            ->destroy(
+                $publicId,
+                [
+                    'resource_type' => 'image',
+                ]
+            );
+    }
+
+    private function extraerPublicIdCloudinary(
+        string $ruta
+    ): ?string {
+        $partes =
+            parse_url($ruta);
+
+        $path =
+            $partes['path']
+            ?? null;
+
+        if (! $path) {
+            return null;
+        }
+
+        $segmentos =
+            explode(
+                '/',
+                trim($path, '/')
+            );
+
+        $indiceUpload =
+            array_search(
+                'upload',
+                $segmentos,
+                true
+            );
+
+        if (
+            $indiceUpload === false
+            || ! isset(
+                $segmentos[
+                    $indiceUpload + 1
+                ]
+            )
+        ) {
+            return null;
+        }
+
+        $publicIdSegmentos =
+            array_slice(
+                $segmentos,
+                $indiceUpload + 1
+            );
+
+        if (
+            isset(
+                $publicIdSegmentos[0]
+            )
+            && preg_match(
+                '/^v\d+$/',
+                $publicIdSegmentos[0]
+            )
+        ) {
+            array_shift(
+                $publicIdSegmentos
+            );
+        }
+
+        if (empty($publicIdSegmentos)) {
+            return null;
+        }
+
+        $ultimo =
+            array_pop(
+                $publicIdSegmentos
+            );
+
+        $ultimoSinExtension =
+            pathinfo(
+                $ultimo,
+                PATHINFO_FILENAME
+            );
+
+        $publicIdSegmentos[] =
+            $ultimoSinExtension;
+
+        return implode(
+            '/',
+            $publicIdSegmentos
+        );
+    }
+
+
+    private function resolverMototaxistaConductor(
+        Request $request
+    ): Mototaxista {
+        if ($this->rol($request) !== 'conductor') {
+            abort(
+                403,
+                'Esta acción corresponde a una cuenta de conductor.'
+            );
+        }
+
+        $mototaxistaId = (int) (
+            $request->user()
+                ?->mototaxista_id
+            ?? 0
+        );
+
+        if ($mototaxistaId <= 0) {
+            abort(
+                403,
+                'La cuenta no está vinculada a un mototaxista.'
+            );
+        }
+
+        return Mototaxista::query()
+            ->with('persona')
+            ->findOrFail(
+                $mototaxistaId
+            );
+    }
+
     private function resolverPersona(
         Request $request,
         int $id
@@ -252,7 +642,16 @@ class ImagenController extends Controller
             $request
         );
 
-        if ($rol === 'admin_general') {
+        if (
+            in_array(
+                $rol,
+                [
+                    'admin_general',
+                    'admin_registro',
+                ],
+                true
+            )
+        ) {
             return Persona::findOrFail(
                 $id
             );

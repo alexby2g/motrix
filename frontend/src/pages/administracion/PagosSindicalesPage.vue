@@ -178,7 +178,7 @@
             Historial de movimientos
           </div>
           <div class="text-caption text-grey-6">
-            {{ pagosFiltrados.length }} registros visibles
+            {{ paginacion.rowsNumber }} registros encontrados
           </div>
         </div>
 
@@ -188,7 +188,7 @@
           icon="refresh"
           color="green-8"
           :loading="loading"
-          @click="cargarTodo"
+          @click="cargarPagos"
         >
           <q-tooltip>Actualizar</q-tooltip>
         </q-btn>
@@ -198,11 +198,13 @@
 
       <q-table
         flat
-        :rows="pagosFiltrados"
+        :rows="pagos"
         :columns="columnas"
         row-key="id"
         :loading="loading"
+        v-model:pagination="paginacion"
         :rows-per-page-options="[5, 10, 20, 50]"
+        @request="onRequestPagos"
         no-data-label="No hay pagos sindicales registrados."
       >
         <template #body-cell-mototaxista="props">
@@ -373,18 +375,71 @@
                   emit-value
                   map-options
                   use-input
-                  input-debounce="0"
+                  fill-input
+                  hide-selected
+                  input-debounce="300"
                   outlined
                   label="Mototaxista *"
                   :disable="editando"
+                  :loading="buscandoMototaxistas"
+                  :hint="
+                    form.id_mototaxista
+                      ? undefined
+                      : 'Escribe al menos 2 caracteres del nombre, CI o chaleco.'
+                  "
+                  hide-bottom-space
                   :rules="[requerido]"
                   @filter="filtrarMototaxistas"
                 >
                   <template #prepend>
                     <q-icon
-                      name="two_wheeler"
+                      name="person_search"
                       color="green-8"
                     />
+                  </template>
+
+                  <template #selected-item="scope">
+                    <div class="mototaxista-seleccionado q-py-xs">
+                      <div class="mototaxista-seleccionado__nombre">
+                        {{ nombreMototaxista(scope.opt) }}
+                      </div>
+                      <div class="mototaxista-seleccionado__detalle">
+                        CI {{ scope.opt?.persona?.ci || '—' }}
+                        · Chaleco {{ scope.opt?.nro_chaleco || '—' }}
+                      </div>
+                    </div>
+                  </template>
+
+                  <template #option="scope">
+                    <q-item v-bind="scope.itemProps">
+                      <q-item-section avatar>
+                        <q-avatar
+                          color="green-1"
+                          text-color="green-9"
+                          icon="two_wheeler"
+                        />
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label class="text-weight-medium">
+                          {{ nombreMototaxista(scope.opt) }}
+                        </q-item-label>
+                        <q-item-label caption>
+                          CI {{ scope.opt?.persona?.ci || '—' }}
+                          · Chaleco {{ scope.opt?.nro_chaleco || '—' }}
+                          <span v-if="scope.opt?.sindicato?.nombre">
+                            · {{ scope.opt.sindicato.nombre }}
+                          </span>
+                        </q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+
+                  <template #no-option>
+                    <q-item>
+                      <q-item-section class="text-grey-7">
+                        {{ mensajeBusquedaMototaxista }}
+                      </q-item-section>
+                    </q-item>
                   </template>
                 </q-select>
               </div>
@@ -543,10 +598,13 @@
 </template>
 
 <script setup>
+import { motrixDateV57 } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   onMounted,
-  ref
+  ref,
+  watch
 } from 'vue'
 
 import {
@@ -557,14 +615,33 @@ import {
   api
 } from 'src/boot/axios.js'
 
+import mototaxistaService from 'src/services/mototaxistaService'
+
 const $q = useQuasar()
 
 const loading = ref(false)
 const guardando = ref(false)
 const pagos = ref([])
-const mototaxistasBase = ref([])
 const mototaxistas = ref([])
 const sindicatos = ref([])
+const buscandoMototaxistas = ref(false)
+const terminoMototaxista = ref('')
+let secuenciaBusquedaMototaxista = 0
+
+const paginacion = ref({
+  sortBy: 'fecha',
+  descending: true,
+  page: 1,
+  rowsPerPage: 10,
+  rowsNumber: 0
+})
+
+const estadisticas = ref({
+  total_recaudado: 0,
+  total_afiliaciones: 0,
+  total_aportes: 0,
+  pendientes: 0
+})
 
 const dialogFormulario = ref(false)
 const editando = ref(false)
@@ -647,7 +724,7 @@ const nombreSindicatoActual = computed(() => {
 })
 
 const mototaxistaSeleccionado = computed(() =>
-  mototaxistasBase.value.find(
+  mototaxistas.value.find(
     m =>
       Number(m.id)
       === Number(
@@ -701,133 +778,42 @@ const opcionesEstadoFiltro = computed(() => [
   }
 ])
 
-const pagosFiltrados = computed(() => {
-  let lista = [...pagos.value]
-
-  const texto = normalizar(
-    filtroTexto.value
-  )
-
-  if (texto) {
-    lista = lista.filter(
-      pago => {
-        const contenido = [
-          nombreMototaxista(
-            pago.mototaxista
-          ),
-          pago.mototaxista?.persona?.ci,
-          pago.mototaxista?.nro_chaleco,
-          pago.sindicato?.nombre,
-          pago.tipo_pago,
-          pago.periodo,
-          pago.estado_pago,
-          pago.forma_pago
-        ]
-          .map(normalizar)
-          .join(' ')
-
-        return contenido.includes(texto)
-      }
-    )
-  }
-
-  if (
-    filtroSindicato.value
-    !== 'todos'
-  ) {
-    lista = lista.filter(
-      pago =>
-        Number(pago.id_sindicato)
-        === Number(
-          filtroSindicato.value
-        )
-    )
-  }
-
-  if (
-    filtroTipo.value
-    !== 'todos'
-  ) {
-    lista = lista.filter(
-      pago =>
-        pago.tipo_pago
-        === filtroTipo.value
-    )
-  }
-
-  if (
-    filtroEstado.value
-    !== 'todos'
-  ) {
-    lista = lista.filter(
-      pago =>
-        pago.estado_pago
-        === filtroEstado.value
-    )
-  }
-
-  return lista
-})
-
-const pagosPagados = computed(() =>
-  pagos.value.filter(
-    pago =>
-      pago.estado_pago === 'Pagado'
-  )
-)
-
 const totalRecaudado = computed(() =>
-  pagosPagados.value.reduce(
-    (total, pago) =>
-      total + numero(pago.monto),
-    0
-  )
+  Number(estadisticas.value.total_recaudado) || 0
 )
 
 const totalAfiliaciones = computed(() =>
-  pagosPagados.value
-    .filter(
-      pago => [
-        'Afiliación',
-        'Inscripción'
-      ].includes(
-        pago.tipo_pago
-      )
-    )
-    .reduce(
-      (total, pago) =>
-        total + numero(pago.monto),
-      0
-    )
+  Number(estadisticas.value.total_afiliaciones) || 0
 )
 
 const totalAportes = computed(() =>
-  pagosPagados.value
-    .filter(
-      pago =>
-        pago.tipo_pago
-        === 'Aporte'
-    )
-    .reduce(
-      (total, pago) =>
-        total + numero(pago.monto),
-      0
-    )
+  Number(estadisticas.value.total_aportes) || 0
 )
 
 const totalPendientes = computed(() =>
-  pagos.value.filter(
-    pago =>
-      pago.estado_pago
-      === 'Pendiente'
-  ).length
+  Number(estadisticas.value.pendientes) || 0
 )
+
+const mensajeBusquedaMototaxista = computed(() => {
+  const texto = String(terminoMototaxista.value || '').trim()
+
+  if (buscandoMototaxistas.value) {
+    return 'Buscando mototaxistas...'
+  }
+
+  if (texto.length < 2) {
+    return 'Escribe al menos 2 caracteres para buscar.'
+  }
+
+  return 'No se encontraron mototaxistas con ese criterio.'
+})
 
 const columnas = [
   {
     name: 'fecha',
     label: 'Fecha',
     field: 'fecha',
+    format: value => motrixDateV57(value),
     align: 'left',
     sortable: true
   },
@@ -890,14 +876,6 @@ const requerido = valor =>
     ).trim()
   )
   || 'Campo obligatorio'
-
-function normalizar(valor) {
-  return String(
-    valor || ''
-  )
-    .trim()
-    .toLocaleLowerCase('es')
-}
 
 function numero(valor) {
   const n = Number.parseFloat(valor)
@@ -1038,46 +1016,67 @@ function mensajeError(error) {
   )
 }
 
-async function cargarTodo() {
+async function cargarSindicatos() {
+  try {
+    const respuesta = await api.get('/sindicatos')
+    sindicatos.value = Array.isArray(respuesta.data)
+      ? respuesta.data
+      : (respuesta.data?.data || [])
+  } catch (error) {
+    console.error('Error cargando sindicatos:', error)
+  }
+}
+
+async function cargarPagos() {
+  if (loading.value) return
+
   loading.value = true
 
   try {
-    const [
-      resPagos,
-      resMototaxistas,
-      resSindicatos
-    ] = await Promise.all([
-      api.get('/pagos-sindicales'),
-      api.get('/mototaxistas'),
-      api.get('/sindicatos')
-    ])
+    const respuesta = await api.get('/pagos-sindicales', {
+      params: {
+        paginated: 1,
+        page: paginacion.value.page,
+        per_page: paginacion.value.rowsPerPage,
+        sort_by: paginacion.value.sortBy || 'fecha',
+        descending: paginacion.value.descending ? 1 : 0,
+        q: String(filtroTexto.value || '').trim() || undefined,
+        id_sindicato:
+          !esSecretario.value && filtroSindicato.value !== 'todos'
+            ? filtroSindicato.value
+            : undefined,
+        tipo_pago:
+          filtroTipo.value !== 'todos'
+            ? filtroTipo.value
+            : undefined,
+        estado_pago:
+          filtroEstado.value !== 'todos'
+            ? filtroEstado.value
+            : undefined
+      }
+    })
 
-    pagos.value =
-      Array.isArray(resPagos.data)
-        ? resPagos.data
-        : []
+    pagos.value = Array.isArray(respuesta.data?.data)
+      ? respuesta.data.data
+      : []
 
-    mototaxistasBase.value =
-      Array.isArray(
-        resMototaxistas.data
-      )
-        ? resMototaxistas.data
-        : []
+    const meta = respuesta.data?.meta || {}
 
-    mototaxistas.value =
-      [...mototaxistasBase.value]
+    paginacion.value = {
+      ...paginacion.value,
+      page: Number(meta.current_page) || 1,
+      rowsPerPage: Number(meta.per_page) || paginacion.value.rowsPerPage,
+      rowsNumber: Number(meta.total) || 0
+    }
 
-    sindicatos.value =
-      Array.isArray(
-        resSindicatos.data
-      )
-        ? resSindicatos.data
-        : []
+    estadisticas.value = {
+      total_recaudado: Number(meta.stats?.total_recaudado) || 0,
+      total_afiliaciones: Number(meta.stats?.total_afiliaciones) || 0,
+      total_aportes: Number(meta.stats?.total_aportes) || 0,
+      pendientes: Number(meta.stats?.pendientes) || 0
+    }
   } catch (error) {
-    console.error(
-      'Error cargando pagos sindicales:',
-      error
-    )
+    console.error('Error cargando pagos sindicales:', error)
 
     $q.notify({
       type: 'negative',
@@ -1090,66 +1089,97 @@ async function cargarTodo() {
   }
 }
 
-function filtrarMototaxistas(
-  valor,
-  update
-) {
-  update(() => {
-    const texto =
-      normalizar(valor)
+function onRequestPagos(props) {
+  paginacion.value = {
+    ...paginacion.value,
+    page: props.pagination.page,
+    rowsPerPage: props.pagination.rowsPerPage,
+    sortBy: props.pagination.sortBy || 'fecha',
+    descending: Boolean(props.pagination.descending)
+  }
 
-    if (!texto) {
-      mototaxistas.value =
-        [...mototaxistasBase.value]
+  cargarPagos()
+}
 
-      return
+async function filtrarMototaxistas(valor, update) {
+  const texto = String(valor || '').trim()
+  terminoMototaxista.value = texto
+
+  if (editando.value) {
+    update(() => {})
+    return
+  }
+
+  if (texto.length < 2) {
+    secuenciaBusquedaMototaxista += 1
+    buscandoMototaxistas.value = false
+
+    update(() => {
+      mototaxistas.value = []
+    })
+    return
+  }
+
+  const secuencia = ++secuenciaBusquedaMototaxista
+  buscandoMototaxistas.value = true
+
+  try {
+    const respuesta = await mototaxistaService.opcionesPagoSindical({
+      q: texto,
+      include_id: form.value.id_mototaxista || undefined
+    })
+
+    if (secuencia !== secuenciaBusquedaMototaxista) return
+
+    update(() => {
+      mototaxistas.value = Array.isArray(respuesta.data)
+        ? respuesta.data
+        : []
+    })
+  } catch (error) {
+    if (secuencia !== secuenciaBusquedaMototaxista) return
+
+    console.error('Error buscando mototaxistas:', error)
+    update(() => {
+      mototaxistas.value = []
+    })
+  } finally {
+    if (secuencia === secuenciaBusquedaMototaxista) {
+      buscandoMototaxistas.value = false
     }
-
-    mototaxistas.value =
-      mototaxistasBase.value.filter(
-        m =>
-          normalizar(
-            labelMototaxista(m)
-          ).includes(texto)
-      )
-  })
+  }
 }
 
 function abrirFormulario(
   pago = null
 ) {
+  secuenciaBusquedaMototaxista += 1
+  terminoMototaxista.value = ''
+  buscandoMototaxistas.value = false
+
   if (pago) {
     editando.value = true
 
     form.value = {
       id: pago.id,
-      id_mototaxista:
-        pago.id_mototaxista,
-      tipo_pago:
-        pago.tipo_pago,
-      monto:
-        numero(pago.monto),
-      fecha:
-        String(
-          pago.fecha || ''
-        ).slice(0, 10),
-      periodo:
-        pago.periodo || '',
-      estado_pago:
-        pago.estado_pago,
-      forma_pago:
-        pago.forma_pago,
-      observacion:
-        pago.observacion || ''
+      id_mototaxista: pago.id_mototaxista,
+      tipo_pago: pago.tipo_pago,
+      monto: numero(pago.monto),
+      fecha: String(pago.fecha || '').slice(0, 10),
+      periodo: pago.periodo || '',
+      estado_pago: pago.estado_pago,
+      forma_pago: pago.forma_pago,
+      observacion: pago.observacion || ''
     }
+
+    mototaxistas.value = pago.mototaxista
+      ? [pago.mototaxista]
+      : []
   } else {
     editando.value = false
-    form.value =
-      formDefault()
+    form.value = formDefault()
+    mototaxistas.value = []
   }
-
-  mototaxistas.value =
-    [...mototaxistasBase.value]
 
   dialogFormulario.value = true
 }
@@ -1161,8 +1191,11 @@ function cerrarFormulario() {
 
   dialogFormulario.value = false
   editando.value = false
-  form.value =
-    formDefault()
+  secuenciaBusquedaMototaxista += 1
+  terminoMototaxista.value = ''
+  buscandoMototaxistas.value = false
+  mototaxistas.value = []
+  form.value = formDefault()
 }
 
 async function guardar() {
@@ -1225,7 +1258,7 @@ async function guardar() {
           : 'Pago sindical registrado.'
     })
 
-    await cargarTodo()
+    await cargarPagos()
   } catch (error) {
     console.error(
       'Error guardando pago sindical:',
@@ -1273,7 +1306,7 @@ function confirmarAnular(pago) {
             'Pago sindical anulado.'
         })
 
-        await cargarTodo()
+        await cargarPagos()
       } catch (error) {
         $q.notify({
           type: 'negative',
@@ -1287,9 +1320,31 @@ function confirmarAnular(pago) {
   )
 }
 
-onMounted(
-  cargarTodo
+let temporizadorFiltros = null
+
+watch(
+  [
+    filtroTexto,
+    filtroSindicato,
+    filtroTipo,
+    filtroEstado
+  ],
+  () => {
+    if (temporizadorFiltros) {
+      clearTimeout(temporizadorFiltros)
+    }
+
+    temporizadorFiltros = setTimeout(() => {
+      paginacion.value.page = 1
+      cargarPagos()
+    }, 280)
+  }
 )
+
+onMounted(async () => {
+  await cargarSindicatos()
+  await cargarPagos()
+})
 </script>
 
 <style scoped>
@@ -1342,4 +1397,27 @@ onMounted(
     max-height: 92vh;
   }
 }
+
+.mototaxista-seleccionado {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.mototaxista-seleccionado__nombre {
+  overflow: hidden;
+  color: #30353b;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mototaxista-seleccionado__detalle {
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
 </style>

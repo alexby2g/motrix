@@ -1,8 +1,11 @@
 import { api } from '../boot/axios.js'
 
 const pasajeroService = {
-  getAll() {
-    return api.get('/pasajeros')
+  getAll(params = {}) {
+    return api.get(
+      '/pasajeros',
+      { params }
+    )
   },
 
   getById(id) {

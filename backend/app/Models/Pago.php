@@ -12,6 +12,8 @@ class Pago extends Model
 
     protected $fillable = [
         'monto',
+        'monto_efectivo',
+        'monto_qr',
         'metodo',
         'estado',
         'id_servicio',
@@ -21,6 +23,8 @@ class Pago extends Model
         'id' => 'integer',
         'id_servicio' => 'integer',
         'monto' => 'decimal:2',
+        'monto_efectivo' => 'decimal:2',
+        'monto_qr' => 'decimal:2',
     ];
 
     /**

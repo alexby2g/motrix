@@ -15,7 +15,7 @@ class PasajeroRequest extends FormRequest
     {
         return [
             'email' => 'required|email',
-            'password' => 'required|min:6',
+            'password' => 'required|min:8',
             'id_persona' => 'required|exists:personas,id'
         ];
     }

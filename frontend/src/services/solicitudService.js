@@ -1,8 +1,11 @@
 import { api } from '../boot/axios.js'
 
 const solicitudService = {
-  getAll() {
-    return api.get('/solicitudes')
+  getAll(params = {}) {
+    return api.get(
+      '/solicitudes',
+      { params }
+    )
   },
 
   getById(id) {

@@ -314,6 +314,8 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import {
   computed,
   onMounted,
@@ -329,10 +331,7 @@ import {
   useRouter
 } from 'vue-router'
 
-import {
-  api
-} from 'src/boot/axios.js'
-
+import { api } from 'src/boot/axios.js'
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
@@ -409,7 +408,8 @@ const columnas = [
     name: 'fecha',
     label: 'Fecha',
     field: 'fecha',
-    align: 'left'
+    align: 'left',
+    format: valor => fechaDDMMYYYY(valor)
   },
   {
     name: 'origen',

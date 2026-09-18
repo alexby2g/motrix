@@ -1,54 +1,52 @@
 <template>
-  <q-page class="q-pa-lg bg-grey-2">
+  <q-page class="dashboard-page q-pa-lg">
     <div class="container-dashboard">
 
       <!-- ENCABEZADO -->
-      <div class="text-center q-mb-xl">
-        <div
-          class="text-h2 text-primary text-bold
-                 tracking-tight text-uppercase"
-        >
-          MOTRIX
+      <div class="dashboard-heading q-mb-lg">
+        <div class="dashboard-heading-copy">
+          <div class="dashboard-eyebrow">
+            Panel de control
+          </div>
+
+          <div class="dashboard-title">
+            ¡Hola, {{ nombreDashboard }}!
+          </div>
+
+          <div class="dashboard-date">
+            {{ fechaDashboard }}
+          </div>
         </div>
 
-        <div
-          class="text-subtitle1 text-grey-8
-                 q-mt-sm max-width-md mx-auto"
-        >
-          Sistema web y móvil para la administración del
-          servicio de mototaxis de la ciudad de Trinidad.
+        <div class="dashboard-actions">
+          <q-chip
+            :class="[
+              'dashboard-live-chip',
+              wsConnected
+                ? 'dashboard-live-chip--ok'
+                : 'dashboard-live-chip--off'
+            ]"
+            :icon="wsConnected ? 'sensors' : 'sync'"
+            dense
+          >
+            {{
+              wsConnected
+                ? 'EN VIVO'
+                : 'CONECTANDO'
+            }}
+          </q-chip>
+
+          <q-btn
+            outline
+            color="primary"
+            icon="refresh"
+            label="Actualizar"
+            no-caps
+            :loading="loading"
+            class="dashboard-refresh-btn"
+            @click="cargarDatosDashboard"
+          />
         </div>
-      </div>
-
-      <!-- ESTADO Y ACTUALIZACIÓN -->
-      <div
-        class="row justify-end items-center
-               q-mb-md q-gutter-sm"
-      >
-        <q-chip
-          :color="wsConnected ? 'positive' : 'negative'"
-          text-color="white"
-          icon="sensors"
-          size="sm"
-          class="text-bold"
-        >
-          {{
-            wsConnected
-              ? 'CANAL EN VIVO ACTIVO'
-              : 'CONECTANDO WS...'
-          }}
-        </q-chip>
-
-        <q-btn
-          color="primary"
-          icon="refresh"
-          label="Actualizar Estadísticas"
-          class="text-bold shadow-1"
-          flat
-          dense
-          :loading="loading"
-          @click="cargarDatosDashboard"
-        />
       </div>
 
       <!-- TARJETAS DE ESTADÍSTICAS -->
@@ -68,31 +66,27 @@
               @click="goToModule(card.route)"
             >
               <q-card-section
-                class="q-pa-md flex flex-center column"
+                class="dashboard-card-section q-pa-lg flex flex-center column"
               >
                 <q-avatar
-                  size="56px"
-                  :color="card.bgColor"
-                  :text-color="card.color"
-                  class="q-mb-sm"
+                  size="72px"
+                  class="dashboard-card-icon q-mb-md"
+                  :class="`dashboard-card-icon--${card.key}`"
                 >
                   <q-icon
                     :name="card.icon"
-                    size="28px"
+                    size="36px"
                   />
                 </q-avatar>
 
                 <div
-                  class="text-caption text-grey-7
-                         text-uppercase text-bold
-                         tracking-wider"
+                  class="dashboard-card-title text-uppercase text-bold tracking-wider"
                 >
                   {{ card.title }}
                 </div>
 
                 <div
-                  class="text-h4 text-bold q-mt-xs"
-                  :class="`text-${card.color}`"
+                  class="dashboard-card-value text-bold q-mt-sm"
                 >
                   {{ stats[card.key] }}
                 </div>
@@ -117,31 +111,27 @@
               @click="goToModule(card.route)"
             >
               <q-card-section
-                class="q-pa-md flex flex-center column"
+                class="dashboard-card-section dashboard-card-section--operational q-pa-md flex flex-center column"
               >
                 <q-avatar
-                  size="52px"
-                  :color="card.bgColor"
-                  :text-color="card.color"
-                  class="q-mb-sm"
+                  size="64px"
+                  class="dashboard-card-icon dashboard-card-icon--operational q-mb-md"
+                  :class="`dashboard-card-icon--${card.key}`"
                 >
                   <q-icon
                     :name="card.icon"
-                    size="24px"
+                    size="31px"
                   />
                 </q-avatar>
 
                 <div
-                  class="text-caption text-grey-7
-                         text-uppercase text-bold
-                         tracking-wider"
+                  class="dashboard-card-title dashboard-card-title--operational text-uppercase text-bold tracking-wider"
                 >
                   {{ card.title }}
                 </div>
 
                 <div
-                  class="text-h5 text-bold q-mt-xs"
-                  :class="`text-${card.color}`"
+                  class="dashboard-card-value dashboard-card-value--operational text-bold q-mt-sm"
                 >
                   <span
                     v-if="card.key === 'pagos'"
@@ -168,12 +158,12 @@
           class="shadow-3 centro-incidencias-card overflow-hidden"
         >
           <q-card-section
-            class="bg-negative text-white row items-center q-col-gutter-md"
+            class="sos-section-header row items-center q-col-gutter-md"
           >
             <div class="col">
               <div class="row items-center no-wrap">
                 <q-avatar
-                  color="white"
+                  color="red-1"
                   text-color="negative"
                   icon="sos"
                   size="48px"
@@ -185,7 +175,7 @@
                     Centro de incidencias SOS
                   </div>
 
-                  <div class="text-caption text-red-1">
+                  <div class="text-caption text-grey-6">
                     Atención y seguimiento de alertas reportadas
                     durante los viajes
                   </div>
@@ -195,8 +185,8 @@
 
             <div class="col-auto">
               <q-btn
-                color="white"
-                text-color="negative"
+                outline
+                color="negative"
                 icon="refresh"
                 label="Actualizar"
                 no-caps
@@ -1896,6 +1886,8 @@
 </template>
 
 <script setup>
+import { fechaDDMMYYYY, fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+
 import {
   ref,
   computed,
@@ -1912,10 +1904,34 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 import { api } from '../boot/axios.js'
-
-
 const router = useRouter()
 const $q = useQuasar()
+
+const usuarioDashboard = (() => {
+  try {
+    return JSON.parse(
+      localStorage.getItem('motrix_user') || 'null'
+    )
+  } catch {
+    return null
+  }
+})()
+
+const nombreDashboard = computed(() => {
+  const nombre = (
+    usuarioDashboard?.persona?.nombre
+    || usuarioDashboard?.name
+    || usuarioDashboard?.nombre
+    || 'Administrador'
+  )
+
+  return String(nombre)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)[0] || 'Administrador'
+})
+
+const fechaDashboard = computed(() => fechaDDMMYYYY(new Date()))
 
 const loading = ref(false)
 const wsConnected = ref(false)
@@ -2059,15 +2075,15 @@ const mainCards = [
   {
     title: 'Personas',
     icon: 'groups',
-    color: 'blue',
-    bgColor: 'blue-1',
+    color: 'green-8',
+    bgColor: 'green-1',
     key: 'personas',
     route: '/personas'
   },
   {
     title: 'Mototaxistas',
     icon: 'sports_motorsports',
-    color: 'green',
+    color: 'green-8',
     bgColor: 'green-1',
     key: 'mototaxistas',
     route: '/mototaxistas'
@@ -2075,16 +2091,16 @@ const mainCards = [
   {
     title: 'Motocicletas',
     icon: 'motorcycle',
-    color: 'orange',
-    bgColor: 'orange-1',
+    color: 'green-8',
+    bgColor: 'green-1',
     key: 'motocicletas',
     route: '/motocicletas'
   },
   {
     title: 'Pasajeros',
     icon: 'person',
-    color: 'red',
-    bgColor: 'red-1',
+    color: 'green-8',
+    bgColor: 'green-1',
     key: 'pasajeros',
     route: '/pasajeros'
   }
@@ -2094,40 +2110,40 @@ const operationalCards = [
   {
     title: 'Sindicatos',
     icon: 'business',
-    color: 'indigo',
-    bgColor: 'indigo-1',
+    color: 'green-8',
+    bgColor: 'green-1',
     key: 'sindicatos',
     route: '/sindicatos'
   },
   {
     title: 'Solicitudes',
     icon: 'add_road',
-    color: 'cyan',
-    bgColor: 'cyan-1',
+    color: 'green-8',
+    bgColor: 'green-1',
     key: 'solicitudes',
     route: '/solicitudes'
   },
   {
     title: 'Servicios',
     icon: 'local_taxi',
-    color: 'teal',
-    bgColor: 'teal-1',
+    color: 'green-8',
+    bgColor: 'green-1',
     key: 'servicios',
     route: '/servicios'
   },
   {
     title: 'Pagos',
     icon: 'payments',
-    color: 'purple',
-    bgColor: 'purple-1',
+    color: 'green-8',
+    bgColor: 'green-1',
     key: 'pagos',
     route: '/pagos'
   },
   {
     title: 'Reportes',
     icon: 'bar_chart',
-    color: 'grey-9',
-    bgColor: 'grey-3',
+    color: 'green-8',
+    bgColor: 'green-1',
     key: 'reportes',
     route: '/reportes'
   }
@@ -2152,7 +2168,7 @@ const chartOptions = ref({
     }
   },
 
-  colors: ['#027be3'],
+  colors: ['#2e7d32'],
 
   dataLabels: {
     enabled: false
@@ -3564,25 +3580,8 @@ const escaparHtml = (valor) => {
     .replaceAll("'", '&#039;')
 }
 
-const formatearFechaHora = (valor) => {
-  if (!valor) {
-    return 'Sin registro'
-  }
-
-  const fecha = new Date(valor)
-
-  if (Number.isNaN(fecha.getTime())) {
-    return String(valor)
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      dateStyle: 'short',
-      timeStyle: 'short'
-    }
-  ).format(fecha)
-}
+const formatearFechaHora = (valor) =>
+  fechaHoraDDMMYYYY(valor, 'Sin registro')
 
 const obtenerColorConductor = (conductor) => {
   if (conductor.viaje) {
@@ -4245,29 +4244,8 @@ const iconoTipoIncidencia = (tipo) => {
   return 'sos'
 }
 
-const formatearFechaHoraIncidencia = (fecha) => {
-  if (!fecha) return 'Fecha no disponible'
-
-  const texto = String(fecha)
-  const valor = texto.includes('T')
-    ? new Date(texto)
-    : new Date(texto.replace(' ', 'T'))
-
-  if (Number.isNaN(valor.getTime())) {
-    return texto
-  }
-
-  return new Intl.DateTimeFormat(
-    'es-BO',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }
-  ).format(valor)
-}
+const formatearFechaHoraIncidencia = (fecha) =>
+  fechaHoraDDMMYYYY(fecha, 'Fecha no disponible')
 
 const tieneUbicacionIncidencia = (incidencia) => {
   return (
@@ -4953,28 +4931,203 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.dashboard-page {
+  min-height: 100%;
+  color: #30353b;
+  background: #f5f6f7;
+}
+
 .container-dashboard {
-  max-width: 1400px;
+  max-width: 1480px;
   margin: 0 auto;
+}
+
+.dashboard-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 4px 2px;
+}
+
+.dashboard-heading-copy {
+  min-width: 0;
+}
+
+.dashboard-eyebrow {
+  margin-bottom: 3px;
+  color: #2e7d32;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.dashboard-title {
+  color: #232926;
+  font-size: clamp(28px, 3vw, 38px);
+  font-weight: 850;
+  line-height: 1.08;
+}
+
+.dashboard-date {
+  margin-top: 7px;
+  color: #707780;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dashboard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dashboard-live-chip {
+  min-height: 30px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.dashboard-live-chip--ok {
+  color: #17632b;
+  background: #edf7ef;
+  border-color: #d3e9d7;
+}
+
+.dashboard-live-chip--off {
+  color: #9a5a08;
+  background: #fff7e8;
+  border-color: #f3dfba;
+}
+
+.dashboard-refresh-btn {
+  min-height: 38px;
+  background: #ffffff;
 }
 
 .my-dashboard-card {
   height: 100%;
-  background-color: #ffffff;
-  border-radius: 12px;
-
+  min-height: 184px;
+  overflow: hidden;
+  border: 1px solid #dfe7e1;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow:
+    0 5px 18px rgba(34, 47, 40, 0.065) !important;
   transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .my-dashboard-card:hover {
-  transform: translateY(-4px);
-
+  transform: translateY(-3px);
+  border-color: #bdd7c3;
   box-shadow:
-    0 8px 24px
-    rgba(0, 0, 0, 0.08) !important;
+    0 12px 28px rgba(34, 47, 40, 0.11) !important;
 }
+
+.dashboard-card-section {
+  min-height: 184px;
+}
+
+.dashboard-card-section--operational {
+  min-height: 164px;
+}
+
+.dashboard-card-icon {
+  color: #ffffff;
+  border: 0 !important;
+  background: linear-gradient(145deg, #2f9e44 0%, #237a35 100%);
+  box-shadow: 0 8px 18px rgba(35, 122, 53, .20);
+}
+
+.dashboard-card-icon--personas {
+  color: #237a35;
+  background: #e8f5e9;
+  box-shadow: inset 0 0 0 1px #d5ead8;
+}
+
+.dashboard-card-icon--mototaxistas,
+.dashboard-card-icon--motocicletas {
+  color: #1b7c41;
+  background: #e4f4ea;
+  box-shadow: inset 0 0 0 1px #cee6d6;
+}
+
+.dashboard-card-icon--pasajeros {
+  color: #296f51;
+  background: #e7f3ed;
+  box-shadow: inset 0 0 0 1px #d2e7dc;
+}
+
+.dashboard-card-icon--sindicatos {
+  color: #176b4a;
+  background: #e2f1e9;
+  box-shadow: inset 0 0 0 1px #cee4d7;
+}
+
+.dashboard-card-icon--solicitudes {
+  color: #856404;
+  background: #fff4cf;
+  box-shadow: inset 0 0 0 1px #f1e0a9;
+}
+
+.dashboard-card-icon--servicios {
+  color: #126a62;
+  background: #def3f0;
+  box-shadow: inset 0 0 0 1px #c6e8e3;
+}
+
+.dashboard-card-icon--pagos {
+  color: #2867a3;
+  background: #e4f0fb;
+  box-shadow: inset 0 0 0 1px #cedff0;
+}
+
+.dashboard-card-icon--reportes {
+  color: #6956a8;
+  background: #eeeafb;
+  box-shadow: inset 0 0 0 1px #ddd5f4;
+}
+
+.dashboard-card-title {
+  color: #67716b;
+  font-size: .84rem;
+  letter-spacing: .055em;
+}
+
+.dashboard-card-title--operational {
+  font-size: .78rem;
+}
+
+.dashboard-card-value {
+  color: #218838;
+  font-size: 2.45rem;
+  line-height: 1;
+}
+
+.dashboard-card-value--operational {
+  font-size: 1.95rem;
+}
+
+.sos-section-header {
+  color: #30353b;
+  background: #ffffff;
+  border-bottom: 1px solid #eadede;
+}
+
+.sos-section-header :deep(.q-avatar) {
+  border: 1px solid #f2d1d1;
+}
+
 
 .max-width-md {
   max-width: 600px;
@@ -5484,4 +5637,29 @@ onBeforeUnmount(() => {
   }
 }
 
+
+@media (max-width: 700px) {
+  .dashboard-page {
+    padding: 14px !important;
+  }
+
+  .dashboard-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-bottom: 18px !important;
+  }
+
+  .dashboard-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dashboard-refresh-btn {
+    flex: 1 1 auto;
+  }
+
+  .dashboard-title {
+    font-size: 29px;
+  }
+}
 </style>

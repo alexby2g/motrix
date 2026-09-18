@@ -37,7 +37,7 @@ class AuthController extends Controller
                 'max:50',
                 'required_without_all:login,email',
             ],
-            'password' => ['required', 'string'],
+            'password' => ['required', 'string', 'max:255'],
             'device_name' => ['nullable', 'string', 'max:100'],
         ]);
 
@@ -49,10 +49,18 @@ class AuthController extends Controller
         ));
 
         $identificadorNormalizado = mb_strtolower($identificador);
+        $telefonoNormalizado = $this->normalizarTelefono(
+            $identificador
+        );
+
+        if (strlen($telefonoNormalizado) < 7) {
+            $telefonoNormalizado = '';
+        }
 
         $user = User::query()
             ->where(function ($query) use (
-                $identificadorNormalizado
+                $identificadorNormalizado,
+                $telefonoNormalizado
             ) {
                 $query
                     ->whereRaw(
@@ -63,6 +71,13 @@ class AuthController extends Controller
                         'LOWER(nickname) = ?',
                         [$identificadorNormalizado]
                     );
+
+                if ($telefonoNormalizado !== '') {
+                    $query->orWhere(
+                        'nickname',
+                        $telefonoNormalizado
+                    );
+                }
             })
             ->first();
 
@@ -75,7 +90,7 @@ class AuthController extends Controller
         ) {
             throw ValidationException::withMessages([
                 'login' => [
-                    'El correo, nickname o la contraseña son incorrectos.',
+                    'El celular, correo, usuario o la contraseña son incorrectos.',
                 ],
             ]);
         }
@@ -125,21 +140,41 @@ class AuthController extends Controller
 
     public function logoutAll(Request $request): JsonResponse
     {
-        $request->user()
-            ?->tokens()
-            ->delete();
+        $user = $request->user();
+
+        $user?->tokens()->delete();
+        $user?->pushDevices()->update(['active' => false]);
 
         return response()->json([
             'message' => 'Todas las sesiones fueron cerradas.',
         ]);
     }
 
+    private function normalizarTelefono(mixed $telefono): string
+    {
+        $numero = preg_replace(
+            '/\D+/u',
+            '',
+            trim((string) $telefono)
+        ) ?? '';
+
+        if (str_starts_with($numero, '00591') && strlen($numero) === 13) {
+            return substr($numero, 5);
+        }
+
+        if (str_starts_with($numero, '591') && strlen($numero) === 11) {
+            return substr($numero, 3);
+        }
+
+        return $numero;
+    }
+
     private function datosUsuario(User $user): array
     {
         $user->loadMissing([
-            'persona',
-            'mototaxista.persona',
-            'pasajero.persona',
+            'persona.imagenes',
+            'mototaxista.persona.imagenes',
+            'pasajero.persona.imagenes',
             'federacion',
             'sindicato.federacionEntidad',
         ]);
@@ -156,6 +191,14 @@ class AuthController extends Controller
             ?? $user->pasajero?->persona?->apellidos
             ?? null;
 
+        $personaEntidad = $user->persona
+            ?? $user->mototaxista?->persona
+            ?? $user->pasajero?->persona;
+
+        $fotoRuta = $personaEntidad?->imagenes
+            ?->sortByDesc('id')
+            ->first()?->ruta;
+
         return [
             'id' => $user->id,
             'name' => $user->name,
@@ -168,11 +211,22 @@ class AuthController extends Controller
                         : ''
                 )
             ),
-            'email' => $user->email,
+            'email' => str_ends_with(
+                mb_strtolower((string) $user->email),
+                '@motrix.invalid'
+            ) ? null : $user->email,
+            'telefono' => $user->persona?->telefono
+                ?? $user->mototaxista?->telefono
+                ?? $user->mototaxista?->persona?->telefono
+                ?? $user->pasajero?->persona?->telefono
+                ?? (preg_match('/^[0-9]{7,15}$/', (string) $user->nickname)
+                    ? $user->nickname
+                    : null),
             'role' => $user->role,
             'mototaxista_id' => $user->mototaxista_id,
             'pasajero_id' => $user->pasajero_id,
             'persona_id' => $user->persona_id,
+            'foto_ruta' => $fotoRuta,
             'federacion_id' => $user->federacion_id,
             'federacion_nombre' => $user->federacion?->nombre,
             'sindicato_id' => $user->sindicato_id,

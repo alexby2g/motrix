@@ -277,7 +277,7 @@
             :label="editando ? 'Nueva contraseña (vacío = conservar actual)' : 'Contraseña inicial *'"
             :type="mostrarPassword ? 'text' : 'password'"
             autocomplete="new-password"
-            hint="Mínimo 6 caracteres"
+            hint="Mínimo 8 caracteres"
           >
             <template #prepend>
               <q-icon name="lock" color="green-8" />
@@ -374,7 +374,7 @@ const dialogoForm = ref(false)
 const editando = ref(null)
 const mostrarPassword = ref(false)
 
-const rolesAdministrativos = ['admin_general', 'admin_servicios', 'secretario']
+const rolesAdministrativos = ['admin_general', 'admin_registro', 'admin_servicios', 'secretario']
 
 const form = reactive({
   persona_id: null,
@@ -388,6 +388,7 @@ const form = reactive({
 
 const resumenRoles = [
   { role: 'admin_general', etiqueta: 'Admin. general', icono: 'admin_panel_settings', fondo: 'green-1', texto: 'green-9' },
+  { role: 'admin_registro', etiqueta: 'Admin. registro', icono: 'how_to_reg', fondo: 'lime-1', texto: 'green-10' },
   { role: 'admin_servicios', etiqueta: 'Admin. servicios', icono: 'support_agent', fondo: 'blue-1', texto: 'blue-9' },
   { role: 'secretario', etiqueta: 'Secretarios', icono: 'edit_note', fondo: 'purple-1', texto: 'purple-9' },
   { role: 'conductor', etiqueta: 'Conductores', icono: 'two_wheeler', fondo: 'orange-1', texto: 'orange-9' },
@@ -396,6 +397,7 @@ const resumenRoles = [
 
 const opcionesRolesAdministrativos = [
   { label: 'Administrador general', value: 'admin_general' },
+  { label: 'Administrador de registro', value: 'admin_registro' },
   { label: 'Administrador de servicios', value: 'admin_servicios' },
   { label: 'Secretario de sindicato', value: 'secretario' }
 ]
@@ -454,6 +456,7 @@ function iniciales(u) {
 function etiquetaRol(role) {
   return ({
     admin_general: 'Administrador general',
+    admin_registro: 'Administrador de registro',
     admin_servicios: 'Administrador de servicios',
     secretario: 'Secretario',
     conductor: 'Conductor / mototaxista',
@@ -464,6 +467,7 @@ function etiquetaRol(role) {
 function configRol(role) {
   return ({
     admin_general: { fondo: 'green-1', texto: 'green-9', chip: 'green-8', icono: 'admin_panel_settings' },
+    admin_registro: { fondo: 'lime-1', texto: 'green-10', chip: 'light-green-8', icono: 'how_to_reg' },
     admin_servicios: { fondo: 'blue-1', texto: 'blue-9', chip: 'blue-7', icono: 'support_agent' },
     secretario: { fondo: 'purple-1', texto: 'purple-9', chip: 'purple-6', icono: 'edit_note' },
     conductor: { fondo: 'orange-1', texto: 'orange-9', chip: 'orange-8', icono: 'two_wheeler' },
@@ -570,13 +574,13 @@ async function guardar() {
     return
   }
 
-  if (!editando.value && (!form.password || form.password.length < 6)) {
-    $q.notify({ type: 'warning', message: 'La contraseña inicial debe tener al menos 6 caracteres.' })
+  if (!editando.value && (!form.password || form.password.length < 8)) {
+    $q.notify({ type: 'warning', message: 'La contraseña inicial debe tener al menos 8 caracteres.' })
     return
   }
 
-  if (editando.value && form.password && form.password.length < 6) {
-    $q.notify({ type: 'warning', message: 'La nueva contraseña debe tener al menos 6 caracteres.' })
+  if (editando.value && form.password && form.password.length < 8) {
+    $q.notify({ type: 'warning', message: 'La nueva contraseña debe tener al menos 8 caracteres.' })
     return
   }
 

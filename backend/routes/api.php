@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\PersonaController;
 use App\Http\Controllers\PasajeroController;
 use App\Http\Controllers\MototaxistaController;
@@ -15,10 +16,16 @@ use App\Http\Controllers\PagoController;
 use App\Http\Controllers\PagoSindicalController;
 use App\Http\Controllers\ImagenController;
 use App\Http\Controllers\ReporteController;
-use App\Http\Controllers\MensajeViajeController;
 use App\Http\Controllers\IncidenciaViajeController;
 use App\Http\Controllers\FederacionController;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\PasswordRecoveryController;
+use App\Http\Controllers\PushDeviceController;
+use App\Http\Controllers\ViajeCompartidoController;
+use App\Http\Controllers\HabilitacionSindicalController;
+
+/* Evita que rutas fijas sean interpretadas como parámetros {id}. */
+Route::pattern('id', '[0-9]+');
 
 /*
 |--------------------------------------------------------------------------
@@ -29,7 +36,65 @@ use App\Http\Controllers\UsuarioController;
 Route::post(
     '/auth/login',
     [AuthController::class, 'login']
-);
+)->middleware('throttle:motrix-login');
+
+
+/*
+|--------------------------------------------------------------------------
+| ACCESO CON GOOGLE - PASAJEROS
+|--------------------------------------------------------------------------
+|
+| Google no crea cuentas de conductor. Estas rutas solo autentican o
+| registran pasajeros. El ID token siempre se verifica en Laravel.
+|
+*/
+
+Route::post(
+    '/auth/google',
+    [GoogleAuthController::class, 'login']
+)->middleware('throttle:motrix-login');
+
+Route::post(
+    '/auth/google/complete',
+    [GoogleAuthController::class, 'completeProfile']
+)->middleware('throttle:motrix-registro-publico');
+
+
+/*
+|--------------------------------------------------------------------------
+| REGISTRO PÚBLICO DE PASAJEROS
+|--------------------------------------------------------------------------
+|
+| Solo los pasajeros pueden crear su propia cuenta desde la aplicación.
+| Las cuentas de conductor continúan siendo creadas desde el módulo
+| administrativo después de verificar la afiliación del mototaxista.
+|
+*/
+
+Route::post(
+    '/auth/registro-pasajero',
+    [PasajeroController::class, 'registroPublico']
+)->middleware('throttle:motrix-registro-publico');
+
+Route::post(
+    '/auth/recuperacion/solicitar',
+    [PasswordRecoveryController::class, 'requestCode']
+)->middleware('throttle:motrix-password-recovery');
+
+Route::post(
+    '/auth/recuperacion/verificar',
+    [PasswordRecoveryController::class, 'verifyCode']
+)->middleware('throttle:motrix-password-recovery');
+
+Route::post(
+    '/auth/recuperacion/restablecer',
+    [PasswordRecoveryController::class, 'resetPassword']
+)->middleware('throttle:motrix-password-recovery');
+
+Route::get(
+    '/viaje-compartido/{token}',
+    [ViajeCompartidoController::class, 'show']
+)->middleware('throttle:60,1');
 
 /*
 |--------------------------------------------------------------------------
@@ -56,6 +121,7 @@ Route::get(
 Broadcast::routes([
     'middleware' => [
         'auth:sanctum',
+        'throttle:120,1',
     ],
 ]);
 
@@ -65,9 +131,10 @@ Broadcast::routes([
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(
-    'auth:sanctum'
-)->group(function () {
+Route::middleware([
+    'auth:sanctum',
+    \App\Http\Middleware\EnsureMotrixLegalAccepted::class,
+])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
@@ -93,6 +160,16 @@ Route::middleware(
         ]
     );
 
+    Route::post(
+        '/push/devices',
+        [PushDeviceController::class, 'store']
+    )->middleware('throttle:30,1');
+
+    Route::delete(
+        '/push/devices',
+        [PushDeviceController::class, 'destroy']
+    )->middleware('throttle:30,1');
+
     /*
     |--------------------------------------------------------------------------
     | CONDUCTOR
@@ -112,12 +189,34 @@ Route::middleware(
                 ]
             );
 
+            Route::post(
+                '/qr-pago',
+                [
+                    ImagenController::class,
+                    'guardarQrPagoConductor',
+                ]
+            )->middleware(
+                'throttle:10,1'
+            );
+
+            Route::delete(
+                '/qr-pago',
+                [
+                    ImagenController::class,
+                    'eliminarQrPagoConductor',
+                ]
+            )->middleware(
+                'throttle:10,1'
+            );
+
             Route::patch(
                 '/disponibilidad',
                 [
                     MototaxistaController::class,
                     'actualizarDisponibilidad',
                 ]
+            )->middleware(
+                'throttle:30,1'
             );
 
             Route::patch(
@@ -126,6 +225,8 @@ Route::middleware(
                     MototaxistaController::class,
                     'actualizarUbicacion',
                 ]
+            )->middleware(
+                'throttle:motrix-gps'
             );
 
             Route::get(
@@ -176,36 +277,6 @@ Route::middleware(
                 ]
             );
 
-            /*
-             * Chat conservado en backend, pero oculto
-             * temporalmente en la interfaz.
-             */
-            Route::get(
-                '/solicitudes/{id}/mensajes',
-                [
-                    MensajeViajeController::class,
-                    'index',
-                ]
-            );
-
-            Route::post(
-                '/solicitudes/{id}/mensajes',
-                [
-                    MensajeViajeController::class,
-                    'store',
-                ]
-            )->middleware(
-                'throttle:30,1'
-            );
-
-            Route::post(
-                '/solicitudes/{id}/mensajes/leidos',
-                [
-                    MensajeViajeController::class,
-                    'marcarLeidos',
-                ]
-            );
-
             Route::get(
                 '/solicitudes/{id}/incidencias',
                 [
@@ -242,6 +313,8 @@ Route::middleware(
                     SolicitudController::class,
                     'storePasajero',
                 ]
+            )->middleware(
+                'throttle:motrix-solicitud'
             );
 
             Route::get(
@@ -292,34 +365,23 @@ Route::middleware(
                 ]
             );
 
-            /*
-             * Chat conservado en backend, pero oculto
-             * temporalmente en la interfaz.
-             */
-            Route::get(
-                '/solicitudes/{id}/mensajes',
-                [
-                    MensajeViajeController::class,
-                    'index',
-                ]
-            );
-
             Route::post(
-                '/solicitudes/{id}/mensajes',
+                '/solicitudes/{id}/compartir',
+                [ViajeCompartidoController::class, 'create']
+            )->middleware('throttle:12,1');
+
+            /*
+             * Eliminación de cuenta solicitada por el propio pasajero.
+             * Conserva únicamente historial anonimizado cuando corresponde.
+             */
+            Route::delete(
+                '/cuenta',
                 [
-                    MensajeViajeController::class,
-                    'store',
+                    PasajeroController::class,
+                    'eliminarMiCuenta',
                 ]
             )->middleware(
-                'throttle:30,1'
-            );
-
-            Route::post(
-                '/solicitudes/{id}/mensajes/leidos',
-                [
-                    MensajeViajeController::class,
-                    'marcarLeidos',
-                ]
+                'throttle:motrix-eliminar-cuenta'
             );
 
             Route::get(
@@ -357,22 +419,50 @@ Route::middleware(
     |
     */
 
+    /*
+     * Lectura del registro maestro.
+     *
+     * El registro maestro de Personas queda reservado a
+     * administración general, registro y secretaría.
+     * admin_servicios usa únicamente el buscador acotado
+     * /personas/opciones-pasajero.
+     */
+    /*
+     * IMPORTANTE:
+     * Las rutas fijas de búsqueda deben declararse antes
+     * de /personas/{id}. Además, {id} queda restringido
+     * a números para impedir que Laravel interprete
+     * "opciones-mototaxista" u otras palabras como un ID.
+     */
+
+    Route::get(
+        '/personas/opciones-mototaxista',
+        [
+            PersonaController::class,
+            'opcionesMototaxista',
+        ]
+    )->middleware(
+        'role:admin_general,admin_registro,secretario'
+    );
+
+    Route::get(
+        '/personas/opciones-pasajero',
+        [
+            PersonaController::class,
+            'opcionesPasajero',
+        ]
+    )->middleware(
+        'role:admin_general,admin_servicios'
+    );
+
     Route::middleware(
-        'role:admin_general,secretario,admin_servicios'
+        'role:admin_general,admin_registro,secretario'
     )->group(function () {
         Route::get(
             '/personas',
             [
                 PersonaController::class,
                 'index',
-            ]
-        );
-
-        Route::post(
-            '/personas',
-            [
-                PersonaController::class,
-                'store',
             ]
         );
 
@@ -389,6 +479,22 @@ Route::middleware(
             [
                 PersonaController::class,
                 'show',
+            ]
+        )->whereNumber('id');
+    });
+
+    /*
+     * Escritura del registro maestro.
+     * admin_servicios no puede crear, editar ni eliminar personas.
+     */
+    Route::middleware(
+        'role:admin_general,admin_registro,secretario'
+    )->group(function () {
+        Route::post(
+            '/personas',
+            [
+                PersonaController::class,
+                'store',
             ]
         );
 
@@ -454,7 +560,7 @@ Route::middleware(
     */
 
     Route::middleware(
-        'role:admin_general,secretario,admin_servicios'
+        'role:admin_general,admin_registro,secretario,admin_servicios'
     )->group(function () {
         Route::get(
             '/mototaxistas',
@@ -473,13 +579,39 @@ Route::middleware(
     */
 
     Route::middleware(
-        'role:admin_general,secretario'
+        'role:admin_general,admin_registro,secretario'
     )->group(function () {
         Route::post(
             '/mototaxistas',
             [
                 MototaxistaController::class,
                 'store',
+            ]
+        );
+
+        Route::get(
+            '/mototaxistas/opciones-servicio',
+            [
+                MototaxistaController::class,
+                'opcionesServicio',
+            ]
+        )->middleware(
+            'role:admin_general,admin_servicios'
+        );
+
+        Route::get(
+            '/mototaxistas/opciones-motocicleta',
+            [
+                MototaxistaController::class,
+                'opcionesMotocicleta',
+            ]
+        );
+
+        Route::get(
+            '/mototaxistas/opciones-pago-sindical',
+            [
+                MototaxistaController::class,
+                'opcionesPagoSindical',
             ]
         );
 
@@ -563,6 +695,22 @@ Route::middleware(
             ]
         );
 
+        Route::post(
+            '/motocicletas/{id}/imagen',
+            [
+                MotocicletaController::class,
+                'subirImagen',
+            ]
+        );
+
+        Route::delete(
+            '/imagenes-motocicletas/{id}',
+            [
+                MotocicletaController::class,
+                'eliminarImagen',
+            ]
+        );
+
         Route::delete(
             '/motocicletas/{id}',
             [
@@ -624,6 +772,15 @@ Route::middleware(
         );
     });
 
+    Route::middleware(
+        'role:admin_general,secretario'
+    )->group(function () {
+        Route::patch(
+            '/mototaxistas/{id}/habilitacion-sindical',
+            [HabilitacionSindicalController::class, 'update']
+        );
+    });
+
     /*
     |--------------------------------------------------------------------------
     | PAGOS SINDICALES
@@ -636,7 +793,7 @@ Route::middleware(
     */
 
     Route::middleware(
-        'role:admin_general,secretario'
+        'role:admin_general,admin_registro,secretario'
     )->group(function () {
         Route::get(
             '/pagos-sindicales',
@@ -708,12 +865,18 @@ Route::middleware(
 
     /*
     |--------------------------------------------------------------------------
-    | ADMINISTRADOR GENERAL
+    | ADMINISTRACIÓN DE REGISTRO
+    | Admin general + administrador de registro
     |--------------------------------------------------------------------------
+    |
+    | Este bloque concentra la creación estructural del padrón gremial.
+    | El administrador de registro puede mantener federaciones y sindicatos,
+    | pero no obtiene acceso al módulo de usuarios ni al área de servicios.
+    |
     */
 
     Route::middleware(
-        'role:admin_general'
+        'role:admin_general,admin_registro'
     )->group(function () {
         Route::post(
             '/federaciones',
@@ -762,7 +925,17 @@ Route::middleware(
                 'destroy',
             ]
         );
+    });
 
+    /*
+    |--------------------------------------------------------------------------
+    | ADMINISTRADOR GENERAL
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware(
+        'role:admin_general'
+    )->group(function () {
         Route::get(
             '/usuarios',
             [
@@ -878,6 +1051,14 @@ Route::middleware(
             ]
         );
 
+        Route::get(
+            '/solicitudes/opciones-servicio',
+            [
+                SolicitudController::class,
+                'opcionesServicio',
+            ]
+        );
+
         Route::post(
             '/solicitudes',
             [
@@ -944,6 +1125,14 @@ Route::middleware(
             [
                 ServicioController::class,
                 'store',
+            ]
+        );
+
+        Route::get(
+            '/servicios/opciones-pago',
+            [
+                ServicioController::class,
+                'opcionesPago',
             ]
         );
 
@@ -1020,3 +1209,10 @@ Route::middleware(
         );
     });
 });
+
+require __DIR__ . '/motrix_release.php';
+
+require __DIR__ . '/conductor_account_release.php';
+
+/* MOTRIX V5.7 - términos y privacidad */
+require __DIR__ . '/motrix_legal.php';

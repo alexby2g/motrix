@@ -52,6 +52,10 @@ function obtenerInicioPorRol(role) {
     return '/monitoreo'
   }
 
+  if (rol === 'admin_registro') {
+    return '/registro'
+  }
+
   if (rol === 'admin_servicios') {
     return '/solicitudes'
   }

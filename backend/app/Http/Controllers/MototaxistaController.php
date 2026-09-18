@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\SolicitudActualizada;
 use App\Http\Requests\MototaxistaRequest;
 use App\Models\Mototaxista;
+use App\Models\Persona;
 use App\Models\Solicitud;
 use App\Models\User;
 use App\Services\AsignacionConductorService;
+use App\Services\FcmPushService;
+use App\Services\MotrixPhoneRegistry;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +21,9 @@ use Illuminate\Validation\Rule;
 class MototaxistaController extends Controller
 {
     public function __construct(
-        private readonly AsignacionConductorService $asignacionService
+        private readonly AsignacionConductorService $asignacionService,
+        private readonly FcmPushService $pushService,
+        private readonly MotrixPhoneRegistry $phoneRegistry
     ) {
     }
 
@@ -30,12 +36,21 @@ class MototaxistaController extends Controller
     public function index(
         Request $request
     ) {
-        $consulta = Mototaxista::with([
-            'persona.imagenes',
-            'sindicato.federacionRelacion',
-            'motocicletas',
-            'usuarioConductor',
+        $datos = $request->validate([
+            'paginated' => ['nullable', 'boolean'],
+            'q' => ['nullable', 'string', 'max:100'],
+            'estado' => ['nullable', 'string', 'max:50'],
+            'sindicato' => ['nullable', 'string', 'max:100'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => [
+                'nullable',
+                'integer',
+                'min:5',
+                'max:100',
+            ],
         ]);
+
+        $consulta = Mototaxista::query();
 
         if (
             $this->rolUsuario($request)
@@ -47,15 +62,523 @@ class MototaxistaController extends Controller
             );
         }
 
-        return $consulta
-            ->orderByDesc('id')
-            ->get();
+        $baseVisible = clone $consulta;
+
+        $texto = trim(
+            (string) ($datos['q'] ?? '')
+        );
+
+        if ($texto !== '') {
+            $terminos = array_values(
+                array_filter(
+                    preg_split('/\\s+/u', $texto) ?: []
+                )
+            );
+
+            foreach (
+                array_slice($terminos, 0, 5)
+                as $termino
+            ) {
+                $consulta->where(
+                    function ($query) use (
+                        $termino
+                    ) {
+                        $patron =
+                            '%' . $termino . '%';
+
+                        $query
+                            ->where(
+                                'nro_chaleco',
+                                'like',
+                                $patron
+                            )
+                            ->orWhere(
+                                'telefono',
+                                'like',
+                                $patron
+                            )
+                            ->orWhereHas(
+                                'persona',
+                                function (
+                                    $persona
+                                ) use (
+                                    $patron
+                                ) {
+                                    $persona
+                                        ->where(
+                                            'nombre',
+                                            'like',
+                                            $patron
+                                        )
+                                        ->orWhere(
+                                            'apellidos',
+                                            'like',
+                                            $patron
+                                        )
+                                        ->orWhere(
+                                            'ci',
+                                            'like',
+                                            $patron
+                                        );
+                                }
+                            )
+                            ->orWhereHas(
+                                'sindicato',
+                                function (
+                                    $sindicato
+                                ) use (
+                                    $patron
+                                ) {
+                                    $sindicato
+                                        ->where(
+                                            'nombre',
+                                            'like',
+                                            $patron
+                                        );
+                                }
+                            );
+                    }
+                );
+            }
+        }
+
+        $estado = trim(
+            (string) ($datos['estado'] ?? '')
+        );
+
+        if (
+            $estado !== ''
+            && $estado !== 'Todos'
+        ) {
+            $consulta->where('estado', $estado);
+        }
+
+        $sindicato = trim(
+            (string) ($datos['sindicato'] ?? '')
+        );
+
+        if (
+            $sindicato !== ''
+            && $sindicato !== 'Todos'
+        ) {
+            $consulta->whereHas(
+                'sindicato',
+                function ($query) use (
+                    $sindicato
+                ) {
+                    $query->where(
+                        'nombre',
+                        $sindicato
+                    );
+                }
+            );
+        }
+
+        $consulta
+            ->with([
+                'persona.imagenes',
+                'sindicato.federacionRelacion',
+                'motocicletas.imagenes',
+                'usuarioConductor',
+            ])
+            ->orderByDesc('id');
+
+        if (! $request->boolean('paginated')) {
+            $items = $consulta->get();
+            $this->adjuntarMetadatosOperativos($items);
+            return $items;
+        }
+
+        $estadisticas = [
+            'total' => (clone $baseVisible)->count(),
+            'activos' => (clone $baseVisible)
+                ->where('estado', 'Activo')
+                ->count(),
+            'con_qr' => (clone $baseVisible)
+                ->whereNotNull('codigo_qr')
+                ->where('codigo_qr', '<>', '')
+                ->count(),
+            'con_cuenta' => (clone $baseVisible)
+                ->whereHas('usuarioConductor')
+                ->count(),
+        ];
+
+        $porPagina = (int) (
+            $datos['per_page'] ?? 12
+        );
+
+        $paginador = $consulta->paginate(
+            $porPagina
+        );
+
+        $this->adjuntarMetadatosOperativos(
+            collect($paginador->items())
+        );
+
+        return response()->json([
+            'data' => $paginador->items(),
+            'meta' => [
+                'current_page' =>
+                    $paginador->currentPage(),
+                'last_page' =>
+                    $paginador->lastPage(),
+                'per_page' =>
+                    $paginador->perPage(),
+                'total' =>
+                    $paginador->total(),
+                'from' =>
+                    $paginador->firstItem(),
+                'to' =>
+                    $paginador->lastItem(),
+                'stats' =>
+                    $estadisticas,
+            ],
+        ]);
+    }
+
+    /**
+     * Opciones ligeras para asignar una motocicleta.
+     * El secretario queda automáticamente limitado a su sindicato.
+     */
+    public function opcionesMotocicleta(
+        Request $request
+    ) {
+        return $this->opcionesLigeras(
+            $request,
+            [
+                'admin_general',
+                'admin_registro',
+                'secretario',
+            ],
+            'No tienes autorización para seleccionar mototaxistas para motocicletas.',
+            true,
+            50
+        );
+    }
+
+    /**
+     * Opciones ligeras para pagos sindicales.
+     * Evita descargar el padrón completo al abrir el formulario.
+     */
+    public function opcionesPagoSindical(
+        Request $request
+    ) {
+        return $this->opcionesLigeras(
+            $request,
+            [
+                'admin_general',
+                'admin_registro',
+                'secretario',
+            ],
+            'No tienes autorización para seleccionar mototaxistas para pagos sindicales.'
+        );
+    }
+
+    /**
+     * Opciones ligeras de conductor para el formulario administrativo
+     * de servicios. Evita cargar todo el padrón de mototaxistas.
+     */
+    public function opcionesServicio(
+        Request $request
+    ) {
+        if (! in_array(
+            $this->rolUsuario($request),
+            [
+                'admin_general',
+                'admin_servicios',
+            ],
+            true
+        )) {
+            abort(
+                403,
+                'No tienes autorización para seleccionar conductores de servicios.'
+            );
+        }
+
+        $datos = $request->validate([
+            'q' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+            'include_id' => [
+                'nullable',
+                'integer',
+                'exists:mototaxistas,id',
+            ],
+        ]);
+
+        $texto = trim(
+            (string) ($datos['q'] ?? '')
+        );
+
+        $includeId = isset($datos['include_id'])
+            ? (int) $datos['include_id']
+            : null;
+
+        if (
+            mb_strlen($texto) < 2
+            && ! $includeId
+        ) {
+            return response()->json([], 200);
+        }
+
+        $consulta = Mototaxista::query()
+            ->with([
+                'persona:id,nombre,apellidos,ci',
+                'sindicato:id,nombre',
+            ])
+            ->where(
+                function ($query) use (
+                    $includeId
+                ) {
+                    $query->where(
+                        'estado',
+                        'Activo'
+                    );
+
+                    if ($includeId) {
+                        $query->orWhere(
+                            'id',
+                            $includeId
+                        );
+                    }
+                }
+            );
+
+        if ($texto !== '') {
+            $terminos = array_values(
+                array_filter(
+                    preg_split('/\\s+/u', $texto) ?: []
+                )
+            );
+
+            foreach (
+                array_slice($terminos, 0, 5)
+                as $termino
+            ) {
+                $consulta->where(
+                    function ($query) use (
+                        $termino
+                    ) {
+                        $patron =
+                            '%' . $termino . '%';
+
+                        $query
+                            ->where(
+                                'nro_chaleco',
+                                'like',
+                                $patron
+                            )
+                            ->orWhere(
+                                'telefono',
+                                'like',
+                                $patron
+                            )
+                            ->orWhereHas(
+                                'persona',
+                                function (
+                                    $persona
+                                ) use (
+                                    $patron
+                                ) {
+                                    $persona
+                                        ->where(
+                                            'nombre',
+                                            'like',
+                                            $patron
+                                        )
+                                        ->orWhere(
+                                            'apellidos',
+                                            'like',
+                                            $patron
+                                        )
+                                        ->orWhere(
+                                            'ci',
+                                            'like',
+                                            $patron
+                                        );
+                                }
+                            );
+                    }
+                );
+            }
+        }
+
+        return response()->json(
+            $consulta
+                ->select([
+                    'id',
+                    'nro_chaleco',
+                    'estado',
+                    'id_persona',
+                    'id_sindicato',
+                ])
+                ->orderByDesc('id')
+                ->limit(10)
+                ->get(),
+            200
+        );
+    }
+
+    private function opcionesLigeras(
+        Request $request,
+        array $rolesPermitidos,
+        string $mensajeNoAutorizado,
+        bool $permitirSinBusqueda = false,
+        int $limite = 8
+    ) {
+        $rol = $this->rolUsuario($request);
+
+        if (! in_array(
+            $rol,
+            $rolesPermitidos,
+            true
+        )) {
+            abort(403, $mensajeNoAutorizado);
+        }
+
+        $datos = $request->validate([
+            'q' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+            'include_id' => [
+                'nullable',
+                'integer',
+                'exists:mototaxistas,id',
+            ],
+        ]);
+
+        $texto = trim(
+            (string) ($datos['q'] ?? '')
+        );
+
+        $includeId = isset($datos['include_id'])
+            ? (int) $datos['include_id']
+            : null;
+
+        if (
+            ! $permitirSinBusqueda
+            && mb_strlen($texto) < 2
+            && ! $includeId
+        ) {
+            return response()->json([], 200);
+        }
+
+        $consulta = Mototaxista::query()
+            ->with([
+                'persona:id,nombre,apellidos,ci,telefono',
+                'sindicato:id,nombre',
+            ]);
+
+        if ($rol === 'secretario') {
+            $consulta->where(
+                'id_sindicato',
+                $this->sindicatoUsuario($request)
+            );
+        }
+
+        $consulta->where(
+            function ($query) use (
+                $includeId
+            ) {
+                $query->where(
+                    'estado',
+                    'Activo'
+                );
+
+                if ($includeId) {
+                    $query->orWhere(
+                        'id',
+                        $includeId
+                    );
+                }
+            }
+        );
+
+        if ($texto !== '') {
+            $terminos = array_values(
+                array_filter(
+                    preg_split('/\\s+/u', $texto) ?: []
+                )
+            );
+
+            foreach (
+                array_slice($terminos, 0, 5)
+                as $termino
+            ) {
+                $consulta->where(
+                    function ($query) use (
+                        $termino
+                    ) {
+                        $patron = '%' . $termino . '%';
+
+                        $query
+                            ->where(
+                                'nro_chaleco',
+                                'like',
+                                $patron
+                            )
+                            ->orWhere(
+                                'telefono',
+                                'like',
+                                $patron
+                            )
+                            ->orWhereHas(
+                                'persona',
+                                function ($persona) use (
+                                    $patron
+                                ) {
+                                    $persona
+                                        ->where(
+                                            'nombre',
+                                            'like',
+                                            $patron
+                                        )
+                                        ->orWhere(
+                                            'apellidos',
+                                            'like',
+                                            $patron
+                                        )
+                                        ->orWhere(
+                                            'ci',
+                                            'like',
+                                            $patron
+                                        );
+                                }
+                            );
+                    }
+                );
+            }
+        }
+
+        return response()->json(
+            $consulta
+                ->select([
+                    'id',
+                    'nro_chaleco',
+                    'telefono',
+                    'estado',
+                    'id_persona',
+                    'id_sindicato',
+                ])
+                ->orderBy('nro_chaleco')
+                ->orderBy('id')
+                ->limit($limite)
+                ->get(),
+            200
+        );
     }
 
     public function store(
         MototaxistaRequest $request
     ) {
         $datos = $request->validated();
+
+        $ciAfiliacion = $datos['ci'] ?? null;
+        unset($datos['ci']);
 
         if (
             $this->rolUsuario($request)
@@ -71,18 +594,48 @@ class MototaxistaController extends Controller
          * disponibilidad para recibir viajes.
          */
         $datos['disponible'] = 0;
+        $datos['documentacion_en_regla'] = false;
+        $datos['aportes_al_dia'] = false;
+        $datos['estado_sindical'] = 'No habilitado';
+        $datos['motivo_estado_sindical'] = 'Pendiente de revisión sindical';
+        $datos['estado_sindical_actualizado_en'] = Carbon::now('UTC')
+            ->format('Y-m-d H:i:s');
 
-        $mototaxista = Mototaxista::create(
-            $datos
+        $mototaxista = DB::transaction(
+            function () use (
+                $datos,
+                $ciAfiliacion
+            ) {
+                $persona = Persona::query()
+                    ->whereKey(
+                        (int) $datos['id_persona']
+                    )
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if (
+                    trim((string) $persona->ci) === ''
+                    && $ciAfiliacion !== null
+                ) {
+                    $persona->ci = $ciAfiliacion;
+                }
+
+                if (
+                    ! empty($datos['id_sindicato'])
+                ) {
+                    $persona->sindicato_registro_id =
+                        $datos['id_sindicato'];
+                }
+
+                if ($persona->isDirty()) {
+                    $persona->save();
+                }
+
+                return Mototaxista::create(
+                    $datos
+                );
+            }
         );
-
-        if ($mototaxista->id_sindicato) {
-            $mototaxista->persona()
-                ->update([
-                    'sindicato_registro_id' =>
-                        $mototaxista->id_sindicato,
-                ]);
-        }
 
         return response()->json([
             'mensaje' =>
@@ -326,6 +879,19 @@ class MototaxistaController extends Controller
             ], 409);
         }
 
+        $persona = $mototaxista->persona;
+        $telefonoCuenta = $this->phoneRegistry->firstValidPhone(
+            $request->input('nickname'),
+            $mototaxista->telefono,
+            $persona?->telefono
+        );
+
+        if ($telefonoCuenta !== '') {
+            $request->merge([
+                'nickname' => $telefonoCuenta,
+            ]);
+        }
+
         $datos = $request->validate([
             'email' => [
                 'required',
@@ -342,12 +908,23 @@ class MototaxistaController extends Controller
             'password' => [
                 'required',
                 'string',
-                'min:6',
+                'min:8',
                 'max:100',
             ],
         ]);
 
-        $persona = $mototaxista->persona;
+        if ($telefonoCuenta !== '') {
+            $this->phoneRegistry->assertAvailableForAccount(
+                $telefonoCuenta,
+                $mototaxista->id_persona
+                    ? (int) $mototaxista->id_persona
+                    : null,
+                (int) $mototaxista->id,
+                $request->has('telefono')
+                    ? 'telefono'
+                    : 'nickname'
+            );
+        }
 
         $nombreCompleto = trim(
             (
@@ -538,6 +1115,10 @@ class MototaxistaController extends Controller
                 'm.nro_chaleco',
                 'm.codigo_qr',
                 'm.estado',
+                'm.documentacion_en_regla',
+                'm.aportes_al_dia',
+                'm.estado_sindical',
+                'm.motivo_estado_sindical',
                 'm.id_persona',
                 'm.id_sindicato',
 
@@ -644,6 +1225,19 @@ class MototaxistaController extends Controller
                                 $motocicleta,
                                 'placa'
                             ),
+                        'tiene_placa' => (bool) (
+                            $leer(
+                                $motocicleta,
+                                'tiene_placa'
+                            ) ?? (
+                                $leer(
+                                    $motocicleta,
+                                    'placa'
+                                )
+                                    ? true
+                                    : false
+                            )
+                        ),
                         'modelo' =>
                             $leer(
                                 $motocicleta,
@@ -683,12 +1277,50 @@ class MototaxistaController extends Controller
         $estadoActivo =
             $registro->estado === 'Activo';
 
+        $documentacionEnRegla = (bool) $registro->documentacion_en_regla;
+        $aportesAlDia = (bool) $registro->aportes_al_dia;
+        $estadoSindical = (string) ($registro->estado_sindical ?? 'No habilitado');
+
+        $habilitado = $estadoActivo
+            && $tieneCuentaConductor
+            && $documentacionEnRegla
+            && $aportesAlDia
+            && $estadoSindical === 'Habilitado';
+
+        $motivos = [];
+        if (! $estadoActivo) {
+            $motivos[] = 'registro administrativo inactivo';
+        }
+        if (! $tieneCuentaConductor) {
+            $motivos[] = 'sin cuenta MOTRIX de conductor';
+        }
+        if ($estadoSindical === 'Expulsado') {
+            $motivos[] = $registro->motivo_estado_sindical ?: 'afiliación expulsada';
+        } else {
+            if (! $documentacionEnRegla) {
+                $motivos[] = 'documentación incompleta';
+            }
+            if (! $aportesAlDia) {
+                $motivos[] = 'aportes pendientes';
+            }
+            if ($estadoSindical !== 'Habilitado' && $documentacionEnRegla && $aportesAlDia) {
+                $motivos[] = $registro->motivo_estado_sindical ?: 'afiliación sindical no habilitada';
+            }
+        }
+
+        $statsCalificacion = DB::table('solicitudes')
+            ->where('mototaxista_id', $registro->mototaxista_id)
+            ->where('estado', 'Finalizado')
+            ->whereNotNull('calificacion')
+            ->selectRaw('COUNT(calificacion) as total, AVG(calificacion) as promedio')
+            ->first();
+
         return response()->json([
             'verificado' => true,
-            'habilitado' => (
-                $estadoActivo
-                && $tieneCuentaConductor
-            ),
+            'habilitado' => $habilitado,
+            'motivo_inhabilitacion' => $habilitado
+                ? null
+                : implode(', ', array_values(array_unique($motivos))),
 
             'mototaxista' => [
                 'id' =>
@@ -714,6 +1346,24 @@ class MototaxistaController extends Controller
 
                 'estado' =>
                     $registro->estado,
+
+                'documentacion_en_regla' =>
+                    $documentacionEnRegla,
+
+                'aportes_al_dia' =>
+                    $aportesAlDia,
+
+                'estado_sindical' =>
+                    $estadoSindical,
+
+                'motivo_estado_sindical' =>
+                    $registro->motivo_estado_sindical,
+
+                'promedio_calificacion' =>
+                    round((float) ($statsCalificacion?->promedio ?? 0), 2),
+
+                'total_calificaciones' =>
+                    (int) ($statsCalificacion?->total ?? 0),
 
                 'sindicato' =>
                     $registro->sindicato,
@@ -815,21 +1465,28 @@ class MototaxistaController extends Controller
             );
 
         /*
-         * En esta fase NO exigimos todavía el QR para ponerse en línea,
-         * porque primero debemos generar/verificar los códigos de todos
-         * los conductores existentes sin romper las pruebas actuales.
-         *
-         * Sí se respeta el estado administrativo.
+         * Para recibir viajes se exige el registro administrativo Activo,
+         * la habilitación sindical vigente y una cuenta de conductor.
+         * La disponibilidad ya no puede reactivar por sí sola a un afiliado
+         * con documentación o aportes pendientes.
          */
-        if (
-            (bool) $datos['disponible']
-            && $mototaxista->estado !== 'Activo'
-        ) {
-            return response()->json([
-                'mensaje' =>
-                    'Tu registro de mototaxista está Inactivo. '
-                    . 'Un administrador debe habilitarlo.',
-            ], 409);
+        if ((bool) $datos['disponible']) {
+            $mototaxista->loadMissing('usuarioConductor');
+
+            if (
+                ! $mototaxista->habilitadoSindicalmente()
+                || $mototaxista->usuarioConductor === null
+            ) {
+                $motivo = $mototaxista->usuarioConductor === null
+                    ? 'No existe una cuenta MOTRIX de conductor vinculada.'
+                    : ($mototaxista->motivoInhabilitacionSindical()
+                        ?: 'La afiliación sindical no está habilitada.');
+
+                return response()->json([
+                    'mensaje' => 'No puedes ponerte en línea: ' . $motivo,
+                    'motivo_inhabilitacion' => $motivo,
+                ], 409);
+            }
         }
 
         $tieneViajeActivo =
@@ -875,6 +1532,8 @@ class MototaxistaController extends Controller
                     ->asignarSolicitudMasCercanaAlConductor(
                         $mototaxista
                     );
+
+            $this->notificarAsignacionAutomatica($asignada);
         }
 
         return response()->json([
@@ -934,6 +1593,8 @@ class MototaxistaController extends Controller
                     ->asignarSolicitudMasCercanaAlConductor(
                         $mototaxista
                     );
+
+            $this->notificarAsignacionAutomatica($asignada);
         }
 
         return response()->json([
@@ -962,10 +1623,17 @@ class MototaxistaController extends Controller
                 $id
             );
 
+        $mototaxista->loadMissing('usuarioConductor');
+
         if (
-            $mototaxista->estado !== 'Activo'
+            ! $mototaxista->habilitadoSindicalmente()
+            || $mototaxista->usuarioConductor === null
             || !(bool) $mototaxista->disponible
         ) {
+            if ((bool) $mototaxista->disponible) {
+                $mototaxista->disponible = false;
+                $mototaxista->save();
+            }
             return response()->json(
                 [],
                 200
@@ -999,6 +1667,62 @@ class MototaxistaController extends Controller
             Carbon::now('UTC')
                 ->format('Y-m-d H:i:s');
 
+        /*
+         * Este mismo endpoint controla el turno individual de 30 segundos.
+         * Así la reasignación no depende de que el pasajero mantenga abierta
+         * su pantalla o haga polling en ese momento.
+         */
+        $solicitudAsignada =
+            Solicitud::query()
+                ->where(
+                    'mototaxista_id',
+                    $mototaxista->id
+                )
+                ->whereIn(
+                    'estado',
+                    [
+                        'Pendiente',
+                        'Buscando conductor',
+                    ]
+                )
+                ->where(
+                    function (
+                        $query
+                    ) use ($ahoraUtc) {
+                        $query
+                            ->whereNull(
+                                'expira_en'
+                            )
+                            ->orWhere(
+                                'expira_en',
+                                '>',
+                                $ahoraUtc
+                            );
+                    }
+                )
+                ->orderByDesc('id')
+                ->first();
+
+        if ($solicitudAsignada) {
+            $resultadoAsignacion = $this->asignacionService
+                ->revisarAsignacionPendiente(
+                    (int) $solicitudAsignada->id
+                );
+
+            if (
+                ($resultadoAsignacion['cambio'] ?? false)
+                && ($resultadoAsignacion['conductor'] ?? null) !== null
+            ) {
+                $reasignada = Solicitud::query()
+                    ->find($solicitudAsignada->id);
+
+                $this->notificarAsignacionAutomatica(
+                    $reasignada,
+                    'conductor_reasignado'
+                );
+            }
+        }
+
         $existeAsignada =
             Solicitud::query()
                 ->where(
@@ -1030,10 +1754,12 @@ class MototaxistaController extends Controller
                 ->exists();
 
         if (! $existeAsignada) {
-            $this->asignacionService
+            $asignada = $this->asignacionService
                 ->asignarSolicitudMasCercanaAlConductor(
                     $mototaxista
                 );
+
+            $this->notificarAsignacionAutomatica($asignada);
         }
 
         $solicitudes =
@@ -1099,6 +1825,29 @@ class MototaxistaController extends Controller
                     'distancia_recogida_km',
                     $distancia
                 );
+
+                $tiempoRespuesta = $this->asignacionService
+                    ->obtenerTiempoRespuestaAsignacion(
+                        (int) $solicitud->id,
+                        (int) $mototaxista->id
+                    );
+
+                $solicitud->setAttribute(
+                    'respuesta_asignada_en',
+                    $tiempoRespuesta['asignado_en'] ?? null
+                );
+                $solicitud->setAttribute(
+                    'respuesta_expira_en',
+                    $tiempoRespuesta['expira_en'] ?? null
+                );
+                $solicitud->setAttribute(
+                    'segundos_respuesta_total',
+                    $tiempoRespuesta['segundos_totales'] ?? 30
+                );
+                $solicitud->setAttribute(
+                    'segundos_respuesta_restantes',
+                    $tiempoRespuesta['segundos_restantes'] ?? 0
+                );
             }
         );
 
@@ -1145,6 +1894,51 @@ class MototaxistaController extends Controller
         );
     }
 
+
+    private function notificarAsignacionAutomatica(
+        ?Solicitud $solicitud,
+        string $tipoEvento = 'conductor_asignado'
+    ): void {
+        if (! $solicitud) {
+            return;
+        }
+
+        $solicitud->load([
+            'pasajero.persona',
+            'mototaxista.persona.imagenes',
+            'mototaxista.sindicato',
+        ]);
+
+        if ($solicitud->mototaxista) {
+            $this->adjuntarMetadatosOperativos(
+                collect([$solicitud->mototaxista])
+            );
+        }
+
+        broadcast(
+            new SolicitudActualizada(
+                $solicitud,
+                $tipoEvento
+            )
+        )->toOthers();
+
+        $userId = User::query()
+            ->where('mototaxista_id', $solicitud->mototaxista_id)
+            ->where('role', 'conductor')
+            ->value('id');
+
+        $this->pushService->sendToUser(
+            $userId ? (int) $userId : null,
+            'Nueva solicitud de viaje',
+            'Tienes 30 segundos para aceptar la solicitud #' . $solicitud->id . '.',
+            [
+                'tipo' => $tipoEvento,
+                'solicitud_id' => $solicitud->id,
+                'route' => '/conductor',
+            ]
+        );
+    }
+
     /*
     |--------------------------------------------------------------------------
     | FUNCIONES INTERNAS
@@ -1154,12 +1948,71 @@ class MototaxistaController extends Controller
     private function cargarDetalle(
         Mototaxista $mototaxista
     ): Mototaxista {
-        return $mototaxista->load([
+        $mototaxista->load([
             'persona.imagenes',
             'sindicato.federacionRelacion',
-            'motocicletas',
+            'motocicletas.imagenes',
             'usuarioConductor',
         ]);
+
+        $this->adjuntarMetadatosOperativos(collect([$mototaxista]));
+
+        return $mototaxista;
+    }
+
+    private function adjuntarMetadatosOperativos($mototaxistas): void
+    {
+        $ids = collect($mototaxistas)
+            ->pluck('id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $reputacion = Solicitud::query()
+            ->selectRaw(
+                'mototaxista_id, COUNT(calificacion) as total_calificaciones, AVG(calificacion) as promedio_calificacion'
+            )
+            ->whereIn('mototaxista_id', $ids)
+            ->where('estado', 'Finalizado')
+            ->whereNotNull('calificacion')
+            ->groupBy('mototaxista_id')
+            ->get()
+            ->keyBy('mototaxista_id');
+
+        foreach ($mototaxistas as $mototaxista) {
+            $stats = $reputacion->get($mototaxista->id);
+
+            $mototaxista->setAttribute(
+                'promedio_calificacion',
+                round((float) ($stats?->promedio_calificacion ?? 0), 2)
+            );
+            $mototaxista->setAttribute(
+                'total_calificaciones',
+                (int) ($stats?->total_calificaciones ?? 0)
+            );
+            $motivoInhabilitacion = $mototaxista->motivoInhabilitacionSindical();
+
+            if ($mototaxista->usuarioConductor === null) {
+                $motivoCuenta = 'sin cuenta MOTRIX de conductor';
+                $motivoInhabilitacion = $motivoInhabilitacion
+                    ? $motivoInhabilitacion . '; ' . $motivoCuenta
+                    : $motivoCuenta;
+            }
+
+            $mototaxista->setAttribute(
+                'motivo_inhabilitacion',
+                $motivoInhabilitacion
+            );
+            $mototaxista->setAttribute(
+                'habilitado_para_operar',
+                $mototaxista->habilitadoSindicalmente()
+                    && $mototaxista->usuarioConductor !== null
+            );
+        }
     }
 
     private function resolverMototaxista(
@@ -1212,7 +2065,10 @@ class MototaxistaController extends Controller
         }
 
         if (
-            $rol === 'admin_general'
+            in_array($rol, [
+                'admin_general',
+                'admin_registro',
+            ], true)
             && $id !== null
         ) {
             return Mototaxista::findOrFail(
@@ -1252,7 +2108,10 @@ class MototaxistaController extends Controller
             $request
         );
 
-        if ($rol === 'admin_general') {
+        if (in_array($rol, [
+            'admin_general',
+            'admin_registro',
+        ], true)) {
             return Mototaxista::findOrFail(
                 $id
             );

@@ -100,6 +100,8 @@
               color="green-1"
               text-color="green-9"
               class="profile-avatar shadow-2"
+              :class="{ 'cursor-pointer': Boolean(fotoUrl) }"
+              @click="abrirVisorFoto"
             >
               <img
                 v-if="fotoUrl"
@@ -112,6 +114,22 @@
 
             <div class="text-h5 text-weight-bold text-grey-9 q-mt-md">
               {{ mototaxista.nombre || 'Mototaxista MOTRIX' }}
+            </div>
+
+            <div class="row items-center justify-center q-gutter-xs q-mt-xs">
+              <q-rating
+                v-if="totalCalificaciones > 0"
+                :model-value="promedioCalificacion"
+                readonly
+                size="21px"
+                color="amber-7"
+                icon="star_border"
+                icon-selected="star"
+              />
+              <span v-if="totalCalificaciones > 0" class="text-caption text-weight-bold">
+                {{ promedioCalificacion.toFixed(1) }} ({{ totalCalificaciones }})
+              </span>
+              <span v-else class="text-caption text-grey-6">Sin calificaciones</span>
             </div>
 
             <q-chip
@@ -295,6 +313,12 @@
         </q-card-section>
       </q-card>
     </main>
+
+    <PhotoViewerDialog
+      v-model="visorFoto"
+      :src="fotoUrl"
+      :title="mototaxista.nombre || 'Mototaxista MOTRIX'"
+    />
   </div>
 </template>
 
@@ -303,6 +327,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from 'src/boot/axios.js'
 import { API_ORIGIN } from 'src/config/runtime.js'
+import PhotoViewerDialog from 'src/components/PhotoViewerDialog.vue'
 
 const route = useRoute()
 
@@ -310,6 +335,7 @@ const loading = ref(true)
 const error = ref('')
 const datos = ref(null)
 const fotoFallida = ref(false)
+const visorFoto = ref(false)
 
 const mototaxista = computed(() => datos.value?.mototaxista || {})
 const motocicletas = computed(() => (
@@ -317,6 +343,9 @@ const motocicletas = computed(() => (
     ? datos.value.motocicletas
     : []
 ))
+
+const promedioCalificacion = computed(() => Number(mototaxista.value?.promedio_calificacion || 0))
+const totalCalificaciones = computed(() => Number(mototaxista.value?.total_calificaciones || 0))
 
 const estadoColor = computed(() => (
   mototaxista.value?.estado === 'Activo'
@@ -337,7 +366,11 @@ const mensajeEstado = computed(() => {
     return 'El registro existe, pero todavía no tiene una cuenta de conductor habilitada.'
   }
 
-  return 'El registro fue encontrado en MOTRIX.'
+  if (datos.value?.motivo_inhabilitacion) {
+    return `No habilitado para operar: ${datos.value.motivo_inhabilitacion}.`
+  }
+
+  return 'El registro fue encontrado en MOTRIX, pero no está habilitado para operar.'
 })
 
 function apiOrigen() {
@@ -358,6 +391,10 @@ const fotoUrl = computed(() => {
 
   return `${apiOrigen()}/storage/${ruta.replace(/^\/+/, '')}`
 })
+
+function abrirVisorFoto() {
+  if (fotoUrl.value) visorFoto.value = true
+}
 
 async function verificar() {
   loading.value = true
