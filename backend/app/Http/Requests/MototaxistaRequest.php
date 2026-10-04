@@ -221,6 +221,19 @@ class MototaxistaRequest extends FormRequest
                         }
                     }
 
+                    if (strtolower(trim((string) $usuario?->role)) === 'representante_federacion') {
+                        $federacionId = (int) $usuario?->federacion_id;
+                        $sindicatos = \App\Models\Sindicato::query()->where('id_federacion', $federacionId)->pluck('id');
+                        $fuera = $personaSeleccionada->sindicato_registro_id
+                            && ! $sindicatos->contains((int) $personaSeleccionada->sindicato_registro_id);
+                        $otro = Mototaxista::query()->where('id_persona', (int) $value)
+                            ->whereNotIn('id_sindicato', $sindicatos)->exists();
+                        if ($federacionId <= 0 || $fuera || $otro) {
+                            $fail('La persona está vinculada a otra federación.');
+                            return;
+                        }
+                    }
+
                     /*
                      * Una misma persona puede conservar afiliaciones
                      * históricas, pero solo una puede estar Activa.
@@ -263,6 +276,14 @@ class MototaxistaRequest extends FormRequest
                 'required',
                 'integer',
                 'exists:sindicatos,id',
+                function ($attribute, $value, $fail) {
+                    if (strtolower(trim((string) $this->user()?->role)) !== 'representante_federacion') return;
+                    $federacionId = (int) $this->user()?->federacion_id;
+                    if ($federacionId <= 0 || ! \App\Models\Sindicato::query()
+                        ->whereKey((int) $value)->where('id_federacion', $federacionId)->exists()) {
+                        $fail('Selecciona un sindicato de tu federación.');
+                    }
+                },
             ],
         ];
     }

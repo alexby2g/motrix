@@ -134,7 +134,11 @@ Broadcast::routes([
 Route::middleware([
     'auth:sanctum',
     \App\Http\Middleware\EnsureMotrixLegalAccepted::class,
+    \App\Http\Middleware\FederationBoundary::class,
 ])->group(function () {
+
+    Route::get('/documentos', [\App\Http\Controllers\DocumentoController::class, 'index']);
+    Route::get('/documentos/{tipo}/{formato}', [\App\Http\Controllers\DocumentoController::class, 'descargar'])->middleware('throttle:10,1');
 
     /*
     |--------------------------------------------------------------------------
@@ -146,6 +150,17 @@ Route::middleware([
         '/auth/me',
         [AuthController::class, 'me']
     );
+
+    Route::post(
+        '/perfil/foto',
+        [
+            ImagenController::class,
+            'guardarFotoPerfilPropia',
+        ]
+    )->middleware([
+        'role:conductor,pasajero',
+        'throttle:10,1',
+    ]);
 
     Route::post(
         '/auth/logout',
@@ -442,7 +457,7 @@ Route::middleware([
             'opcionesMototaxista',
         ]
     )->middleware(
-        'role:admin_general,admin_registro,secretario'
+        'role:admin_general,admin_registro,secretario,representante_federacion'
     );
 
     Route::get(
@@ -456,7 +471,7 @@ Route::middleware([
     );
 
     Route::middleware(
-        'role:admin_general,admin_registro,secretario'
+        'role:admin_general,admin_registro,secretario,representante_federacion'
     )->group(function () {
         Route::get(
             '/personas',
@@ -488,7 +503,7 @@ Route::middleware([
      * admin_servicios no puede crear, editar ni eliminar personas.
      */
     Route::middleware(
-        'role:admin_general,admin_registro,secretario'
+        'role:admin_general,admin_registro,secretario,representante_federacion'
     )->group(function () {
         Route::post(
             '/personas',
@@ -560,7 +575,7 @@ Route::middleware([
     */
 
     Route::middleware(
-        'role:admin_general,admin_registro,secretario,admin_servicios'
+        'role:admin_general,admin_registro,secretario,admin_servicios,representante_federacion'
     )->group(function () {
         Route::get(
             '/mototaxistas',
@@ -571,6 +586,16 @@ Route::middleware([
         );
     });
 
+        Route::get(
+    '/mototaxistas/{id}',
+    [
+        MototaxistaController::class,
+        'show',
+    ]
+)->middleware(
+    'role:admin_general,admin_registro,secretario,admin_servicios,representante_federacion'
+);
+
     /*
     |--------------------------------------------------------------------------
     | MÓDULO SINDICAL
@@ -579,7 +604,7 @@ Route::middleware([
     */
 
     Route::middleware(
-        'role:admin_general,admin_registro,secretario'
+        'role:admin_general,admin_registro,secretario,representante_federacion'
     )->group(function () {
         Route::post(
             '/mototaxistas',
@@ -615,13 +640,7 @@ Route::middleware([
             ]
         );
 
-        Route::get(
-            '/mototaxistas/{id}',
-            [
-                MototaxistaController::class,
-                'show',
-            ]
-        );
+
 
         Route::put(
             '/mototaxistas/{id}',

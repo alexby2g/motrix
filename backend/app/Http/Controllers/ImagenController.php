@@ -199,6 +199,105 @@ class ImagenController extends Controller
     }
 
 
+    public function guardarFotoPerfilPropia(
+        Request $request
+    ) {
+        $request->validate([
+            'imagen' => [
+                'required',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:4096',
+            ],
+        ]);
+
+        $persona =
+            $this->resolverPersonaPropia(
+                $request
+            );
+
+        $subida = $this->subirImagenCloudinary(
+            $request->file('imagen'),
+            'motrix/perfiles'
+        );
+
+        $rutaNueva = $subida['ruta'];
+        $imagenAnterior =
+            $persona->imagenes()
+                ->orderByDesc('id')
+                ->first();
+        $rutaAnterior =
+            $imagenAnterior?->ruta;
+
+        try {
+            $imagen = DB::transaction(
+                function () use (
+                    $request,
+                    $persona,
+                    $imagenAnterior,
+                    $rutaNueva
+                ) {
+                    if ($imagenAnterior) {
+                        $imagenAnterior->update([
+                            'ruta' => $rutaNueva,
+                            'tipo' => $request
+                                ->file('imagen')
+                                ->getClientOriginalExtension(),
+                        ]);
+
+                        return $imagenAnterior
+                            ->fresh();
+                    }
+
+                    return ImagenPersona::create([
+                        'ruta' => $rutaNueva,
+                        'tipo' => $request
+                            ->file('imagen')
+                            ->getClientOriginalExtension(),
+                        'id_persona' => $persona->id,
+                    ]);
+                }
+            );
+        } catch (\Throwable $error) {
+            try {
+                $this->eliminarArchivoImagen(
+                    $rutaNueva
+                );
+            } catch (\Throwable) {
+                // La excepción original conserva prioridad.
+            }
+
+            throw $error;
+        }
+
+        if (
+            $rutaAnterior
+            && $rutaAnterior !== $rutaNueva
+        ) {
+            try {
+                $this->eliminarArchivoImagen(
+                    $rutaAnterior
+                );
+            } catch (\Throwable $error) {
+                Log::warning(
+                    'No se pudo eliminar la foto de perfil anterior.',
+                    [
+                        'persona_id' => $persona->id,
+                        'error' => $error->getMessage(),
+                    ]
+                );
+            }
+        }
+
+        return response()->json([
+            'message' =>
+                'Foto de perfil actualizada correctamente.',
+            'foto_ruta' => $rutaNueva,
+            'imagen' => $imagen,
+        ], 200);
+    }
+
+
     public function guardarQrPagoConductor(
         Request $request
     ) {
@@ -601,6 +700,72 @@ class ImagenController extends Controller
             '/',
             $publicIdSegmentos
         );
+    }
+
+
+    private function resolverPersonaPropia(
+        Request $request
+    ): Persona {
+        $usuario = $request->user();
+        $rol = $this->rol($request);
+
+        if (! in_array(
+            $rol,
+            ['conductor', 'pasajero'],
+            true
+        )) {
+            abort(
+                403,
+                'La foto de perfil solo puede ser actualizada por el pasajero o conductor propietario de la cuenta.'
+            );
+        }
+
+        $personaId = (int) (
+            $usuario?->persona_id
+            ?? 0
+        );
+
+        if ($personaId > 0) {
+            return Persona::findOrFail(
+                $personaId
+            );
+        }
+
+        if ($rol === 'conductor') {
+            $mototaxistaId = (int) (
+                $usuario?->mototaxista_id
+                ?? 0
+            );
+
+            $mototaxista = Mototaxista::query()
+                ->with('persona')
+                ->findOrFail($mototaxistaId);
+
+            abort_unless(
+                $mototaxista->persona,
+                409,
+                'El conductor no tiene una persona vinculada.'
+            );
+
+            return $mototaxista->persona;
+        }
+
+        $pasajeroId = (int) (
+            $usuario?->pasajero_id
+            ?? 0
+        );
+
+        $pasajero = \App\Models\Pasajero::query()
+            ->with('persona')
+            ->findOrFail($pasajeroId);
+
+        abort_unless(
+            $pasajero->persona,
+            409,
+            'El pasajero no tiene una persona vinculada.'
+        );
+
+        return $pasajero->persona;
     }
 
 

@@ -31,6 +31,12 @@ class SindicatoController extends Controller
             );
         }
 
+        if ($this->rol($request) === 'representante_federacion') {
+            $federacionId = (int) $request->user()?->federacion_id;
+            abort_if($federacionId <= 0, 403, 'La cuenta no tiene federación asignada.');
+            $consulta->where('id_federacion', $federacionId);
+        }
+
         $sindicatos = $consulta
             ->get()
             ->map(
@@ -394,6 +400,12 @@ class SindicatoController extends Controller
         Request $request,
         int $id
     ): void {
+        if ($this->rol($request) === 'representante_federacion') {
+            $federacionId = (int) $request->user()?->federacion_id;
+            abort_if($federacionId <= 0, 403, 'La cuenta no tiene federación asignada.');
+            Sindicato::query()->whereKey($id)->where('id_federacion', $federacionId)->firstOrFail();
+            return;
+        }
         if (
             $this->rol($request)
             !== 'secretario'

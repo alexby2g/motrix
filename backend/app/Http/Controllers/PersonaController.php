@@ -179,6 +179,7 @@ class PersonaController extends Controller
             'admin_general',
             'admin_registro',
             'secretario',
+            'representante_federacion',
         ], true)) {
             abort(
                 403,
@@ -259,6 +260,13 @@ class PersonaController extends Controller
                 ->whereDoesntHave(
                     'mototaxista'
                 );
+        }
+
+        if ($rol === 'representante_federacion') {
+            $federacionId = (int) $request->user()?->federacion_id;
+            abort_if($federacionId <= 0, 403, 'La cuenta no tiene federación asignada.');
+            $ids = \App\Models\Sindicato::query()->where('id_federacion', $federacionId)->pluck('id');
+            $consulta->where(fn ($q) => $q->whereNull('sindicato_registro_id')->orWhereIn('sindicato_registro_id', $ids));
         }
 
         foreach (
@@ -418,6 +426,17 @@ class PersonaController extends Controller
                 );
         }
 
+        if ($this->rol($request) === 'representante_federacion') {
+            $federacionId = (int) $request->user()?->federacion_id;
+            $sindicatoId = (int) $request->input('sindicato_registro_id', 0);
+            abort_if($federacionId <= 0, 403, 'La cuenta no tiene federación asignada.');
+            if ($sindicatoId > 0) {
+                \App\Models\Sindicato::query()->whereKey($sindicatoId)
+                    ->where('id_federacion', $federacionId)->firstOrFail();
+                $datos['sindicato_registro_id'] = $sindicatoId;
+            }
+        }
+
         $persona = Persona::create(
             $datos
         );
@@ -446,6 +465,27 @@ class PersonaController extends Controller
         }
 
         $datos = $request->validated();
+
+        /*
+         * El CI es opcional para una persona común o pasajero,
+         * pero una persona que ya está afiliada como mototaxista
+         * debe conservar un CI válido mientras mantenga esa afiliación.
+         */
+        if (
+            array_key_exists('ci', $datos)
+            && $datos['ci'] === null
+            && $persona->mototaxista()->exists()
+        ) {
+            return response()->json([
+                'mensaje' =>
+                    'La cédula de identidad es obligatoria para una persona afiliada como mototaxista.',
+                'errors' => [
+                    'ci' => [
+                        'La cédula de identidad es obligatoria para una persona afiliada como mototaxista.',
+                    ],
+                ],
+            ], 422);
+        }
 
         if (
             $this->rol($request)
@@ -557,6 +597,14 @@ class PersonaController extends Controller
             'admin_registro',
         ], true)) {
             return $consulta;
+        }
+
+        if ($rol === 'representante_federacion') {
+            $federacionId = (int) $request->user()?->federacion_id;
+            abort_if($federacionId <= 0, 403, 'La cuenta no tiene federación asignada.');
+            $ids = \App\Models\Sindicato::query()->where('id_federacion', $federacionId)->pluck('id');
+            return $consulta->where(fn ($q) => $q->whereIn('sindicato_registro_id', $ids)
+                ->orWhereHas('mototaxista', fn ($m) => $m->whereIn('id_sindicato', $ids)));
         }
 
         if ($rol === 'secretario') {

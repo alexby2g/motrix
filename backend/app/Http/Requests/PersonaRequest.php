@@ -12,6 +12,16 @@ class PersonaRequest extends FormRequest
         return true;
     }
 
+
+    protected function prepareForValidation(): void
+    {
+        $ci = trim((string) $this->input('ci', ''));
+
+        $this->merge([
+            'ci' => $ci !== '' ? $ci : null,
+        ]);
+    }
+
     public function rules(): array
     {
         $id = $this->route('id');
@@ -59,7 +69,6 @@ class PersonaRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'ci.required' => 'El CI es obligatorio.',
             'ci.unique' => 'El CI ya se encuentra registrado.',
             'ci.max' => 'El CI no debe superar los 20 caracteres.',
 

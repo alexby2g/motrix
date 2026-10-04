@@ -108,6 +108,33 @@ export function fechaHoraDDMMYYYY(valor, fallback = '—') {
   }).format(fecha)
 }
 
+
+export function fechaHoraUtcBolivia(valor, fallback = '—') {
+  if (!valor) return fallback
+
+  const limpio = texto(valor)
+  let normalizado = limpio.replace(' ', 'T')
+
+  // ultima_conexion se guarda en UTC. Cuando Laravel/MySQL la entrega
+  // sin sufijo de zona, la interpretamos explícitamente como UTC.
+  if (!/(Z|[+-]\d{2}:?\d{2})$/i.test(normalizado)) {
+    normalizado += 'Z'
+  }
+
+  const fecha = new Date(normalizado)
+  if (Number.isNaN(fecha.getTime())) return limpio || fallback
+
+  return new Intl.DateTimeFormat('es-BO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'America/La_Paz'
+  }).format(fecha)
+}
+
 export function periodoMMYYYY(valor, fallback = '—') {
   const limpio = texto(valor)
   const match = limpio.match(/^(\d{4})-(\d{2})$/)

@@ -708,7 +708,6 @@ import Pusher from 'pusher-js'
 
 import { api } from '../boot/axios.js'
 import { echoOptions } from '../config/runtime.js'
-import { inicializarPushMotrix, desregistrarPushMotrix } from '../services/pushNotifications.js'
 window.Pusher = Pusher
 
 const $q = useQuasar()
@@ -1180,7 +1179,7 @@ const menuPasajero = [
   }
 ]
 
-const seccionesMenu = computed(() => {
+const seccionesBase = computed(() => {
   if (esAdminGeneral.value) {
     return menuAdministradorGeneral
   }
@@ -1205,9 +1204,29 @@ const seccionesMenu = computed(() => {
     return menuPasajero
   }
 
+  if (rol.value === 'representante_federacion') {
+    return [{ titulo: 'Mi federación', opciones: [{ etiqueta: 'Mototaxistas', icono: 'two_wheeler', ruta: '/mototaxistas' }, { etiqueta: 'Sindicatos', icono: 'business', ruta: '/sindicatos' }] }]
+  }
   return []
 })
+const seccionesMenu = computed(() => {
+  const secciones = [...seccionesBase.value]
 
+  if (esSecretario.value || rol.value === 'representante_federacion') {
+    secciones.push({
+      titulo: 'Documentos',
+      opciones: [
+        {
+          etiqueta: 'Documentos y reportes',
+          icono: 'description',
+          ruta: '/documentos'
+        }
+      ]
+    })
+  }
+
+  return secciones
+})
 
 function obtenerNombrePasajero(solicitud) {
   return (
@@ -2279,7 +2298,6 @@ async function cerrarSesion() {
   cerrandoSesion.value = true
 
   try {
-    await desregistrarPushMotrix()
     await api.post('/auth/logout')
   } catch (error) {
     const estado = error?.response?.status
@@ -2304,10 +2322,6 @@ async function cerrarSesion() {
 }
 
 onMounted(async () => {
-  inicializarPushMotrix(router).catch(function (error) {
-    console.warn('No se pudo iniciar push MOTRIX sin bloquear la app:', error)
-  })
-
   if (!puedeGestionarIncidencias.value) return
 
   document.addEventListener(

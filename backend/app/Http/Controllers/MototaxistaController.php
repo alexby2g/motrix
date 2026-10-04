@@ -61,6 +61,20 @@ class MototaxistaController extends Controller
                 $this->sindicatoUsuario($request)
             );
         }
+        if (
+    $this->rolUsuario($request)
+    === 'representante_federacion'
+) {
+    $consulta->whereHas(
+        'sindicato',
+        function ($sindicato) use ($request) {
+            $sindicato->where(
+                'id_federacion',
+                $this->federacionUsuario($request)
+            );
+        }
+    );
+}
 
         $baseVisible = clone $consulta;
 
@@ -2068,8 +2082,10 @@ class MototaxistaController extends Controller
             in_array($rol, [
                 'admin_general',
                 'admin_registro',
+                'admin_servicios',
             ], true)
             && $id !== null
+            && ($rol !== 'admin_servicios' || $request->isMethod('GET'))
         ) {
             return Mototaxista::findOrFail(
                 (int) $id
@@ -2091,6 +2107,13 @@ class MototaxistaController extends Controller
                         $request
                     )
                 )
+                ->firstOrFail();
+        }
+
+        if ($rol === 'representante_federacion' && $id !== null && $request->isMethod('GET')) {
+            $federacionId = $this->federacionUsuario($request);
+            return Mototaxista::query()->whereKey((int) $id)
+                ->whereHas('sindicato', fn ($q) => $q->where('id_federacion', $federacionId))
                 ->firstOrFail();
         }
 
@@ -2167,6 +2190,24 @@ class MototaxistaController extends Controller
 
         return $sindicatoId;
     }
+    private function federacionUsuario(
+    Request $request
+): int {
+    $federacionId = (int) (
+        $request->user()
+            ?->federacion_id
+            ?? 0
+    );
+
+    if ($federacionId <= 0) {
+        abort(
+            403,
+            'La cuenta de representante no está vinculada a una federación.'
+        );
+    }
+
+    return $federacionId;
+}
 
     private function calcularDistanciaKm(
         float $latitudOrigen,

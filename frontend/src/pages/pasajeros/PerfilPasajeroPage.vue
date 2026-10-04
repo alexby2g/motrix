@@ -83,6 +83,29 @@
                 <span v-else>{{ iniciales }}</span>
               </q-avatar>
 
+              <input
+                ref="fotoPerfilInput"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                class="profile-file-input"
+                @change="seleccionarFotoPerfil"
+              >
+
+              <q-btn
+                outline
+                no-caps
+                color="green-8"
+                icon="photo_camera"
+                :label="fotoPerfilUrl ? 'Cambiar foto' : 'Agregar foto'"
+                class="q-mt-md"
+                :loading="subiendoFotoPerfil"
+                @click="abrirSelectorFotoPerfil"
+              />
+
+              <div class="text-caption text-grey-6 q-mt-xs text-center">
+                JPG, PNG o WEBP · máximo 4 MB
+              </div>
+
               <div class="text-center">
                 <div class="text-h5 text-weight-bold text-grey-9 q-mt-md">
                   {{ nombreUsuario }}
@@ -342,6 +365,8 @@ const route = useRoute()
 const cargando = ref(false)
 const visorFoto = ref(false)
 const fotoPerfilError = ref(false)
+const fotoPerfilInput = ref(null)
+const subiendoFotoPerfil = ref(false)
 const dialogEliminarCuenta = ref(false)
 const eliminandoCuenta = ref(false)
 const passwordActual = ref('')
@@ -387,6 +412,88 @@ const fotoPerfilUrl = computed(() => {
 
 function abrirVisorFoto() {
   if (fotoPerfilUrl.value) visorFoto.value = true
+}
+
+function abrirSelectorFotoPerfil() {
+  if (subiendoFotoPerfil.value) return
+  fotoPerfilInput.value?.click()
+}
+
+async function seleccionarFotoPerfil(event) {
+  const input = event?.target
+  const archivo = input?.files?.[0]
+
+  if (!archivo) return
+
+  const tiposPermitidos = [
+    'image/jpeg',
+    'image/png',
+    'image/webp'
+  ]
+
+  if (!tiposPermitidos.includes(archivo.type)) {
+    $q.notify({
+      type: 'warning',
+      position: 'top',
+      message: 'Selecciona una imagen JPG, PNG o WEBP.'
+    })
+    input.value = ''
+    return
+  }
+
+  if (archivo.size > 4 * 1024 * 1024) {
+    $q.notify({
+      type: 'warning',
+      position: 'top',
+      message: 'La foto no puede superar los 4 MB.'
+    })
+    input.value = ''
+    return
+  }
+
+  subiendoFotoPerfil.value = true
+
+  try {
+    const formData = new FormData()
+    formData.append('imagen', archivo)
+
+    const respuesta = await api.post(
+      '/perfil/foto',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    )
+
+    fotoPerfilError.value = false
+
+    $q.notify({
+      type: 'positive',
+      position: 'top',
+      icon: 'check_circle',
+      message:
+        respuesta?.data?.message
+        || 'Foto de perfil actualizada.'
+    })
+
+    await cargarPerfil()
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      position: 'top',
+      message:
+        error?.response?.data?.message
+        || Object.values(
+          error?.response?.data?.errors || {}
+        ).flat().find(Boolean)
+        || 'No se pudo actualizar la foto de perfil.'
+    })
+  } finally {
+    subiendoFotoPerfil.value = false
+    if (input) input.value = ''
+  }
 }
 
 const iniciales = computed(() => {
@@ -554,6 +661,10 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.profile-file-input {
+  display: none;
 }
 
 .profile-avatar {

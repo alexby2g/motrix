@@ -208,7 +208,7 @@
                   <div class="operation-box">
                     <div class="text-caption text-grey-6">Última conexión</div>
                     <div class="text-weight-bold">
-                      {{ formatearFechaHora(mototaxista.ultima_conexion) }}
+                      {{ formatearUltimaConexion(mototaxista.ultima_conexion) }}
                     </div>
                   </div>
                 </div>
@@ -388,7 +388,7 @@
 </template>
 
 <script setup>
-import { fechaDDMMYYYY, fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+import { fechaDDMMYYYY, fechaHoraUtcBolivia } from 'src/utils/motrixDate.js'
 
 import {
   computed,
@@ -730,8 +730,9 @@ function colorEstado(estado) {
   }
 }
 
-function formatearFechaHora(valor) {
-  return fechaHoraDDMMYYYY(valor)
+
+function formatearUltimaConexion(valorFecha) {
+  return fechaHoraUtcBolivia(valorFecha, 'Sin registro')
 }
 
 function volver() {

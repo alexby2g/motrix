@@ -117,7 +117,7 @@
               <div>
                 <div class="text-caption text-grey-6">Última conexión</div>
                 <div class="text-body2 text-weight-medium text-grey-9">
-                  {{ formatearFechaHora(mototaxista?.ultima_conexion) }}
+                  {{ formatearUltimaConexion(mototaxista?.ultima_conexion) }}
                 </div>
               </div>
             </div>
@@ -1352,7 +1352,7 @@
     </q-dialog>
 
     <!-- MODAL DE COBRO -->
-    <q-dialog v-model="dialogCobro" persistent position="bottom">
+    <q-dialog v-model="dialogCobro" persistent>
       <q-card class="q-pa-sm border-radius-lg cobro-dialog">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6 text-bold text-grey-9">Confirmar finalización</div>
@@ -1374,21 +1374,31 @@
         </q-card-section>
 
         <q-card-section class="q-py-md cobro-dialog-body">
-          <div class="column q-gutter-sm">
+          <q-banner rounded class="bg-grey-2 text-grey-8 q-mb-md cobro-ayuda">
+            <template #avatar>
+              <q-icon name="verified_user" color="green-8" />
+            </template>
+            Elige cómo pagó el pasajero. MOTRIX registra el método declarado;
+            no verifica automáticamente la transferencia bancaria.
+          </q-banner>
+
+          <div class="cobro-metodos-grid">
             <q-btn
+              unelevated
               color="green-7"
               icon="payments"
               label="Efectivo"
-              class="text-bold q-py-md text-subtitle1"
+              class="metodo-cobro-btn"
               :loading="procesandoCobro"
               @click="procesarFinalizacionConPago('Efectivo')"
             />
 
             <q-btn
+              unelevated
               color="indigo-7"
               icon="qr_code_2"
               label="Transferencia / QR"
-              class="text-bold q-py-md text-subtitle1"
+              class="metodo-cobro-btn"
               :disable="procesandoCobro"
               @click="activarPagoQr"
             />
@@ -1397,8 +1407,8 @@
               outline
               color="orange-9"
               icon="account_balance_wallet"
-              label="Pago mixto: efectivo + QR"
-              class="text-bold q-py-md text-subtitle1"
+              label="Mixto: efectivo + QR"
+              class="metodo-cobro-btn"
               :disable="procesandoCobro"
               @click="activarPagoMixto"
             />
@@ -1407,7 +1417,7 @@
           <q-slide-transition>
             <div
               v-if="pagoQrActivo"
-              class="q-mt-md q-pa-md bg-indigo-1 rounded-borders"
+              class="q-mt-md q-pa-md cobro-panel cobro-panel-qr"
             >
               <div class="text-subtitle2 text-weight-bold text-indigo-10 text-center">
                 QR de cobro del mototaxista
@@ -1470,7 +1480,7 @@
           <q-slide-transition>
             <div
               v-if="pagoMixtoActivo"
-              class="q-mt-md q-pa-md bg-orange-1 rounded-borders"
+              class="q-mt-md q-pa-md cobro-panel cobro-panel-mixto"
             >
               <div class="text-subtitle2 text-weight-bold text-orange-10 q-mb-sm">
                 Divide la tarifa entre efectivo y QR
@@ -1527,8 +1537,25 @@
                 </div>
               </div>
 
-              <div class="text-caption text-grey-7 q-mt-sm">
-                Total: {{ formatearMonto(montoTotalCobro) }}
+              <div class="row q-col-gutter-sm q-mt-sm">
+                <div class="col-4">
+                  <div class="cobro-resumen-box">
+                    <span>Efectivo</span>
+                    <strong>{{ formatearMonto(montoEfectivoMixto || 0) }}</strong>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="cobro-resumen-box">
+                    <span>Por QR</span>
+                    <strong>{{ formatearMonto(montoQrMixto) }}</strong>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="cobro-resumen-box total">
+                    <span>Total</span>
+                    <strong>{{ formatearMonto(montoTotalCobro) }}</strong>
+                  </div>
+                </div>
               </div>
 
               <q-btn
@@ -1559,7 +1586,7 @@
 </template>
 
 <script setup>
-import { fechaDDMMYYYY, fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+import { fechaDDMMYYYY, fechaHoraDDMMYYYY, fechaHoraUtcBolivia } from 'src/utils/motrixDate.js'
 
 import {
   computed,
@@ -2040,6 +2067,9 @@ const formatearFecha = (fecha) =>
 
 const formatearFechaHora = (fecha) =>
   fechaHoraDDMMYYYY(fecha, 'Sin registro')
+
+const formatearUltimaConexion = (fecha) =>
+  fechaHoraUtcBolivia(fecha, 'Sin registro')
 
 const getMetodoPagoIcono = (metodo) => {
   if (!metodo) return 'account_balance_wallet'
@@ -3260,7 +3290,7 @@ const iniciarSeguimientoGPS = () => {
       gpsEstado.value = 'activo'
       gpsMensaje.value = 'Ubicación activa'
 
-      if (Date.now() - ultimaUbicacionEnviada < 5000) return
+      if (Date.now() - ultimaUbicacionEnviada < 10000) return
 
       try {
         await enviarUbicacion(posicion)
@@ -4077,12 +4107,72 @@ onBeforeUnmount(() => {
 }
 
 .cobro-dialog {
-  width: 100%;
-  max-width: 460px;
-  max-height: calc(100vh - 24px);
+  width: min(94vw, 680px);
+  max-width: 680px;
+  max-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: 22px;
+}
+
+.cobro-ayuda {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.cobro-metodos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metodo-cobro-btn {
+  min-height: 62px;
+  padding: 10px 8px;
+  font-weight: 800;
+  border-radius: 14px;
+}
+
+.cobro-panel {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+}
+
+.cobro-panel-qr {
+  background: #eef0ff;
+}
+
+.cobro-panel-mixto {
+  background: #fff7e8;
+}
+
+.cobro-resumen-box {
+  display: flex;
+  min-height: 72px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 9px;
+  border: 1px solid #e2e5ea;
+  border-radius: 12px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.cobro-resumen-box span {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.cobro-resumen-box strong {
+  margin-top: 3px;
+  color: #263238;
+  font-size: 14px;
+}
+
+.cobro-resumen-box.total {
+  border-color: #f59e0b;
+  background: #fffaf0;
 }
 
 .cobro-dialog-body {
@@ -4110,13 +4200,21 @@ onBeforeUnmount(() => {
   .request-detail {
     min-height: 58px;
   }
+
+  .cobro-metodos-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metodo-cobro-btn {
+    min-height: 54px;
+  }
 }
 
 
 .cobro-qr-image {
   display: block;
-  width: min(100%, 320px);
-  max-height: 360px;
+  width: min(100%, 260px);
+  max-height: 290px;
   object-fit: contain;
   margin: 0 auto;
   padding: 10px;

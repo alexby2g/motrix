@@ -183,11 +183,12 @@
           class="persona-item"
           @click="abrirDetallePersona(persona)"
         >
-          <q-item-section avatar>
+          <q-item-section avatar class="persona-item__avatar-section">
             <q-avatar
-              size="52px"
+              size="62px"
               color="green-1"
               text-color="green-9"
+              class="persona-item__avatar"
             >
               <img
                 v-if="fotoPersona(persona)"
@@ -201,12 +202,12 @@
             </q-avatar>
           </q-item-section>
 
-          <q-item-section>
-            <q-item-label class="text-weight-bold text-grey-9">
+          <q-item-section class="persona-item__main">
+            <q-item-label class="persona-item__name text-weight-bold text-grey-9">
               {{ nombreCompleto(persona) }}
             </q-item-label>
 
-            <q-item-label caption>
+            <q-item-label caption class="persona-item__meta">
               <q-icon
                 name="fingerprint"
                 size="14px"
@@ -218,6 +219,7 @@
             <q-item-label
               v-if="persona.telefono"
               caption
+              class="persona-item__meta"
             >
               <q-icon
                 name="phone"
@@ -226,11 +228,20 @@
               />
               {{ persona.telefono }}
             </q-item-label>
+
+            <q-item-label caption class="persona-item__meta lt-sm">
+              <q-icon
+                name="home"
+                size="14px"
+                class="q-mr-xs"
+              />
+              {{ persona.direccion || 'Sin dirección' }}
+            </q-item-label>
           </q-item-section>
 
           <q-item-section
             side
-            class="gt-xs"
+            class="persona-item__address gt-xs"
           >
             <div class="text-caption text-grey-7 text-right">
               {{ persona.direccion || 'Sin dirección' }}
@@ -460,7 +471,7 @@
           ref="formRef"
           @submit.prevent="guardarPersona"
         >
-          <q-card-section class="q-pa-md q-pa-lg-md">
+          <q-card-section class="persona-dialog-body q-pa-md q-pa-lg-md">
             <div class="row q-col-gutter-md">
               <div class="col-12 col-sm-6">
                 <q-input
@@ -1012,7 +1023,7 @@ function payloadPersona() {
   return {
     nombre: form.value.nombre,
     apellidos: form.value.apellidos || null,
-    ci: form.value.ci,
+    ci: String(form.value.ci || '').trim() || null,
     telefono: form.value.telefono || null,
     direccion: form.value.direccion || null
   }
@@ -1320,9 +1331,40 @@ onMounted(
 }
 
 .persona-item {
-  min-height: 82px;
+  min-height: 104px;
+  padding: 14px 18px;
   transition:
     background-color 0.15s ease;
+}
+
+.persona-item__avatar-section {
+  min-width: 78px;
+  padding-right: 14px;
+}
+
+.persona-item__avatar {
+  font-size: 1.08rem;
+  box-shadow: 0 3px 12px rgba(46, 125, 50, 0.12);
+}
+
+.persona-item__main {
+  min-width: 0;
+  gap: 2px;
+}
+
+.persona-item__name {
+  font-size: 1.03rem;
+  line-height: 1.3;
+}
+
+.persona-item__meta {
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.persona-item__address {
+  max-width: 260px;
+  padding-left: 16px;
 }
 
 .persona-item:hover {
@@ -1337,9 +1379,27 @@ onMounted(
 }
 
 .persona-dialog {
-  width: 700px;
+  width: 780px;
   max-width: 94vw;
-  border-radius: 16px;
+  max-height: calc(100dvh - 24px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.persona-dialog > form {
+  min-height: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.persona-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .fotos-dialog {
@@ -1354,12 +1414,52 @@ onMounted(
 }
 
 @media (max-width: 599px) {
+  .persona-item {
+    min-height: 112px;
+    padding: 14px 10px 14px 12px;
+    align-items: flex-start;
+  }
+
+  .persona-item__avatar-section {
+    min-width: 66px;
+    padding-right: 10px;
+  }
+
+  .persona-item__avatar {
+    width: 56px !important;
+    height: 56px !important;
+    font-size: 1rem;
+  }
+
+  .persona-item__name {
+    font-size: 1rem;
+    white-space: normal;
+  }
+
+  .persona-item__meta {
+    font-size: 0.82rem;
+    white-space: normal;
+  }
+
+  .persona-item > .q-item__section--side {
+    padding-left: 4px;
+  }
+
   .detalle-persona-dialog,
   .persona-dialog,
   .fotos-dialog {
     width: 100vw;
     max-width: 100vw;
+    max-height: 100dvh;
     border-radius: 0;
+  }
+
+  .persona-dialog .q-card__actions {
+    gap: 8px;
+  }
+
+  .persona-dialog .q-card__actions .q-btn {
+    min-height: 44px;
   }
 }
 </style>

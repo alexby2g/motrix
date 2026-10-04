@@ -313,7 +313,10 @@
             label="Rol"
           />
 
-          <div v-if="!esCuentaOperativa && form.role === 'secretario'" class="row q-col-gutter-md">
+          <div
+            v-if="!esCuentaOperativa && ['secretario', 'representante_federacion'].includes(form.role)"
+            class="row q-col-gutter-md"
+          >
             <div class="col-12 col-sm-6">
               <q-select
                 v-model="form.federacion_id"
@@ -325,7 +328,10 @@
                 label="Federación"
               />
             </div>
-            <div class="col-12 col-sm-6">
+            <div
+              v-if="form.role === 'secretario'"
+              class="col-12 col-sm-6"
+            >
               <q-select
                 v-model="form.sindicato_id"
                 :options="opcionesSindicatosFiltrados"
@@ -374,7 +380,7 @@ const dialogoForm = ref(false)
 const editando = ref(null)
 const mostrarPassword = ref(false)
 
-const rolesAdministrativos = ['admin_general', 'admin_registro', 'admin_servicios', 'secretario']
+const rolesAdministrativos = ['admin_general', 'admin_registro', 'admin_servicios', 'representante_federacion', 'secretario']
 
 const form = reactive({
   persona_id: null,
@@ -390,6 +396,7 @@ const resumenRoles = [
   { role: 'admin_general', etiqueta: 'Admin. general', icono: 'admin_panel_settings', fondo: 'green-1', texto: 'green-9' },
   { role: 'admin_registro', etiqueta: 'Admin. registro', icono: 'how_to_reg', fondo: 'lime-1', texto: 'green-10' },
   { role: 'admin_servicios', etiqueta: 'Admin. servicios', icono: 'support_agent', fondo: 'blue-1', texto: 'blue-9' },
+  { role: 'representante_federacion', etiqueta: 'Representantes', icono: 'account_balance', fondo: 'orange-1', texto: 'orange-9' },
   { role: 'secretario', etiqueta: 'Secretarios', icono: 'edit_note', fondo: 'purple-1', texto: 'purple-9' },
   { role: 'conductor', etiqueta: 'Conductores', icono: 'two_wheeler', fondo: 'orange-1', texto: 'orange-9' },
   { role: 'pasajero', etiqueta: 'Pasajeros', icono: 'person_pin_circle', fondo: 'teal-1', texto: 'teal-9' }
@@ -399,6 +406,7 @@ const opcionesRolesAdministrativos = [
   { label: 'Administrador general', value: 'admin_general' },
   { label: 'Administrador de registro', value: 'admin_registro' },
   { label: 'Administrador de servicios', value: 'admin_servicios' },
+  { label: 'Representante de Federación', value: 'representante_federacion' },
   { label: 'Secretario de sindicato', value: 'secretario' }
 ]
 
@@ -423,7 +431,7 @@ const usuariosFiltrados = computed(() => {
 })
 
 watch(() => form.role, nuevoRol => {
-  if (nuevoRol !== 'secretario') {
+  if (!['secretario', 'representante_federacion'].includes(nuevoRol)) {
     form.federacion_id = null
     form.sindicato_id = null
   }
@@ -458,6 +466,7 @@ function etiquetaRol(role) {
     admin_general: 'Administrador general',
     admin_registro: 'Administrador de registro',
     admin_servicios: 'Administrador de servicios',
+    representante_federacion: 'Representante de Federación',
     secretario: 'Secretario',
     conductor: 'Conductor / mototaxista',
     pasajero: 'Pasajero / cliente'
@@ -469,6 +478,7 @@ function configRol(role) {
     admin_general: { fondo: 'green-1', texto: 'green-9', chip: 'green-8', icono: 'admin_panel_settings' },
     admin_registro: { fondo: 'lime-1', texto: 'green-10', chip: 'light-green-8', icono: 'how_to_reg' },
     admin_servicios: { fondo: 'blue-1', texto: 'blue-9', chip: 'blue-7', icono: 'support_agent' },
+    representante_federacion: { fondo: 'amber-1', texto: 'amber-9', chip: 'amber-8', icono: 'account_balance' },
     secretario: { fondo: 'purple-1', texto: 'purple-9', chip: 'purple-6', icono: 'edit_note' },
     conductor: { fondo: 'orange-1', texto: 'orange-9', chip: 'orange-8', icono: 'two_wheeler' },
     pasajero: { fondo: 'teal-1', texto: 'teal-9', chip: 'teal-7', icono: 'person_pin_circle' }
@@ -615,7 +625,7 @@ async function guardar() {
         nickname: form.nickname,
         email: form.email || null,
         role: form.role,
-        federacion_id: form.role === 'secretario' ? form.federacion_id : null,
+        federacion_id: ['secretario', 'representante_federacion'].includes(form.role) ? form.federacion_id : null,
         sindicato_id: form.role === 'secretario' ? form.sindicato_id : null
       }
       if (form.password) payload.password = form.password

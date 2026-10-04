@@ -90,6 +90,7 @@ class SolicitudController extends Controller
                 'mototaxista.persona',
                 'mototaxista.persona.imagenes',
                 'mototaxista.sindicato',
+                'mototaxista.motocicletas',
             ]);
 
         if (! empty($datos['id_pasajero'])) {
@@ -626,6 +627,7 @@ class SolicitudController extends Controller
                 'mototaxista.persona',
                 'mototaxista.persona.imagenes',
                 'mototaxista.sindicato',
+                'mototaxista.motocicletas',
             ]),
 
             'conductores' => $conductores,
@@ -770,6 +772,7 @@ class SolicitudController extends Controller
                     'mototaxista.persona',
                 'mototaxista.persona.imagenes',
                 'mototaxista.sindicato',
+                'mototaxista.motocicletas',
                 ]);
             }
         );
@@ -912,6 +915,7 @@ class SolicitudController extends Controller
                     'mototaxista.persona',
                 'mototaxista.persona.imagenes',
                 'mototaxista.sindicato',
+                'mototaxista.motocicletas',
                 ]),
             ], 409);
         }
@@ -942,6 +946,7 @@ class SolicitudController extends Controller
             'pasajero.persona',
             'mototaxista.persona.imagenes',
             'mototaxista.sindicato',
+            'mototaxista.motocicletas',
         ]);
 
         $this->adjuntarReputacionConductor($solicitud);
@@ -990,6 +995,7 @@ class SolicitudController extends Controller
                 'mototaxista.persona',
                 'mototaxista.persona.imagenes',
                 'mototaxista.sindicato',
+                'mototaxista.motocicletas',
             ])
             ->where('id_pasajero', $pasajeroId)
             ->orderByDesc('id')
@@ -1023,6 +1029,7 @@ class SolicitudController extends Controller
                 'mototaxista.persona',
                 'mototaxista.persona.imagenes',
                 'mototaxista.sindicato',
+                'mototaxista.motocicletas',
             ])
             ->where('id', $id)
             ->where('id_pasajero', $pasajeroId)
@@ -1086,6 +1093,7 @@ class SolicitudController extends Controller
                         'mototaxista.persona',
                         'mototaxista.persona.imagenes',
                         'mototaxista.sindicato',
+                'mototaxista.motocicletas',
                     ])
                     ->find($solicitudPendiente->id);
 
@@ -1120,6 +1128,7 @@ class SolicitudController extends Controller
                 'mototaxista.persona',
                 'mototaxista.persona.imagenes',
                 'mototaxista.sindicato',
+                'mototaxista.motocicletas',
             ])
             ->where('id_pasajero', $pasajeroId)
             ->whereIn('estado', [
@@ -1164,6 +1173,7 @@ class SolicitudController extends Controller
                 'mototaxista.persona',
                 'mototaxista.persona.imagenes',
                 'mototaxista.sindicato',
+                'mototaxista.motocicletas',
             ])
             ->where('id_pasajero', $pasajeroId)
             ->where('estado', 'Finalizado')
@@ -1313,6 +1323,7 @@ class SolicitudController extends Controller
                         'mototaxista.persona',
                 'mototaxista.persona.imagenes',
                 'mototaxista.sindicato',
+                'mototaxista.motocicletas',
                     ]),
 
                     'promedio_mototaxista' =>
@@ -1453,6 +1464,7 @@ class SolicitudController extends Controller
                     'mototaxista.persona',
                 'mototaxista.persona.imagenes',
                 'mototaxista.sindicato',
+                'mototaxista.motocicletas',
                 ]);
 
                 broadcast(
@@ -1647,6 +1659,7 @@ class SolicitudController extends Controller
                     'pasajero.persona',
                     'mototaxista.persona.imagenes',
                     'mototaxista.sindicato',
+                'mototaxista.motocicletas',
                 ]);
 
                 $this->adjuntarReputacionConductor($solicitud);
@@ -1740,6 +1753,7 @@ class SolicitudController extends Controller
                 'mototaxista.persona',
                 'mototaxista.persona.imagenes',
                 'mototaxista.sindicato',
+                'mototaxista.motocicletas',
             ])
             ->findOrFail($id);
 
@@ -2046,6 +2060,7 @@ class SolicitudController extends Controller
                     'pasajero.persona',
                     'mototaxista.persona.imagenes',
                     'mototaxista.sindicato',
+                'mototaxista.motocicletas',
                 ]);
 
                 $this->adjuntarReputacionConductor($solicitud);

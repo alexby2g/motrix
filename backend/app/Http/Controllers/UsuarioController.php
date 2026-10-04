@@ -16,6 +16,7 @@ class UsuarioController extends Controller
         'admin_general',
         'admin_registro',
         'admin_servicios',
+        'representante_federacion',
         'secretario',
     ];
 
@@ -23,6 +24,7 @@ class UsuarioController extends Controller
         'admin_general',
         'admin_registro',
         'admin_servicios',
+        'representante_federacion',
         'secretario',
         'conductor',
         'pasajero',
@@ -255,6 +257,9 @@ class UsuarioController extends Controller
                 Rule::in(self::ROLES_ADMINISTRATIVOS),
             ],
             'federacion_id' => [
+                Rule::requiredIf(
+                    fn () => $request->input('role') === 'representante_federacion'
+                ),
                 'nullable',
                 'integer',
                 'exists:federaciones,id',
@@ -285,7 +290,16 @@ class UsuarioController extends Controller
 
     private function resolverVinculos(array $datos): array
     {
-        if (($datos['role'] ?? null) !== 'secretario') {
+        $rol = $datos['role'] ?? null;
+
+        if ($rol === 'representante_federacion') {
+            return [
+                'federacion_id' => (int) $datos['federacion_id'],
+                'sindicato_id' => null,
+            ];
+        }
+
+        if ($rol !== 'secretario') {
             return [
                 'federacion_id' => null,
                 'sindicato_id' => null,

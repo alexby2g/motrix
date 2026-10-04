@@ -150,12 +150,12 @@
             "
           />
 
-          <q-card-section class="row no-wrap items-start">
+          <q-card-section class="mototaxista-card__body row no-wrap items-start">
             <q-avatar
-              size="62px"
+              size="72px"
               color="green-1"
               text-color="green-9"
-              class="q-mr-md"
+              class="mototaxista-card__avatar q-mr-md"
             >
               <img
                 v-if="fotoUrl(m)"
@@ -168,20 +168,20 @@
             </q-avatar>
 
             <div class="col min-width-zero">
-              <div class="text-subtitle1 text-weight-bold text-grey-9">
+              <div class="mototaxista-card__name text-subtitle1 text-weight-bold text-grey-9">
                 {{ nombreCompleto(m) }}
               </div>
 
-              <div class="text-caption text-grey-7">
-                CI: {{ m.persona?.ci || '—' }}
+              <div class="mototaxista-card__meta text-caption text-grey-7">
+                CI: {{ m.persona?.ci || 'No registrado' }}
               </div>
 
-              <div class="text-caption text-grey-7">
+              <div class="mototaxista-card__meta text-caption text-grey-7">
                 {{ m.sindicato?.nombre || 'Sin sindicato' }}
                 · Chaleco {{ m.nro_chaleco || '—' }}
               </div>
 
-              <div class="row q-gutter-xs q-mt-sm">
+              <div class="mototaxista-card__badges row q-gutter-xs q-mt-sm">
                 <q-badge
                   :color="
                     m.estado === 'Activo'
@@ -270,6 +270,7 @@
                   </q-item>
 
                   <q-item
+                    v-if="puedeEditar"
                     clickable
                     v-close-popup
                     @click="abrirFormulario(m)"
@@ -281,6 +282,7 @@
                   </q-item>
 
                   <q-item
+                    v-if="puedeEditar"
                     clickable
                     v-close-popup
                     @click="cambiarEstado(m)"
@@ -309,6 +311,7 @@
                   </q-item>
 
                   <q-item
+                    v-if="puedeEditar || m.codigo_qr"
                     clickable
                     v-close-popup
                     @click="generarQr(m)"
@@ -326,7 +329,7 @@
                   </q-item>
 
                   <q-item
-                    v-if="!m.usuario_conductor"
+                    v-if="puedeEditar && !m.usuario_conductor"
                     clickable
                     v-close-popup
                     @click="abrirCuenta(m)"
@@ -340,6 +343,7 @@
                   <q-separator />
 
                   <q-item
+                    v-if="puedeEditar"
                     clickable
                     v-close-popup
                     @click="confirmarEliminar(m)"
@@ -449,7 +453,21 @@
         </q-card-section>
 
         <q-form ref="formRef" @submit.prevent="guardar">
-          <q-card-section class="q-pa-lg">
+          <q-card-section class="dialog-card__body q-pa-lg">
+            <q-banner
+              v-if="editando"
+              rounded
+              class="bg-green-1 text-green-10 q-mb-md mototaxista-edit-summary"
+            >
+              <template #avatar>
+                <q-icon name="badge" color="green-8" />
+              </template>
+              <div class="text-weight-bold">{{ labelPersonaSeleccionada }}</div>
+              <div class="text-caption">
+                Los datos personales, incluido el CI, se administran desde Personas.
+              </div>
+            </q-banner>
+
             <div class="row q-col-gutter-md">
               <div class="col-12">
                 <q-select
@@ -476,7 +494,6 @@
                   :loading="buscandoPersonas"
                   :rules="[requerido]"
                   @filter="filtrarPersonas"
-                  @update:model-value="alCambiarPersona"
                 >
                   <template #prepend>
                     <q-icon name="person_search" color="green-8" />
@@ -524,24 +541,6 @@
                     </q-item>
                   </template>
                 </q-select>
-              </div>
-
-              <div
-                v-if="requiereCiAfiliacion"
-                class="col-12"
-              >
-                <q-input
-                  v-model.trim="form.ci"
-                  outlined
-                  label="Cédula de identidad *"
-                  maxlength="20"
-                  :rules="[requerido]"
-                  hint="Obligatorio para afiliar a esta persona como mototaxista."
-                >
-                  <template #prepend>
-                    <q-icon name="badge" color="green-8" />
-                  </template>
-                </q-input>
               </div>
 
               <div class="col-12 col-sm-7">
@@ -651,7 +650,7 @@
           <q-btn flat round dense icon="close" v-close-popup />
         </q-card-section>
 
-        <q-card-section v-if="seleccionado" class="q-pa-lg">
+        <q-card-section v-if="seleccionado" class="q-pa-lg credencial-dialog-body">
           <div class="credencial-motrix">
             <div class="credencial-encabezado row items-center">
               <div>
@@ -836,7 +835,7 @@
                   </div>
 
                   <q-btn
-                    v-if="!seleccionado.codigo_qr"
+                    v-if="puedeEditar && !seleccionado.codigo_qr"
                     color="blue-8"
                     icon="qr_code_2"
                     label="Generar QR"
@@ -860,6 +859,7 @@
 
           <!-- CAMBIAR FOTO DEL CONDUCTOR -->
           <q-expansion-item
+            v-if="puedeEditar"
             icon="photo_camera"
             label="Cambiar fotografía del mototaxista"
             header-class="text-green-9 text-weight-medium q-mt-md"
@@ -912,6 +912,7 @@
             @click="abrirHabilitacionSindical(seleccionado)"
           />
           <q-btn
+            v-if="puedeEditar"
             color="green-8"
             icon="edit"
             label="Editar datos"
@@ -1179,6 +1180,7 @@ const rolActual = computed(() => {
 
 const esAdminGeneral = computed(() => rolActual.value === 'admin_general')
 const esSecretario = computed(() => rolActual.value === 'secretario')
+const puedeEditar = computed(() => ['admin_general', 'admin_registro', 'secretario'].includes(rolActual.value))
 const puedeGestionarHabilitacion = computed(() => (
   esAdminGeneral.value || esSecretario.value
 ))
@@ -1248,7 +1250,6 @@ const formHabilitacion = ref({
 const formDefault = {
   id: null,
   id_persona: null,
-  ci: '',
   id_sindicato: null,
   nro_chaleco: '',
   telefono: '',
@@ -1258,17 +1259,6 @@ const formDefault = {
 const form = ref({
   ...formDefault
 })
-
-const personaSeleccionada = computed(() =>
-  personasDisponibles.value.find(
-    (persona) => Number(persona?.id) === Number(form.value.id_persona)
-  ) || null
-)
-
-const requiereCiAfiliacion = computed(() => (
-  Boolean(form.value.id_persona)
-  && String(personaSeleccionada.value?.ci || '').trim() === ''
-))
 
 const mensajeBusquedaPersona = computed(() => {
   const texto = String(
@@ -1356,6 +1346,24 @@ function formatearNombrePersona(p) {
         `${separador}${letra.toLocaleUpperCase('es-BO')}`
     )
 }
+
+const labelPersonaSeleccionada = computed(() => {
+  const persona = personasDisponibles.value.find(
+    item => Number(item.id) === Number(form.value.id_persona)
+  )
+
+  if (persona) {
+    return `${formatearNombrePersona(persona)} · CI ${persona.ci || 'no registrado'}`
+  }
+
+  const personaActual = seleccionado.value?.persona
+
+  if (personaActual) {
+    return `${formatearNombrePersona(personaActual)} · CI ${personaActual.ci || 'no registrado'}`
+  }
+
+  return 'Datos personales del mototaxista'
+})
 
 function labelPersona(p) {
   if (!p) return ''
@@ -1683,10 +1691,6 @@ async function filtrarPersonas(
   }
 }
 
-function alCambiarPersona() {
-  form.value.ci = ''
-}
-
 function abrirFormulario(m = null) {
   if (m) {
     editando.value = true
@@ -1694,7 +1698,6 @@ function abrirFormulario(m = null) {
     form.value = {
       id: m.id,
       id_persona: m.id_persona,
-      ci: '',
       id_sindicato: m.id_sindicato,
       nro_chaleco:
         m.nro_chaleco || '',
@@ -1754,10 +1757,6 @@ async function guardar() {
     const payload = {
       id_persona:
         form.value.id_persona,
-      ci:
-        requiereCiAfiliacion.value
-          ? form.value.ci
-          : null,
       id_sindicato:
         form.value.id_sindicato,
       nro_chaleco:
@@ -2070,6 +2069,13 @@ async function prepararImagenQr(codigo) {
 }
 
 async function generarQr(m) {
+  if (!puedeEditar.value) {
+    if (!m.codigo_qr) return
+    seleccionadoQr.value = m
+    await prepararImagenQr(m.codigo_qr)
+    dialogQr.value = true
+    return
+  }
   try {
     const respuesta =
       await api.post(
@@ -2328,6 +2334,7 @@ onMounted(async () => {
 
 .mototaxista-card {
   position: relative;
+  min-height: 184px;
   overflow: hidden;
   transition:
     transform 0.16s ease,
@@ -2349,10 +2356,63 @@ onMounted(async () => {
   min-width: 0;
 }
 
+.mototaxista-card__body {
+  padding: 18px;
+}
+
+.mototaxista-card__avatar {
+  flex: 0 0 auto;
+  box-shadow: 0 4px 14px rgba(46, 125, 50, 0.13);
+}
+
+.mototaxista-card__name {
+  font-size: 1.06rem;
+  line-height: 1.28;
+}
+
+.mototaxista-card__meta {
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.mototaxista-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 4px;
+}
+
+.mototaxista-card__badges .q-badge {
+  min-height: 22px;
+  padding: 4px 7px;
+  font-size: 0.76rem;
+}
+
 .dialog-card {
-  width: 720px;
+  width: 780px;
   max-width: 94vw;
-  border-radius: 16px;
+  max-height: calc(100dvh - 24px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.dialog-card > form {
+  min-height: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.dialog-card__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.mototaxista-edit-summary {
+  border: 1px solid #cfe3cc;
 }
 
 .qr-dialog {
@@ -2386,8 +2446,23 @@ onMounted(async () => {
 .credencial-dialog {
   width: min(1040px, 96vw);
   max-width: 1040px;
+  max-height: calc(100dvh - 24px);
+  display: flex;
+  flex-direction: column;
   border-radius: 18px;
   overflow: hidden;
+}
+
+.credencial-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.credencial-dialog > .q-card-section:first-child,
+.credencial-dialog > .q-card-actions {
+  flex: 0 0 auto;
 }
 
 .credencial-motrix {
@@ -2465,12 +2540,51 @@ onMounted(async () => {
 }
 
 @media (max-width: 599px) {
+  .mototaxista-card {
+    min-height: 0;
+  }
+
+  .mototaxista-card__body {
+    padding: 14px 12px;
+  }
+
+  .mototaxista-card__avatar {
+    width: 60px !important;
+    height: 60px !important;
+    margin-right: 10px !important;
+  }
+
+  .mototaxista-card__name {
+    font-size: 1rem;
+    white-space: normal;
+  }
+
+  .mototaxista-card__meta {
+    font-size: 0.81rem;
+    white-space: normal;
+  }
+
+  .mototaxista-card__badges {
+    margin-top: 8px;
+    gap: 6px 4px;
+  }
+
+  .mototaxista-card__badges .q-badge {
+    min-height: 24px;
+    padding: 4px 7px;
+  }
+
   .dialog-card,
   .qr-dialog,
   .credencial-dialog {
     width: 100vw;
     max-width: 100vw;
+    max-height: 100dvh;
     border-radius: 0;
+  }
+
+  .dialog-card .q-card__actions .q-btn {
+    min-height: 44px;
   }
 }
 

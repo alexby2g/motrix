@@ -76,6 +76,29 @@
                 </span>
               </q-avatar>
 
+              <input
+                ref="fotoPerfilInput"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                class="profile-file-input"
+                @change="seleccionarFotoPerfil"
+              >
+
+              <q-btn
+                outline
+                no-caps
+                color="green-8"
+                icon="photo_camera"
+                :label="fotoPerfilUrl ? 'Cambiar foto' : 'Agregar foto'"
+                class="q-mt-md"
+                :loading="subiendoFotoPerfil"
+                @click="abrirSelectorFotoPerfil"
+              />
+
+              <div class="text-caption text-grey-6 q-mt-xs text-center">
+                Esta foto será visible para el pasajero · máximo 4 MB
+              </div>
+
               <div class="text-h5 text-weight-bold text-grey-9 q-mt-md text-center">
                 {{ nombreCompleto }}
               </div>
@@ -232,7 +255,7 @@
                 <div>
                   <span>Última conexión</span>
                   <strong>
-                    {{ formatearFechaHora(perfil?.ultima_conexion) }}
+                    {{ formatearUltimaConexion(perfil?.ultima_conexion) }}
                   </strong>
                 </div>
               </div>
@@ -542,7 +565,7 @@
 </template>
 
 <script setup>
-import { fechaHoraDDMMYYYY } from 'src/utils/motrixDate.js'
+import { fechaHoraUtcBolivia } from 'src/utils/motrixDate.js'
 
 import ConductorAccountDelete from 'src/components/ConductorAccountDelete.vue'
 import PhotoViewerDialog from 'src/components/PhotoViewerDialog.vue'
@@ -568,6 +591,8 @@ const cargando = ref(false)
 const perfil = ref(null)
 const fotoPerfilError = ref(false)
 const visorFoto = ref(false)
+const fotoPerfilInput = ref(null)
+const subiendoFotoPerfil = ref(false)
 const qrPagoArchivo = ref(null)
 const qrPagoMetodo = ref('')
 const qrPagoTitular = ref('')
@@ -675,6 +700,88 @@ const qrPagoUrl = computed(() => {
 function abrirVisorFoto() {
   if (fotoPerfilUrl.value && !fotoPerfilError.value) {
     visorFoto.value = true
+  }
+}
+
+function abrirSelectorFotoPerfil() {
+  if (subiendoFotoPerfil.value) return
+  fotoPerfilInput.value?.click()
+}
+
+async function seleccionarFotoPerfil(event) {
+  const input = event?.target
+  const archivo = input?.files?.[0]
+
+  if (!archivo) return
+
+  const tiposPermitidos = [
+    'image/jpeg',
+    'image/png',
+    'image/webp'
+  ]
+
+  if (!tiposPermitidos.includes(archivo.type)) {
+    $q.notify({
+      type: 'warning',
+      position: 'top',
+      message: 'Selecciona una imagen JPG, PNG o WEBP.'
+    })
+    input.value = ''
+    return
+  }
+
+  if (archivo.size > 4 * 1024 * 1024) {
+    $q.notify({
+      type: 'warning',
+      position: 'top',
+      message: 'La foto no puede superar los 4 MB.'
+    })
+    input.value = ''
+    return
+  }
+
+  subiendoFotoPerfil.value = true
+
+  try {
+    const formData = new FormData()
+    formData.append('imagen', archivo)
+
+    const respuesta = await api.post(
+      '/perfil/foto',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    )
+
+    fotoPerfilError.value = false
+
+    $q.notify({
+      type: 'positive',
+      position: 'top',
+      icon: 'check_circle',
+      message:
+        respuesta?.data?.message
+        || 'Foto de perfil actualizada.'
+    })
+
+    await cargarPerfil()
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      position: 'top',
+      message:
+        error?.response?.data?.message
+        || Object.values(
+          error?.response?.data?.errors || {}
+        ).flat().find(Boolean)
+        || 'No se pudo actualizar la foto de perfil.'
+    })
+  } finally {
+    subiendoFotoPerfil.value = false
+    if (input) input.value = ''
   }
 }
 
@@ -901,8 +1008,9 @@ function valor(dato) {
   return String(dato)
 }
 
-function formatearFechaHora(valorFecha) {
-  return fechaHoraDDMMYYYY(valorFecha)
+
+function formatearUltimaConexion(valorFecha) {
+  return fechaHoraUtcBolivia(valorFecha, 'Sin registro')
 }
 
 function volver() {
@@ -942,6 +1050,10 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.profile-file-input {
+  display: none;
 }
 
 .profile-avatar {

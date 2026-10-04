@@ -64,6 +64,10 @@ function obtenerInicioPorRol(role) {
     return '/mototaxistas'
   }
 
+  if (rol === 'representante_federacion') {
+    return '/mototaxistas'
+  }
+
   if (rol === 'conductor') {
     return '/conductor'
   }

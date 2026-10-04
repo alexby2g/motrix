@@ -249,72 +249,115 @@
                     bordered
                     class="full-height"
                   >
-                    <q-card-section class="text-center">
-                      <q-avatar
-                        size="78px"
-                        :color="nombreConductor ? 'primary' : 'grey-4'"
-                        :text-color="nombreConductor ? 'white' : 'grey-7'"
-                        class="conductor-avatar"
-                        :class="{ 'cursor-pointer': Boolean(fotoConductorUrl) }"
-                        @click="abrirFotoConductor"
-                      >
-                        <img
-                          v-if="fotoConductorUrl"
-                          :src="fotoConductorUrl"
-                          :alt="`Foto de ${nombreConductor || 'mototaxista'}`"
-                        >
-                        <q-icon v-else name="two_wheeler" size="40px" />
-                      </q-avatar>
+                    <q-card-section class="conductor-resumen-card">
+                      <div class="row items-center no-wrap q-col-gutter-md">
+                        <div class="col-auto">
+                          <q-avatar
+                            size="96px"
+                            :color="nombreConductor ? 'green-1' : 'grey-4'"
+                            :text-color="nombreConductor ? 'green-9' : 'grey-7'"
+                            class="conductor-avatar conductor-avatar-destacado"
+                            :class="{ 'cursor-pointer': Boolean(fotoConductorUrl) }"
+                            @click="abrirFotoConductor"
+                          >
+                            <img
+                              v-if="fotoConductorUrl"
+                              :src="fotoConductorUrl"
+                              :alt="`Foto de ${nombreConductor || 'mototaxista'}`"
+                            >
+                            <q-icon v-else name="two_wheeler" size="46px" />
+                          </q-avatar>
+                        </div>
 
-                      <div class="text-caption text-grey-6 q-mt-md">
-                        Mototaxista asignado
+                        <div class="col min-width-zero text-left">
+                          <div class="text-caption text-grey-6 text-uppercase text-weight-bold">
+                            Tu mototaxista
+                          </div>
+
+                          <div
+                            v-if="nombreConductor"
+                            class="text-h6 text-weight-bold text-green-9 ellipsis"
+                          >
+                            {{ nombreConductor }}
+                          </div>
+
+                          <div v-else class="text-subtitle1 text-grey-7">
+                            Buscando conductor cercano...
+                          </div>
+
+                          <div
+                            v-if="nombreConductor"
+                            class="row items-center q-gutter-xs q-mt-xs"
+                          >
+                            <q-rating
+                              v-if="totalCalificacionesConductor > 0"
+                              :model-value="promedioCalificacionConductor"
+                              readonly
+                              size="19px"
+                              color="amber-7"
+                              icon="star_border"
+                              icon-selected="star"
+                            />
+                            <span
+                              v-if="totalCalificacionesConductor > 0"
+                              class="text-caption text-weight-bold text-grey-9"
+                            >
+                              {{ promedioCalificacionConductor.toFixed(1) }}
+                              · {{ totalCalificacionesConductor }} opiniones
+                            </span>
+                            <span v-else class="text-caption text-grey-6">
+                              Sin calificaciones todavía
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
                       <div
                         v-if="nombreConductor"
-                        class="text-h6 text-weight-bold text-primary"
+                        class="row q-gutter-xs q-mt-md"
                       >
-                        {{ nombreConductor }}
-                      </div>
-
-                      <div
-                        v-else
-                        class="text-subtitle1 text-grey-7"
-                      >
-                        Buscando conductor cercano...
+                        <q-chip
+                          v-if="sindicatoConductor"
+                          dense
+                          color="green-1"
+                          text-color="green-9"
+                          icon="groups"
+                        >
+                          {{ sindicatoConductor }}
+                        </q-chip>
+                        <q-chip
+                          v-if="chalecoConductor"
+                          dense
+                          color="blue-1"
+                          text-color="blue-9"
+                          icon="badge"
+                        >
+                          Chaleco {{ chalecoConductor }}
+                        </q-chip>
+                        <q-chip
+                          dense
+                          color="grey-2"
+                          text-color="grey-8"
+                          icon="tag"
+                        >
+                          Conductor #{{ viajeActivo.mototaxista_id }}
+                        </q-chip>
                       </div>
 
                       <div
                         v-if="nombreConductor"
-                        class="row items-center justify-center q-gutter-xs q-mt-xs"
+                        class="vehiculo-conductor-box q-mt-md"
                       >
-                        <q-rating
-                          v-if="totalCalificacionesConductor > 0"
-                          :model-value="promedioCalificacionConductor"
-                          readonly
-                          size="20px"
-                          color="amber-7"
-                          icon="star_border"
-                          icon-selected="star"
-                        />
-                        <span
-                          v-if="totalCalificacionesConductor > 0"
-                          class="text-caption text-weight-bold text-grey-9"
-                        >
-                          {{ promedioCalificacionConductor.toFixed(1) }}
-                          ({{ totalCalificacionesConductor }})
-                        </span>
-                        <span v-else class="text-caption text-grey-6">
-                          Sin calificaciones
-                        </span>
-                      </div>
-
-                      <div
-                        v-if="viajeActivo.mototaxista_id"
-                        class="text-caption text-grey-6 q-mt-xs"
-                      >
-                        Código de conductor:
-                        #{{ viajeActivo.mototaxista_id }}
+                        <q-icon name="two_wheeler" color="green-8" size="30px" />
+                        <div class="col min-width-zero">
+                          <div class="text-caption text-grey-6">Motocicleta</div>
+                          <div class="text-body2 text-weight-bold text-grey-9">
+                            {{ descripcionMotocicletaConductor || 'Datos de motocicleta no registrados' }}
+                          </div>
+                          <div class="text-caption text-grey-7">
+                            Placa: {{ placaMotocicletaConductor }}
+                          </div>
+                        </div>
                       </div>
 
                       <q-separator class="q-my-md" />
@@ -394,14 +437,14 @@
                       <q-avatar
                         color="blue-1"
                         text-color="primary"
-                        icon="my_location"
+                        icon="two_wheeler"
                         size="46px"
                         class="q-mr-md"
                       />
 
                       <div class="min-width-zero">
                         <div class="text-h6 text-weight-bold text-grey-9">
-                          Seguimiento en tiempo real
+                          {{ estadoNormalizado === 'aceptado' ? `${nombreConductor || 'Tu mototaxista'} está en camino` : 'Seguimiento de tu viaje' }}
                         </div>
 
                         <div class="text-caption text-grey-6">
@@ -461,11 +504,11 @@
 
                     <div class="col-12 col-md-4">
                       <div class="tracking-info-box">
-                        <q-icon name="gps_fixed" color="positive" size="24px" />
+                        <q-icon name="gps_fixed" :color="edadUbicacion === null ? 'grey-6' : edadUbicacion >= 60 ? 'warning' : 'positive'" size="24px" />
 
                         <div>
                           <div class="text-caption text-grey-6">
-                            Última ubicación
+                            Actualización del GPS
                           </div>
 
                           <div class="text-body2 text-weight-bold">
@@ -782,8 +825,9 @@
 
                   Marca tu <strong>origen</strong> en el mapa o usa tu
                   ubicación actual. Para el <strong>destino</strong>, escribe
-                  una calle, barrio o lugar y pulsa buscar. También puedes
-                  marcar el destino directamente en el mapa.
+                  una calle, barrio o lugar y MOTRIX te mostrará sugerencias
+                  automáticamente. También puedes usar la lupa o marcar el
+                  destino directamente en el mapa.
                 </q-banner>
 
                 <div class="row q-col-gutter-lg">
@@ -823,7 +867,7 @@
                         outlined
                         clearable
                         label="Punto de destino"
-                        placeholder="Ej. Paitití, una calle o un lugar"
+                        placeholder="Escribe una calle, barrio o lugar…"
                         :loading="buscandoDestino"
                         :rules="[
                           () => Boolean(form.destino) ||
@@ -855,6 +899,14 @@
                           </q-btn>
                         </template>
                       </q-input>
+
+                      <div
+                        v-if="busquedaDestino && busquedaDestino.trim().length >= 3 && !form.destino"
+                        class="text-caption text-grey-6 q-mt-xs q-ml-sm"
+                      >
+                        <q-icon name="auto_awesome" size="15px" class="q-mr-xs" />
+                        Las sugerencias aparecen mientras escribes.
+                      </div>
 
                       <q-card
                         v-if="resultadosDestino.length"
@@ -1280,6 +1332,30 @@
             >
               N.º de chaleco: {{ notificacionActual.chaleco }}
             </div>
+
+            <div
+              v-if="notificacionActual.motocicleta || notificacionActual.placa"
+              class="notificacion-vehiculo q-mt-sm"
+            >
+              <q-icon name="two_wheeler" size="19px" />
+              <span>
+                {{ notificacionActual.motocicleta || 'Motocicleta registrada' }}
+                <template v-if="notificacionActual.placa">
+                  · Placa {{ notificacionActual.placa }}
+                </template>
+              </span>
+            </div>
+
+            <div
+              v-if="notificacionActual.totalCalificaciones > 0"
+              class="row items-center q-gutter-xs q-mt-sm"
+            >
+              <q-icon name="star" color="amber-8" size="18px" />
+              <span class="text-caption text-weight-bold">
+                {{ Number(notificacionActual.promedio).toFixed(1) }}
+                · {{ notificacionActual.totalCalificaciones }} calificaciones
+              </span>
+            </div>
           </q-banner>
         </q-card-section>
 
@@ -1363,6 +1439,8 @@ const buscandoDestino = ref(false)
 const busquedaDestino = ref('')
 const resultadosDestino = ref([])
 const busquedaDestinoRealizada = ref(false)
+let temporizadorBusquedaDestino = null
+let secuenciaBusquedaDestino = 0
 
 const viajeActivo = ref(null)
 const viajeFinalizado = ref(null)
@@ -1408,6 +1486,10 @@ const notificacionActual = ref({
   chaleco: '',
   foto: '',
   iniciales: '',
+  motocicleta: '',
+  placa: '',
+  promedio: 0,
+  totalCalificaciones: 0,
   icono: 'notifications_active',
   color: 'primary'
 })
@@ -1433,7 +1515,7 @@ let marcadorOrigenSeguimiento = null
 let marcadorDestinoSeguimiento = null
 let lineaRutaSeguimiento = null
 let ultimaClaveRutaSeguimiento = null
-let ultimaRutaSeguimientoEn = 0
+let animacionMarcadorConductor = null
 let intervaloActualizacion = null
 let intervaloIncidencias = null
 let cargaViajeEnCurso = false
@@ -1701,6 +1783,38 @@ const fotoConductorUrl = computed(() => {
   return fotoPersonaUrl(viajeActivo.value?.mototaxista?.persona)
 })
 
+const sindicatoConductor = computed(() => {
+  return String(
+    viajeActivo.value?.mototaxista?.sindicato?.nombre || ''
+  ).trim()
+})
+
+const chalecoConductor = computed(() => {
+  return String(
+    viajeActivo.value?.mototaxista?.nro_chaleco || ''
+  ).trim()
+})
+
+const motocicletaConductor = computed(() => {
+  const motos = viajeActivo.value?.mototaxista?.motocicletas
+  return Array.isArray(motos) && motos.length ? motos[0] : null
+})
+
+const descripcionMotocicletaConductor = computed(() => {
+  const moto = motocicletaConductor.value
+  if (!moto) return ''
+
+  return [moto.modelo, moto.color]
+    .map(valor => String(valor || '').trim())
+    .filter(Boolean)
+    .join(' · ')
+})
+
+const placaMotocicletaConductor = computed(() => {
+  const placa = String(motocicletaConductor.value?.placa || '').trim()
+  return placa || 'Sin placa registrada'
+})
+
 const requiereQrViajeActivo = computed(() => {
   return ['QR', 'Transferencia / QR', 'Mixto'].includes(
     String(viajeActivo.value?.metodo_pago || '')
@@ -1838,28 +1952,21 @@ const tiempoSeguimientoTexto = computed(() => {
     : 'Calculando...'
 })
 
+const relojSeguimiento = ref(Date.now())
+const edadUbicacion = computed(() => {
+  const fecha = viajeActivo.value?.mototaxista?.ultima_conexion
+  if (!fecha) return null
+  let texto = String(fecha).replace(' ', 'T')
+  // El backend almacena ultima_conexion en UTC; ISO con zona se respeta.
+  if (!/(Z|[+-]\d{2}:?\d{2})$/i.test(texto)) texto += 'Z'
+  const valor = new Date(texto).getTime()
+  return Number.isFinite(valor) ? Math.max(0, Math.floor((relojSeguimiento.value - valor) / 1000)) : null
+})
 const ultimaActualizacionTexto = computed(() => {
-  const fecha = (
-    viajeActivo.value?.mototaxista?.ultima_conexion
-    || viajeActivo.value?.mototaxista?.updated_at
-    || null
-  )
-
-  if (!fecha) {
-    return 'Actualizando ahora'
-  }
-
-  const objetoFecha = new Date(String(fecha).replace(' ', 'T'))
-
-  if (Number.isNaN(objetoFecha.getTime())) {
-    return 'Ubicación recibida'
-  }
-
-  return new Intl.DateTimeFormat('es-BO', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  }).format(objetoFecha)
+  const segundos = edadUbicacion.value
+  if (segundos === null) return 'Sin ubicación confirmada'
+  if (segundos < 60) return `Actualizada hace ${segundos} s`
+  return `Hace ${Math.floor(segundos / 60)} min · ubicación antigua`
 })
 
 function leerUsuario() {
@@ -1987,8 +2094,8 @@ function crearIconoSeguimiento(tipo) {
     conductor: {
       clase: 'pin-conductor-seguimiento',
       icono: 'two_wheeler',
-      tamano: [44, 44],
-      ancla: [22, 22]
+      tamano: [52, 52],
+      ancla: [26, 26]
     },
     origen: {
       clase: 'pin-origen-seguimiento',
@@ -2040,6 +2147,11 @@ function calcularDistanciaRecta(origen, destino) {
 }
 
 function destruirMapaSeguimiento() {
+  if (animacionMarcadorConductor) {
+    window.cancelAnimationFrame(animacionMarcadorConductor)
+    animacionMarcadorConductor = null
+  }
+
   if (mapaSeguimiento) {
     mapaSeguimiento.remove()
   }
@@ -2051,7 +2163,6 @@ function destruirMapaSeguimiento() {
   marcadorDestinoSeguimiento = null
   lineaRutaSeguimiento = null
   ultimaClaveRutaSeguimiento = null
-  ultimaRutaSeguimientoEn = 0
 
   distanciaSeguimientoKm.value = null
   tiempoSeguimientoMin.value = null
@@ -2100,6 +2211,47 @@ function inicializarMapaSeguimiento() {
   }
 }
 
+function animarMarcadorConductorHasta(marcador, coordenadas) {
+  if (!marcador || !coordenadas) return
+
+  const actual = marcador.getLatLng()
+  const origen = [actual.lat, actual.lng]
+  const destino = [coordenadas[0], coordenadas[1]]
+  const distanciaKm = calcularDistanciaRecta(origen, destino)
+
+  if (animacionMarcadorConductor) {
+    window.cancelAnimationFrame(animacionMarcadorConductor)
+    animacionMarcadorConductor = null
+  }
+
+  // Un salto grande suele significar GPS recién adquirido o corregido.
+  // En ese caso no animamos para no simular un recorrido inexistente.
+  if (!Number.isFinite(distanciaKm) || distanciaKm > 1.5) {
+    marcador.setLatLng(destino)
+    return
+  }
+
+  const inicio = performance.now()
+  const duracion = 1200
+
+  const paso = (ahora) => {
+    const progreso = Math.min(1, (ahora - inicio) / duracion)
+    const suavizado = 1 - Math.pow(1 - progreso, 3)
+    const lat = origen[0] + (destino[0] - origen[0]) * suavizado
+    const lng = origen[1] + (destino[1] - origen[1]) * suavizado
+
+    marcador.setLatLng([lat, lng])
+
+    if (progreso < 1) {
+      animacionMarcadorConductor = window.requestAnimationFrame(paso)
+    } else {
+      animacionMarcadorConductor = null
+    }
+  }
+
+  animacionMarcadorConductor = window.requestAnimationFrame(paso)
+}
+
 function actualizarMarcadorSeguimiento(
   marcadorActual,
   coordenadas,
@@ -2121,7 +2273,12 @@ function actualizarMarcadorSeguimiento(
       .bindPopup(textoPopup)
   }
 
-  marcadorActual.setLatLng(coordenadas)
+  if (tipo === 'conductor') {
+    animarMarcadorConductorHasta(marcadorActual, coordenadas)
+  } else {
+    marcadorActual.setLatLng(coordenadas)
+  }
+
   marcadorActual.setPopupContent(textoPopup)
   return marcadorActual
 }
@@ -2184,17 +2341,7 @@ async function dibujarRutaSeguimiento(conductor, objetivo) {
     return
   }
 
-  const ahoraRuta = Date.now()
-
-  if (
-    lineaRutaSeguimiento
-    && ahoraRuta - ultimaRutaSeguimientoEn < 15000
-  ) {
-    return
-  }
-
   ultimaClaveRutaSeguimiento = claveRuta
-  ultimaRutaSeguimientoEn = ahoraRuta
 
   try {
     const origenTexto = `${conductor[1]},${conductor[0]}`
@@ -2552,6 +2699,12 @@ function limpiarDestinoSeleccionado(limpiarBusqueda = true) {
 function alEditarBusquedaDestino(valor) {
   resultadosDestino.value = []
   busquedaDestinoRealizada.value = false
+  secuenciaBusquedaDestino += 1
+
+  if (temporizadorBusquedaDestino) {
+    window.clearTimeout(temporizadorBusquedaDestino)
+    temporizadorBusquedaDestino = null
+  }
 
   const texto = String(valor || '').trim()
   const destinoActual = String(form.destino || '').trim()
@@ -2562,19 +2715,38 @@ function alEditarBusquedaDestino(valor) {
   ) {
     limpiarDestinoSeleccionado(false)
   }
-}
 
-async function buscarDestino() {
-  const consulta = String(busquedaDestino.value || '').trim()
-
-  if (consulta.length < 3) {
-    $q.notify({
-      type: 'warning',
-      message: 'Escribe al menos 3 caracteres para buscar el destino.'
-    })
+  if (texto.length < 3) {
+    buscandoDestino.value = false
     return
   }
 
+  // Autocompletado con debounce: evita una petición por cada tecla.
+  temporizadorBusquedaDestino = window.setTimeout(() => {
+    buscarDestino({
+      consulta: texto,
+      silencioso: true
+    }).catch(() => {})
+  }, 650)
+}
+
+async function buscarDestino(opciones = {}) {
+  const consulta = String(
+    opciones?.consulta ?? busquedaDestino.value ?? ''
+  ).trim()
+  const silencioso = opciones?.silencioso === true
+
+  if (consulta.length < 3) {
+    if (!silencioso) {
+      $q.notify({
+        type: 'warning',
+        message: 'Escribe al menos 3 caracteres para buscar el destino.'
+      })
+    }
+    return
+  }
+
+  const secuencia = ++secuenciaBusquedaDestino
   buscandoDestino.value = true
   resultadosDestino.value = []
   busquedaDestinoRealizada.value = false
@@ -2598,6 +2770,10 @@ async function buscarDestino() {
     const resultados = Array.isArray(respuesta.data)
       ? respuesta.data
       : []
+
+    if (secuencia !== secuenciaBusquedaDestino) {
+      return
+    }
 
     resultadosDestino.value = resultados
       .map((resultado) => {
@@ -2631,14 +2807,20 @@ async function buscarDestino() {
   } catch (error) {
     console.error('Error buscando destino:', error)
 
-    busquedaDestinoRealizada.value = true
+    if (secuencia === secuenciaBusquedaDestino) {
+      busquedaDestinoRealizada.value = true
+    }
 
-    $q.notify({
-      type: 'warning',
-      message: 'No se pudo buscar el destino en este momento. Puedes marcarlo manualmente en el mapa.'
-    })
+    if (!silencioso) {
+      $q.notify({
+        type: 'warning',
+        message: 'No se pudo buscar el destino en este momento. Puedes marcarlo manualmente en el mapa.'
+      })
+    }
   } finally {
-    buscandoDestino.value = false
+    if (secuencia === secuenciaBusquedaDestino) {
+      buscandoDestino.value = false
+    }
   }
 }
 
@@ -2646,6 +2828,13 @@ async function seleccionarResultadoDestino(resultado) {
   if (!resultado) {
     return
   }
+
+  if (temporizadorBusquedaDestino) {
+    window.clearTimeout(temporizadorBusquedaDestino)
+    temporizadorBusquedaDestino = null
+  }
+  secuenciaBusquedaDestino += 1
+  buscandoDestino.value = false
 
   resultadosDestino.value = []
   busquedaDestinoRealizada.value = false
@@ -2928,6 +3117,11 @@ function obtenerDetalleConductorSolicitud(solicitud) {
     || ''
   )
 
+  const motos = Array.isArray(mototaxista?.motocicletas)
+    ? mototaxista.motocicletas
+    : []
+  const moto = motos[0] || null
+
   return {
     nombre,
     sindicato: String(
@@ -2937,7 +3131,14 @@ function obtenerDetalleConductorSolicitud(solicitud) {
       mototaxista?.nro_chaleco || ''
     ).trim(),
     foto: fotoPersonaUrl(persona),
-    iniciales: inicialesNombre(nombre)
+    iniciales: inicialesNombre(nombre),
+    motocicleta: [moto?.modelo, moto?.color]
+      .map(valor => String(valor || '').trim())
+      .filter(Boolean)
+      .join(' · '),
+    placa: String(moto?.placa || '').trim(),
+    promedio: Number(mototaxista?.promedio_calificacion || 0),
+    totalCalificaciones: Number(mototaxista?.total_calificaciones || 0)
   }
 }
 
@@ -3109,6 +3310,10 @@ function construirNotificacionEstado(
       chaleco: '',
       foto: '',
       iniciales: '',
+      motocicleta: '',
+      placa: '',
+      promedio: 0,
+      totalCalificaciones: 0,
       icono: 'travel_explore',
       color: 'orange-8',
       destacada: false
@@ -3231,29 +3436,20 @@ async function mostrarNotificacionEstado(
   notificacionFotoError.value = false
   notificacionActual.value = notificacion
 
-  $q.notify({
-    color: notificacion.color,
-    textColor: 'white',
-    icon: notificacion.icono,
-    message: notificacion.titulo,
-    caption: notificacion.mensaje,
-    position: 'top',
-    timeout: 7000,
-    actions: notificacion.destacada
-      ? [
-          {
-            label: 'VER',
-            color: 'white',
-            handler: () => {
-              dialogNotificacion.value = true
-            }
-          }
-        ]
-      : []
-  })
-
   if (notificacion.destacada) {
+    // Para estados importantes usamos el modal enriquecido.
+    // Evita mostrar a la vez un toast con la misma información.
     dialogNotificacion.value = true
+  } else {
+    $q.notify({
+      color: notificacion.color,
+      textColor: 'white',
+      icon: notificacion.icono,
+      message: notificacion.titulo,
+      caption: notificacion.mensaje,
+      position: 'top',
+      timeout: 7000
+    })
   }
 
   await reproducirSonidoEstado(
@@ -4127,9 +4323,8 @@ onMounted(async () => {
   }
 
   intervaloActualizacion = window.setInterval(() => {
-    const espera = viajeActivo.value?.id
-      ? 5000
-      : (websocketConectado.value ? 30000 : 10000)
+    relojSeguimiento.value = Date.now()
+    const espera = viajeActivo.value?.id ? 2000 : 10000
 
     if (
       Date.now() - ultimaSincronizacionViaje >= espera
@@ -4157,6 +4352,11 @@ onBeforeUnmount(() => {
   }
 
   audioContexto = null
+
+  if (temporizadorBusquedaDestino) {
+    window.clearTimeout(temporizadorBusquedaDestino)
+    temporizadorBusquedaDestino = null
+  }
 
   if (intervaloActualizacion) {
     window.clearInterval(intervaloActualizacion)
@@ -4195,15 +4395,46 @@ onBeforeUnmount(() => {
 }
 
 .notificacion-viaje-card {
-  width: min(92vw, 520px);
-  border-radius: 18px;
+  width: min(92vw, 560px);
+  border-radius: 20px;
   overflow: hidden;
 }
 
+.notificacion-vehiculo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.conductor-resumen-card {
+  padding: 20px;
+  background: linear-gradient(145deg, #ffffff 0%, #f4fbf5 100%);
+}
+
+.conductor-avatar-destacado {
+  border: 4px solid #ffffff;
+  box-shadow: 0 8px 24px rgba(20, 83, 45, 0.18);
+}
+
+.vehiculo-conductor-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #dcebdd;
+  border-radius: 14px;
+  background: #ffffff;
+  text-align: left;
+}
+
 .destino-resultados {
-  max-height: 250px;
+  max-height: 280px;
   overflow-y: auto;
-  border-radius: 12px;
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.10);
 }
 
 .destino-resultado {
@@ -4363,10 +4594,33 @@ onBeforeUnmount(() => {
 }
 
 :deep(.pin-conductor-seguimiento) {
-  width: 44px;
-  height: 44px;
+  position: relative;
+  width: 52px;
+  height: 52px;
   color: white;
   background: #1976d2;
+  transition: transform 0.2s ease;
+}
+
+:deep(.pin-conductor-seguimiento::after) {
+  position: absolute;
+  inset: -9px;
+  content: '';
+  border: 3px solid rgba(25, 118, 210, 0.35);
+  border-radius: 50%;
+  animation: pulso-gps-motrix 1.8s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulso-gps-motrix {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.75);
+  }
+  70%, 100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
 }
 
 :deep(.pin-origen-seguimiento),
@@ -4385,7 +4639,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.pin-conductor-seguimiento .material-icons) {
-  font-size: 25px;
+  font-size: 31px;
 }
 
 :deep(.pin-origen-seguimiento .material-icons),

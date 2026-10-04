@@ -20,7 +20,7 @@
           </div>
         </div>
         <div class="col-auto">
-          <q-btn v-if="!esSecretario" color="green-8" icon="add" label="Nuevo sindicato" unelevated no-caps @click="abrirCrear" />
+          <q-btn v-if="!esSecretario && !esRepresentante" color="green-8" icon="add" label="Nuevo sindicato" unelevated no-caps @click="abrirCrear" />
         </div>
       </div>
 
@@ -81,9 +81,9 @@
               </q-chip>
               <q-space />
               <q-btn flat round dense icon="visibility" color="blue-8" @click="abrirDetalle(sindicato)"><q-tooltip>Ver detalles</q-tooltip></q-btn>
-              <q-btn flat round dense icon="edit" color="green-8" @click="abrirEditar(sindicato)"><q-tooltip>Editar</q-tooltip></q-btn>
-              <q-btn flat round dense icon="image" color="purple-7" @click="abrirLogo(sindicato)"><q-tooltip>Cambiar logo</q-tooltip></q-btn>
-              <q-btn v-if="!esSecretario" flat round dense icon="delete" color="negative" @click="confirmarEliminar(sindicato)"><q-tooltip>Eliminar</q-tooltip></q-btn>
+              <q-btn v-if="!esRepresentante" flat round dense icon="edit" color="green-8" @click="abrirEditar(sindicato)"><q-tooltip>Editar</q-tooltip></q-btn>
+              <q-btn v-if="!esRepresentante" flat round dense icon="image" color="purple-7" @click="abrirLogo(sindicato)"><q-tooltip>Cambiar logo</q-tooltip></q-btn>
+              <q-btn v-if="!esSecretario && !esRepresentante" flat round dense icon="delete" color="negative" @click="confirmarEliminar(sindicato)"><q-tooltip>Eliminar</q-tooltip></q-btn>
             </q-card-section>
           </q-card>
         </div>
@@ -188,7 +188,7 @@
 
         <q-card-actions align="right" class="q-pa-md bg-grey-1">
           <q-btn flat color="grey-7" label="Cerrar" v-close-popup />
-          <q-btn color="green-8" icon="edit" label="Editar datos" unelevated @click="editarDesdeDetalle" />
+          <q-btn v-if="!esRepresentante" color="green-8" icon="edit" label="Editar datos" unelevated @click="editarDesdeDetalle" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -281,6 +281,7 @@ const esSecretario =
   String(usuarioActual?.role || '').toLowerCase()
   === 'secretario'
 
+const esRepresentante = String(usuarioActual?.role || '').toLowerCase() === 'representante_federacion'
 const cargando = ref(false)
 const guardando = ref(false)
 const subiendoLogo = ref(false)

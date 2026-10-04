@@ -112,17 +112,17 @@ const routes = [
       {
         path: 'sindicatos',
         component: () => import('pages/administracion/SindicatosPage.vue'),
-        meta: { roles: ['admin_general', 'admin_registro', 'secretario'] }
+        meta: { roles: ['admin_general', 'admin_registro', 'secretario', 'representante_federacion'] }
       },
       {
         path: 'mototaxistas',
         component: () => import('pages/mototaxistas/MototaxistasPage.vue'),
-        meta: { roles: ['admin_general', 'admin_registro', 'secretario'] }
+        meta: { roles: ['admin_general', 'admin_registro', 'secretario','representante_federacion'] }
       },
       {
         path: 'motocicletas',
         component: () => import('pages/mototaxistas/MotocicletasPage.vue'),
-        meta: { roles: ['admin_general', 'admin_registro', 'secretario'] }
+        meta: { roles: ['admin_general', 'admin_registro', 'secretario',] }
       },
       {
         path: 'solicitudes',
@@ -163,6 +163,11 @@ const routes = [
         path: 'reportes-suscripciones-motrix',
         component: () => import('pages/reportes/ReportesSuscripcionesMotrixPage.vue'),
         meta: { roles: ['admin_general', 'secretario'] }
+      },
+      {
+        path: 'documentos',
+        component: () => import('pages/reportes/DocumentosPage.vue'),
+        meta: { roles: ['representante_federacion', 'secretario'] }
       },
       {
         path: 'reportes',

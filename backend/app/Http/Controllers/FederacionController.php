@@ -18,11 +18,7 @@ class FederacionController extends Controller
             ->orderBy('nombre');
 
         if (
-            strtolower(
-                trim(
-                    (string) $request->user()?->role
-                )
-            ) === 'secretario'
+in_array(strtolower(trim((string) $request->user()?->role)), ['secretario', 'representante_federacion'], true)
         ) {
             $federacionId = (int) (
                 $request->user()?->federacion_id
@@ -58,11 +54,7 @@ class FederacionController extends Controller
             ]);
 
         if (
-            strtolower(
-                trim(
-                    (string) $request->user()?->role
-                )
-            ) === 'secretario'
+in_array(strtolower(trim((string) $request->user()?->role)), ['secretario', 'representante_federacion'], true)
         ) {
             $federacionId = (int) (
                 $request->user()?->federacion_id
