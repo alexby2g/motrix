@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build-apk:
-    name: Compilar APK Android
+    name: Compilar APK Android Release
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -48,7 +48,55 @@ jobs:
         shell: bash
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          sdkmanager \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "platform-tools"
+
+      - name: Verificar secrets de firma
+        shell: bash
+        env:
+          MOTRIX_KEYSTORE_B64: ${{ secrets.MOTRIX_KEYSTORE_B64 }}
+          MOTRIX_KEYSTORE_PASSWORD: ${{ secrets.MOTRIX_KEYSTORE_PASSWORD }}
+          MOTRIX_KEY_PASSWORD: ${{ secrets.MOTRIX_KEY_PASSWORD }}
+        run: |
+          if [ -z "$MOTRIX_KEYSTORE_B64" ]; then
+            echo "Falta MOTRIX_KEYSTORE_B64"
+            exit 1
+          fi
+
+          if [ -z "$MOTRIX_KEYSTORE_PASSWORD" ]; then
+            echo "Falta MOTRIX_KEYSTORE_PASSWORD"
+            exit 1
+          fi
+
+          if [ -z "$MOTRIX_KEY_PASSWORD" ]; then
+            echo "Falta MOTRIX_KEY_PASSWORD"
+            exit 1
+          fi
+
+          echo "Secrets de firma disponibles."
+
+      - name: Reconstruir keystore MOTRIX
+        shell: bash
+        env:
+          MOTRIX_KEYSTORE_B64: ${{ secrets.MOTRIX_KEYSTORE_B64 }}
+          MOTRIX_KEYSTORE_PASSWORD: ${{ secrets.MOTRIX_KEYSTORE_PASSWORD }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/motrix-signing"
+
+          printf '%s' "$MOTRIX_KEYSTORE_B64" \
+            | base64 --decode \
+            > "$RUNNER_TEMP/motrix-signing/motrix-release-key.jks"
+
+          keytool \
+            -list \
+            -keystore "$RUNNER_TEMP/motrix-signing/motrix-release-key.jks" \
+            -storepass "$MOTRIX_KEYSTORE_PASSWORD" \
+            -alias motrix \
+            >/dev/null
+
+          echo "Keystore MOTRIX reconstruido y verificado."
 
       - name: Instalar dependencias Quasar
         working-directory: frontend
@@ -85,7 +133,8 @@ jobs:
           mkdir -p www
 
           if [ ! -f www/index.html ]; then
-            printf '<!doctype html><html><body>MOTRIX</body></html>\n' > www/index.html
+            printf '<!doctype html><html><body>MOTRIX</body></html>\n' \
+              > www/index.html
           fi
 
           if [ ! -d android ]; then
@@ -110,7 +159,11 @@ jobs:
         env:
           VITE_API_URL: https://backend.motrixbolivia.com/api
           VITE_REVERB_HOST: backend.motrixbolivia.com
-        run: npx quasar build -m capacitor -T android --skip-pkg
+        run: |
+          npx quasar build \
+            -m capacitor \
+            -T android \
+            --skip-pkg
 
       - name: Configurar permisos Android
         shell: bash
@@ -142,10 +195,18 @@ jobs:
               '<uses-feature android:name="android.hardware.location.gps" android:required="false" />'
           ]
 
-          faltantes = [linea for linea in permisos if linea not in xml]
+          faltantes = [
+              linea
+              for linea in permisos
+              if linea not in xml
+          ]
 
           if faltantes:
-              match = re.search(r'<manifest\b[^>]*>', xml, flags=re.DOTALL)
+              match = re.search(
+                  r'<manifest\b[^>]*>',
+                  xml,
+                  flags=re.DOTALL
+              )
 
               if not match:
                   raise RuntimeError(
@@ -161,10 +222,13 @@ jobs:
                   + xml[cierre:]
               )
 
-              manifest.write_text(xml, encoding='utf-8')
+              manifest.write_text(
+                  xml,
+                  encoding='utf-8'
+              )
           PY
 
-      - name: Compilar APK debug instalable
+      - name: Compilar APK release
         working-directory: frontend/src-capacitor/android
         shell: bash
         run: |
@@ -173,7 +237,7 @@ jobs:
           for intento in 1 2 3; do
             echo "Intento Gradle ${intento}/3"
 
-            if ./gradlew assembleDebug --stacktrace; then
+            if ./gradlew assembleRelease --stacktrace; then
               exit 0
             fi
 
@@ -184,19 +248,80 @@ jobs:
             sleep 12
           done
 
-      - name: Preparar APK MOTRIX
+      - name: Localizar APK release
         shell: bash
         run: |
+          APK_RELEASE="$(
+            find frontend/src-capacitor/android/app/build/outputs/apk/release \
+              -maxdepth 1 \
+              -type f \
+              -name '*.apk' \
+              | head -n 1
+          )"
+
+          if [ -z "$APK_RELEASE" ]; then
+            echo "No se encontró la APK release."
+            exit 1
+          fi
+
+          echo "APK_RELEASE=$APK_RELEASE" >> "$GITHUB_ENV"
+          echo "APK release encontrada."
+
+      - name: Firmar APK oficial MOTRIX
+        shell: bash
+        env:
+          MOTRIX_KEYSTORE_PASSWORD: ${{ secrets.MOTRIX_KEYSTORE_PASSWORD }}
+          MOTRIX_KEY_PASSWORD: ${{ secrets.MOTRIX_KEY_PASSWORD }}
+        run: |
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
+
           mkdir -p dist-apk
 
-          cp \
-            frontend/src-capacitor/android/app/build/outputs/apk/debug/app-debug.apk \
-            dist-apk/MOTRIX-Android-debug.apk
+          "$BUILD_TOOLS/zipalign" \
+            -f \
+            -v \
+            4 \
+            "$APK_RELEASE" \
+            dist-apk/MOTRIX-aligned.apk
 
-      - name: Publicar APK
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$RUNNER_TEMP/motrix-signing/motrix-release-key.jks" \
+            --ks-key-alias motrix \
+            --ks-pass env:MOTRIX_KEYSTORE_PASSWORD \
+            --key-pass env:MOTRIX_KEY_PASSWORD \
+            --out dist-apk/MOTRIX.apk \
+            dist-apk/MOTRIX-aligned.apk
+
+          rm -f dist-apk/MOTRIX-aligned.apk
+
+      - name: Verificar firma APK
+        shell: bash
+        run: |
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
+
+          "$BUILD_TOOLS/apksigner" verify \
+            --verbose \
+            --print-certs \
+            dist-apk/MOTRIX.apk
+
+          "$BUILD_TOOLS/zipalign" \
+            -c \
+            -v \
+            4 \
+            dist-apk/MOTRIX.apk
+
+      - name: Generar SHA256 APK
+        shell: bash
+        run: |
+          sha256sum dist-apk/MOTRIX.apk \
+            > dist-apk/MOTRIX.apk.sha256
+
+      - name: Publicar APK oficial
         uses: actions/upload-artifact@v4
         with:
-          name: MOTRIX-Android-APK
-          path: dist-apk/MOTRIX-Android-debug.apk
+          name: MOTRIX-Android-Release
+          path: |
+            dist-apk/MOTRIX.apk
+            dist-apk/MOTRIX.apk.sha256
           if-no-files-found: error
           retention-days: 30
