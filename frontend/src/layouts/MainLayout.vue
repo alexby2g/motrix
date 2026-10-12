@@ -707,12 +707,14 @@ import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 
 import { api } from '../boot/axios.js'
+import { esContenedorNativo } from '../services/googleAuth.js'
 import { echoOptions } from '../config/runtime.js'
 window.Pusher = Pusher
 
 const $q = useQuasar()
 const router = useRouter()
 const route = useRoute()
+const esAppNativa = esContenedorNativo()
 
 const leftDrawerOpen = ref(true)
 const cerrandoSesion = ref(false)
@@ -2310,7 +2312,9 @@ async function cerrarSesion() {
     usuario.value = null
     cerrandoSesion.value = false
 
-    await router.replace('/presentacion')
+    await router.replace(
+      esAppNativa ? '/login' : '/presentacion'
+    )
 
     $q.notify({
       type: 'positive',

@@ -41,6 +41,7 @@
             <div class="login-panel__inner">
               <div class="panel-topbar">
                 <q-btn
+                  v-if="!esAppNativa"
                   flat dense no-caps icon="arrow_back"
                   label="Volver a MOTRIX"
                   color="green-9"
