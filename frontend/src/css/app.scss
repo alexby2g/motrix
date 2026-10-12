@@ -4,8 +4,8 @@
 ========================================================= */
 
 :root {
-  --motrix-primary: #2e7d32;
-  --motrix-primary-dark: #244e36;
+  --motrix-primary: #029037;
+  --motrix-primary-dark: #006D2A;
   --motrix-sidebar: #183c2b;
   --motrix-sidebar-deep: #123524;
   --motrix-bg: #f5f6f7;
@@ -268,3 +268,156 @@ html body #q-app .q-drawer.motrix-drawer .menu-item.q-router-link--exact-active 
   padding-right: 16px;
   padding-left: 16px;
 }
+
+
+/* =========================================================
+   MOTRIX · CAPA VISUAL PRO 2026
+   Pulido institucional para lanzamiento, defensa y demo.
+========================================================= */
+:root {
+  --motrix-primary: #1f7a34;
+  --motrix-primary-strong: #155d28;
+  --motrix-primary-deep: #0d4420;
+  --motrix-primary-soft: #edf7ef;
+  --motrix-accent: #75c786;
+  --motrix-page-gradient: linear-gradient(180deg, #f8fbf8 0%, #f3f6f4 100%);
+  --motrix-shadow-soft: 0 10px 30px rgba(18, 57, 31, 0.07);
+  --motrix-shadow-card: 0 16px 38px rgba(18, 57, 31, 0.09);
+  --motrix-radius-lg: 20px;
+  --motrix-radius-md: 14px;
+}
+
+body:not(.body--dark) .q-page {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(66, 160, 83, 0.06), transparent 24%),
+    var(--motrix-page-gradient);
+}
+
+body:not(.body--dark) .q-card {
+  border-radius: var(--motrix-radius-lg);
+}
+
+body:not(.body--dark) .q-card.q-card--bordered {
+  border-color: #e1e8e3;
+}
+
+body:not(.body--dark) .q-field--outlined .q-field__control {
+  min-height: 50px;
+  border-radius: 13px;
+  box-shadow: inset 0 0 0 1px rgba(18, 57, 31, 0.015);
+}
+
+body:not(.body--dark) .q-btn:not(.q-btn--round):not(.q-btn--dense) {
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+body:not(.body--dark) .q-menu {
+  border-radius: 15px;
+  box-shadow: 0 18px 46px rgba(18, 57, 31, 0.14);
+}
+
+.motrix-visual-card {
+  border: 1px solid #e1e9e3;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: var(--motrix-shadow-soft);
+}
+
+.motrix-org-logo {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, #ffffff 0%, #f2f8f3 100%);
+  border: 1px solid #dce8df;
+  box-shadow: 0 10px 24px rgba(25, 83, 41, 0.10);
+}
+
+.motrix-org-logo img {
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  object-fit: contain !important;
+  background: #fff;
+}
+
+.motrix-profile-photo {
+  overflow: hidden;
+  border: 3px solid #fff;
+  box-shadow:
+    0 0 0 1px #d9e5dc,
+    0 9px 24px rgba(20, 66, 34, 0.14);
+}
+
+.motrix-profile-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover !important;
+}
+
+.motrix-clickable-image {
+  cursor: zoom-in;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.motrix-clickable-image:hover {
+  transform: translateY(-2px) scale(1.015);
+}
+
+/* Dashboard: acabado más institucional sin alterar su lógica. */
+.dashboard-page .dashboard-heading {
+  padding: 8px 2px 4px;
+}
+
+.dashboard-page .dashboard-title {
+  letter-spacing: -0.025em;
+}
+
+.dashboard-page .my-dashboard-card {
+  overflow: hidden;
+  border: 1px solid #e0e8e2;
+  border-radius: 20px !important;
+  box-shadow: var(--motrix-shadow-soft) !important;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.dashboard-page .my-dashboard-card:hover {
+  transform: translateY(-4px);
+  border-color: #c7dccb;
+  box-shadow: var(--motrix-shadow-card) !important;
+}
+
+.dashboard-page .centro-incidencias-card,
+.dashboard-page .dashboard-panel-card {
+  border-radius: 20px !important;
+  border: 1px solid #e0e8e2;
+  box-shadow: var(--motrix-shadow-soft) !important;
+}
+
+/* Listados principales */
+.personas-page .lista-card,
+.personas-page .filtro-card,
+.personas-page .stat-card,
+.mototaxista-card,
+.sindicato-card,
+.federacion-card,
+.filters-card {
+  border-color: #e0e8e2 !important;
+  box-shadow: 0 8px 24px rgba(18, 57, 31, 0.055);
+}
+
+@media (max-width: 599px) {
+  body:not(.body--dark) .q-field--outlined .q-field__control {
+    min-height: 48px;
+  }
+
+  .dashboard-page .my-dashboard-card {
+    border-radius: 16px !important;
+  }
+}
+
+/* MOTRIX REALISTA V4 — solo capa visual */
+:root{--motrix-v4-green:#1f8b3b;--motrix-v4-deep:#0e4d2a;--motrix-v4-soft:#eef8f0;--motrix-v4-line:#dfe9e1;--motrix-v4-shadow:0 16px 42px rgba(20,70,38,.08)}
+.q-page{background:linear-gradient(180deg,#f6f9f6 0%,#f8faf8 100%)}
+.q-card{border-radius:18px!important}.q-card.shadow-1,.q-card.shadow-2,.q-card.shadow-3{box-shadow:var(--motrix-v4-shadow)!important}.q-btn:not(.q-btn--round){border-radius:12px}.q-field--outlined .q-field__control{border-radius:12px}.q-chip{border-radius:9px}.motrix-photo-thumb,.motrix-logo-thumb{transition:transform .18s ease,box-shadow .18s ease}.motrix-photo-thumb:hover,.motrix-logo-thumb:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(23,89,44,.14)}

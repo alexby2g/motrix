@@ -188,7 +188,9 @@
               size="62px"
               color="green-1"
               text-color="green-9"
-              class="persona-item__avatar"
+              class="persona-item__avatar motrix-profile-photo"
+              :class="{ 'motrix-clickable-image': Boolean(fotoPersona(persona)) }"
+              @click.stop="verFotoPersona(persona)"
             >
               <img
                 v-if="fotoPersona(persona)"
@@ -352,7 +354,14 @@
     <q-dialog v-model="detalleDialogOpen">
       <q-card class="detalle-persona-dialog">
         <q-card-section class="bg-green-8 text-white row items-center">
-          <q-avatar size="54px" color="white" text-color="green-9" class="q-mr-md">
+          <q-avatar
+            size="58px"
+            color="white"
+            text-color="green-9"
+            class="q-mr-md detalle-persona-avatar motrix-profile-photo"
+            :class="{ 'motrix-clickable-image': Boolean(fotoPersona(personaDetalle)) }"
+            @click="verFotoPersona(personaDetalle)"
+          >
             <img
               v-if="fotoPersona(personaDetalle)"
               :src="fotoPersona(personaDetalle)"
@@ -638,6 +647,8 @@
                   :src="urlImagen(imagen.ruta)"
                   ratio="1"
                   fit="cover"
+                  class="motrix-clickable-image"
+                  @click="verFotoRuta(imagen.ruta, nombreCompleto(personaFotos))"
                 >
                   <template #error>
                     <div class="absolute-full flex flex-center bg-grey-2 text-grey-6">
@@ -714,6 +725,12 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <PhotoViewerDialog
+      v-model="visorFotoOpen"
+      :src="visorFotoSrc"
+      :title="visorFotoTitulo"
+    />
   </q-page>
 </template>
 
@@ -728,6 +745,7 @@ import {
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios.js'
 import { API_ORIGIN } from 'src/config/runtime.js'
+import PhotoViewerDialog from 'src/components/PhotoViewerDialog.vue'
 
 const $q = useQuasar()
 
@@ -754,6 +772,9 @@ let temporizadorBusqueda = null
 const dialogOpen = ref(false)
 const detalleDialogOpen = ref(false)
 const personaDetalle = ref(null)
+const visorFotoOpen = ref(false)
+const visorFotoSrc = ref('')
+const visorFotoTitulo = ref('')
 const isEditing = ref(false)
 const formRef = ref(null)
 const archivoImagen = ref(null)
@@ -858,6 +879,22 @@ function fotoPersona(persona) {
   return urlImagen(
     imagenes[imagenes.length - 1]?.ruta
   )
+}
+
+function verFotoPersona(persona) {
+  const src = fotoPersona(persona)
+  if (!src) return
+  visorFotoSrc.value = src
+  visorFotoTitulo.value = nombreCompleto(persona)
+  visorFotoOpen.value = true
+}
+
+function verFotoRuta(ruta, titulo = 'Fotografía MOTRIX') {
+  const src = urlImagen(ruta)
+  if (!src) return
+  visorFotoSrc.value = src
+  visorFotoTitulo.value = titulo || 'Fotografía MOTRIX'
+  visorFotoOpen.value = true
 }
 
 function ocultarImagen(evento) {
@@ -1462,4 +1499,31 @@ onMounted(
     min-height: 44px;
   }
 }
+
+.persona-item__avatar,
+.detalle-persona-avatar {
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px #dce7df, 0 8px 20px rgba(25,83,41,.12);
+}
+
+.persona-item {
+  transition: background .18s ease, transform .18s ease;
+}
+
+.persona-item:hover {
+  background: #f8fbf8;
+}
+
+.foto-card {
+  border-color: #dfe8e1;
+  box-shadow: 0 8px 22px rgba(18,57,31,.06);
+}
+
+.foto-card :deep(.q-img) {
+  overflow: hidden;
+}
+</style>
+
+<style scoped>
+:deep(.q-card){border-radius:18px}:deep(.q-table__container){border-radius:18px;overflow:hidden}:deep(.q-avatar img){object-fit:cover}:deep(.q-btn:not(.q-btn--round)){border-radius:11px}.motrix-logo-box,.federacion-logo,.sindicato-logo{background:#fff;border:1px solid #e1ebe3;border-radius:16px;box-shadow:0 10px 24px rgba(25,75,43,.06)}
 </style>

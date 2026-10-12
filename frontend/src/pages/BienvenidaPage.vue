@@ -5,8 +5,8 @@
     <div class="welcome-shell">
       <section class="welcome-hero">
         <div class="brand-row">
-          <div class="brand-icon">
-            <q-icon name="two_wheeler" />
+          <div class="brand-icon brand-icon--official">
+            <img src="/motrix-logo-oficial.png" alt="MOTRIX" />
           </div>
 
           <div>
@@ -30,6 +30,12 @@
             ubicación. Si ya tienes una cuenta, inicia sesión; si eres
             pasajero nuevo, crea tu cuenta en pocos pasos.
           </p>
+
+          <div class="hero-trust-row">
+            <span><q-icon name="verified_user" /> Conductores afiliados</span>
+            <span><q-icon name="my_location" /> Seguimiento de viaje</span>
+            <span><q-icon name="qr_code_2" /> Verificación QR</span>
+          </div>
         </div>
 
         <div class="hero-illustration" aria-hidden="true">
@@ -49,13 +55,14 @@
 
       <section class="welcome-actions">
         <div class="action-card">
+          <div class="action-kicker">
+            <span /> ACCESO OFICIAL MOTRIX
+          </div>
+
           <div class="mobile-brand">
-            <q-avatar
-              size="64px"
-              color="green-1"
-              text-color="green-9"
-              icon="two_wheeler"
-            />
+            <div class="welcome-official-logo">
+              <img src="/motrix-logo-oficial.png" alt="MOTRIX" />
+            </div>
 
             <div>
               <div class="text-h5 text-weight-bold text-green-9">
@@ -723,5 +730,123 @@ function irLoginDesdeDialog() {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .08em;
+}
+
+
+/* ===== MOTRIX UI PRO · bienvenida ===== */
+.welcome-hero {
+  background:
+    radial-gradient(circle at 82% 72%, rgba(123,213,137,.18), transparent 26%),
+    linear-gradient(145deg, #0b3716 0%, #155a27 50%, #287b38 100%);
+}
+
+.brand-icon {
+  box-shadow: 0 10px 28px rgba(0,0,0,.13);
+}
+
+.hero-copy h1 {
+  letter-spacing: -.035em;
+}
+
+.hero-trust-row {
+  position: relative;
+  z-index: 3;
+  margin-top: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.hero-trust-row span {
+  padding: 8px 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255,255,255,.88);
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+}
+
+.welcome-actions {
+  background:
+    radial-gradient(circle at 92% 12%, rgba(70,164,87,.11), transparent 28%),
+    #f4f8f3;
+}
+
+.action-card {
+  max-width: 470px;
+  padding: 32px 36px;
+  border-radius: 26px;
+  border: 1px solid rgba(46,125,50,.11);
+  box-shadow: 0 28px 70px rgba(27,94,32,.12);
+}
+
+.action-kicker {
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #2e7d32;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .10em;
+}
+
+.action-kicker span {
+  width: 7px;
+  height: 7px;
+  background: #42a653;
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px rgba(66,166,83,.09);
+}
+
+.main-action {
+  min-height: 50px;
+  border-radius: 13px !important;
+  font-weight: 750;
+}
+
+.driver-info-button {
+  border-radius: 15px;
+}
+
+.safety-note {
+  border-radius: 15px;
+}
+
+@media (max-width: 850px) {
+  .action-card { max-width: 560px; }
+}
+
+@media (max-width: 599px) {
+  .action-card { padding: 26px 20px; border-radius: 20px; }
+  .hero-trust-row { justify-content: center; }
+}
+
+</style>
+
+<style scoped>
+:deep(.q-card){border-radius:18px}:deep(.q-table__container){border-radius:18px;overflow:hidden}:deep(.q-avatar img){object-fit:cover}:deep(.q-btn:not(.q-btn--round)){border-radius:11px}.motrix-logo-box,.federacion-logo,.sindicato-logo{background:#fff;border:1px solid #e1ebe3;border-radius:16px;box-shadow:0 10px 24px rgba(25,75,43,.06)}
+
+.brand-icon--official,
+.welcome-official-logo {
+  overflow: hidden;
+  background: transparent !important;
+}
+.brand-icon--official img,
+.welcome-official-logo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+.welcome-official-logo {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
 }
 </style>

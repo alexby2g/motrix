@@ -600,7 +600,7 @@ async function eliminarCuenta() {
       message: response?.data?.message || 'Tu cuenta fue eliminada correctamente.'
     })
 
-    await router.replace('/inicio')
+    await router.replace('/presentacion')
   } catch (error) {
     $q.notify({
       type: 'negative',

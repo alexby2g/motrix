@@ -5,13 +5,7 @@
         <q-card class="home-card shadow-2">
           <q-card-section class="passenger-hero text-white">
             <div class="row items-center no-wrap">
-              <q-avatar
-                color="white"
-                text-color="green-8"
-                icon="person_pin_circle"
-                size="58px"
-                class="q-mr-md"
-              />
+              <div class="passenger-motrix-logo q-mr-md"><img src="/motrix-logo-oficial.png" alt="MOTRIX" /></div>
 
               <div class="col min-width-zero">
                 <div class="text-h5 text-weight-bold">
@@ -410,4 +404,8 @@ function irAPerfil() {
     font-size: 11px;
   }
 }
+</style>
+
+<style scoped>
+.passenger-motrix-logo{width:58px;height:58px;border-radius:17px;overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,.16)}.passenger-motrix-logo img{width:100%;height:100%;display:block;object-fit:cover}.passenger-hero{background:linear-gradient(135deg,#0f5f31,#2b9348)!important}.home-card{border-radius:22px!important;overflow:hidden;border:1px solid #e0ebe2}.action-card{border-radius:18px!important;transition:transform .18s ease,box-shadow .18s ease}.action-card:hover{transform:translateY(-3px);box-shadow:0 18px 36px rgba(25,85,44,.10)}
 </style>

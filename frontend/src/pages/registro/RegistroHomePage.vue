@@ -325,3 +325,7 @@ onMounted(cargarDatos)
   }
 }
 </style>
+
+<style scoped>
+.registro-page{background:linear-gradient(180deg,#f3f8f4,#f8faf8)!important}.hero-saludo{padding:8px 4px}.hero-title{letter-spacing:-.03em}.card-stat,.panel-card{border-radius:18px!important;border-color:#e0e9e2!important;box-shadow:0 15px 36px rgba(25,75,43,.06)}.card-stat{min-height:104px}.panel-card{overflow:hidden}.panel-title{color:#173d27}.registro-shell{max-width:1500px;margin:0 auto}
+</style>

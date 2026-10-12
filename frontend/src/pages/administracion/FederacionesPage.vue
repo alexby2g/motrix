@@ -49,11 +49,18 @@
         <div v-for="federacion in federaciones" :key="federacion.id" class="col-12 col-sm-6 col-md-4 col-lg-3">
           <q-card flat bordered class="federacion-card full-height cursor-pointer" @click="abrirDetalle(federacion)">
             <q-card-section class="row items-start no-wrap">
-              <q-avatar size="64px" color="green-1" text-color="green-8" class="q-mr-md">
+              <q-avatar
+                size="72px"
+                color="green-1"
+                text-color="green-8"
+                class="q-mr-md logo-card-avatar motrix-org-logo motrix-clickable-image"
+                @click.stop="verLogo(federacion)"
+              >
                 <img
                   v-if="federacion.logo && !logosFallidos.has(federacion.id)"
                   :src="archivoPublico(federacion.logo)"
                   alt="Logo de federación"
+                  class="logo-img-contain"
                   @error="marcarLogoFallido(federacion.id)"
                 >
                 <q-icon v-else name="account_tree" size="34px" />
@@ -124,11 +131,18 @@
         <q-card-section v-if="seleccionada" class="q-pa-lg">
           <div class="row q-col-gutter-lg items-center">
             <div class="col-12 col-sm-auto text-center">
-              <q-avatar size="130px" color="green-1" text-color="green-8" class="logo-detalle">
+              <q-avatar
+                size="150px"
+                color="green-1"
+                text-color="green-8"
+                class="logo-detalle motrix-org-logo motrix-clickable-image"
+                @click="verLogo(seleccionada)"
+              >
                 <img
                   v-if="seleccionada.logo && !logosFallidos.has(seleccionada.id)"
                   :src="archivoPublico(seleccionada.logo)"
                   alt="Logo de federación"
+                  class="logo-img-contain"
                   @error="marcarLogoFallido(seleccionada.id)"
                 >
                 <q-icon v-else name="account_tree" size="64px" />
@@ -142,6 +156,15 @@
                 {{ seleccionada.sindicatos_count || 0 }} sindicato{{ Number(seleccionada.sindicatos_count || 0) === 1 ? '' : 's' }} afiliado{{ Number(seleccionada.sindicatos_count || 0) === 1 ? '' : 's' }}
               </q-chip>
               <div class="row q-gutter-sm q-mt-md">
+                <q-btn
+                  v-if="seleccionada.logo && !logosFallidos.has(seleccionada.id)"
+                  outline
+                  color="blue-8"
+                  icon="zoom_in"
+                  label="Ver logo"
+                  no-caps
+                  @click="verLogo(seleccionada)"
+                />
                 <q-btn color="purple-7" icon="image" label="Cambiar logo" no-caps unelevated @click="cambiarLogoDesdeDetalle" />
                 <q-btn outline color="green-8" icon="groups" label="Ver sindicatos" no-caps @click="irSindicatos(seleccionada)" />
               </div>
@@ -218,6 +241,12 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <PhotoViewerDialog
+      v-model="visorLogoOpen"
+      :src="visorLogoSrc"
+      :title="visorLogoTitulo"
+    />
   </q-page>
 </template>
 
@@ -226,6 +255,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { api } from 'src/boot/axios.js'
+import PhotoViewerDialog from 'src/components/PhotoViewerDialog.vue'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -244,6 +274,9 @@ const editando = ref(null)
 const federacionLogo = ref(null)
 const logoNuevo = ref(null)
 const errorNombre = ref('')
+const visorLogoOpen = ref(false)
+const visorLogoSrc = ref('')
+const visorLogoTitulo = ref('')
 
 const form = reactive({ nombre: '', logo: null })
 
@@ -254,7 +287,16 @@ function origenApi() {
 }
 
 function archivoPublico(ruta) {
-  return `${origenApi()}/storage/${ruta}`
+  if (!ruta) return ''
+  if (/^https?:\/\//i.test(String(ruta))) return String(ruta)
+  return `${origenApi()}/storage/${String(ruta).replace(/^\/+/, '')}`
+}
+
+function verLogo(federacion) {
+  if (!federacion?.logo || logosFallidos.value.has(federacion.id)) return
+  visorLogoSrc.value = archivoPublico(federacion.logo)
+  visorLogoTitulo.value = `Federación · ${federacion.nombre || 'MOTRIX'}`
+  visorLogoOpen.value = true
 }
 
 function marcarLogoFallido(id) {
@@ -420,4 +462,43 @@ onMounted(cargarFederaciones)
 .dialog-header { background: #f1f8e9; }
 .min-width-zero { min-width: 0; }
 .ellipsis-2-lines { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.logo-card-avatar {
+  flex: 0 0 auto;
+}
+
+.logo-card-avatar :deep(img),
+.logo-detalle :deep(img),
+.logo-img-contain {
+  width: 100%;
+  height: 100%;
+  padding: 7px;
+  object-fit: contain !important;
+  background: #fff;
+}
+
+.federacion-card {
+  overflow: hidden;
+  border: 1px solid #dfe8e1;
+  border-top: 3px solid #2e7d32;
+  box-shadow: 0 10px 28px rgba(27,94,32,.07);
+}
+
+.federacion-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 38px rgba(27,94,32,.12);
+}
+
+.stat-card {
+  box-shadow: 0 8px 22px rgba(27,94,32,.06);
+}
+
+@media (max-width: 599px) {
+  .logo-card-avatar { width: 64px !important; height: 64px !important; }
+  .logo-detalle { width: 126px !important; height: 126px !important; }
+}
+</style>
+
+<style scoped>
+:deep(.q-card){border-radius:18px}:deep(.q-table__container){border-radius:18px;overflow:hidden}:deep(.q-avatar img){object-fit:cover}:deep(.q-btn:not(.q-btn--round)){border-radius:11px}.motrix-logo-box,.federacion-logo,.sindicato-logo{background:#fff;border:1px solid #e1ebe3;border-radius:16px;box-shadow:0 10px 24px rgba(25,75,43,.06)}
 </style>

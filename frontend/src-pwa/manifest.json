@@ -8,8 +8,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#F4F8F2",
-  "theme_color": "#1B7A2A",
+  "background_color": "#FFFFFF",
+  "theme_color": "#029037",
   "categories": [
     "transportation",
     "navigation",

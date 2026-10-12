@@ -5662,4 +5662,76 @@ onBeforeUnmount(() => {
     font-size: 29px;
   }
 }
+
+
+/* ===== MOTRIX UI PRO · dashboard ===== */
+.dashboard-page {
+  background:
+    radial-gradient(circle at 96% 2%, rgba(63,158,80,.075), transparent 24%),
+    linear-gradient(180deg,#f8faf8 0%,#f3f6f4 100%) !important;
+}
+
+.container-dashboard {
+  max-width: 1320px;
+}
+
+.dashboard-heading {
+  padding: 4px 0 10px;
+}
+
+.dashboard-eyebrow {
+  color: #2d7b3b;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .10em;
+}
+
+.dashboard-title {
+  margin-top: 4px;
+  color: #1c2c21;
+  font-size: clamp(28px,3.1vw,40px);
+  font-weight: 850;
+  line-height: 1.08;
+}
+
+.dashboard-date {
+  margin-top: 5px;
+  color: #839087;
+  font-weight: 600;
+}
+
+.my-dashboard-card {
+  min-height: 196px;
+}
+
+.dashboard-card-icon {
+  border: 1px solid rgba(25,90,39,.08);
+  box-shadow: 0 10px 24px rgba(25,90,39,.08);
+}
+
+.dashboard-card-title {
+  color: #68766b;
+  font-size: 11px;
+  letter-spacing: .07em;
+}
+
+.dashboard-card-value {
+  color: #1e3424;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.dashboard-refresh-btn {
+  background: rgba(255,255,255,.7);
+}
+
+@media (max-width: 599px) {
+  .dashboard-page { padding: 14px !important; }
+  .dashboard-title { font-size: 28px; }
+  .my-dashboard-card { min-height: 160px; }
+}
+
+</style>
+<style scoped>
+:deep(.q-card){border-radius:18px}:deep(.q-table__container){border-radius:18px;overflow:hidden}:deep(.q-avatar img){object-fit:cover}:deep(.q-btn:not(.q-btn--round)){border-radius:11px}.motrix-logo-box,.federacion-logo,.sindicato-logo{background:#fff;border:1px solid #e1ebe3;border-radius:16px;box-shadow:0 10px 24px rgba(25,75,43,.06)}
 </style>

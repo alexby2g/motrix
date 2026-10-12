@@ -8,8 +8,16 @@
   >
     <div class="photo-viewer" @click.self="cerrar">
       <div class="photo-viewer__toolbar">
-        <div class="text-white text-subtitle1 text-weight-medium ellipsis">
-          {{ title || 'Fotografía' }}
+        <div class="photo-viewer__title-wrap">
+          <span class="photo-viewer__badge">
+            <q-icon name="zoom_in" />
+          </span>
+          <div class="min-width-zero">
+            <div class="text-white text-subtitle1 text-weight-bold ellipsis">
+              {{ title || 'Vista de imagen' }}
+            </div>
+            <div class="photo-viewer__caption">MOTRIX · Vista ampliada</div>
+          </div>
         </div>
         <q-btn
           flat
@@ -54,20 +62,53 @@ function cerrar() {
 <style scoped>
 .photo-viewer {
   min-height: 100vh;
-  background: rgba(7, 12, 10, 0.96);
+  background:
+    radial-gradient(circle at 50% 45%, rgba(52, 148, 76, .12), transparent 34%),
+    rgba(5, 11, 8, 0.975);
   display: flex;
   flex-direction: column;
 }
 
 .photo-viewer__toolbar {
-  min-height: 64px;
-  padding: 10px 14px 10px 20px;
+  min-height: 72px;
+  padding: 10px 18px 10px 22px;
   display: flex;
   align-items: center;
   gap: 12px;
   justify-content: space-between;
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(0, 0, 0, 0.30);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  backdrop-filter: blur(14px);
 }
+
+.photo-viewer__title-wrap {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.photo-viewer__badge {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: #a8e7b2;
+  background: rgba(66, 160, 83, .16);
+  border: 1px solid rgba(168, 231, 178, .16);
+  border-radius: 13px;
+}
+
+.photo-viewer__caption {
+  margin-top: 2px;
+  color: rgba(255,255,255,.55);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.min-width-zero { min-width: 0; }
 
 .photo-viewer__body {
   flex: 1;
@@ -86,7 +127,8 @@ function cerrar() {
   width: auto;
   height: auto;
   object-fit: contain;
-  border-radius: 8px;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.46);
 }
 </style>

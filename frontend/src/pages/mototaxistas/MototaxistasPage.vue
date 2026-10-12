@@ -152,10 +152,12 @@
 
           <q-card-section class="mototaxista-card__body row no-wrap items-start">
             <q-avatar
-              size="72px"
+              size="76px"
               color="green-1"
               text-color="green-9"
-              class="mototaxista-card__avatar q-mr-md"
+              class="mototaxista-card__avatar q-mr-md motrix-profile-photo"
+              :class="{ 'motrix-clickable-image': Boolean(fotoUrl(m)) }"
+              @click.stop="verFotoMototaxista(m)"
             >
               <img
                 v-if="fotoUrl(m)"
@@ -680,10 +682,12 @@
                 <div class="row q-col-gutter-md">
                   <div class="col-12 col-sm-auto text-center">
                     <q-avatar
-                      size="128px"
+                      size="138px"
                       color="green-1"
                       text-color="green-9"
-                      class="credencial-foto"
+                      class="credencial-foto motrix-profile-photo"
+                      :class="{ 'motrix-clickable-image': Boolean(fotoUrl(seleccionado)) }"
+                      @click="verFotoMototaxista(seleccionado)"
                     >
                       <img
                         v-if="fotoUrl(seleccionado)"
@@ -766,7 +770,8 @@
                     width="150px"
                     height="105px"
                     fit="cover"
-                    class="moto-credencial-img"
+                    class="moto-credencial-img motrix-clickable-image"
+                    @click="verFotoMoto(seleccionado)"
                   />
                   <div
                     v-else
@@ -1143,6 +1148,12 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <PhotoViewerDialog
+      v-model="visorFotoOpen"
+      :src="visorFotoSrc"
+      :title="visorFotoTitulo"
+    />
   </q-page>
 </template>
 
@@ -1159,6 +1170,7 @@ import { useRoute, useRouter } from 'vue-router'
 import QRCode from 'qrcode'
 import { api } from 'src/boot/axios.js'
 import { API_ORIGIN } from 'src/config/runtime.js'
+import PhotoViewerDialog from 'src/components/PhotoViewerDialog.vue'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -1222,6 +1234,9 @@ const formRef = ref(null)
 
 const dialogDetalle = ref(false)
 const seleccionado = ref(null)
+const visorFotoOpen = ref(false)
+const visorFotoSrc = ref('')
+const visorFotoTitulo = ref('')
 const detalleQrDataUrl = ref('')
 const generandoQrDetalle = ref(false)
 const fotoMototaxistaNueva = ref(null)
@@ -1441,6 +1456,23 @@ function fotoUrl(m) {
   )
 }
 
+
+function verFotoMototaxista(m) {
+  const src = fotoUrl(m)
+  if (!src) return
+  visorFotoSrc.value = src
+  visorFotoTitulo.value = nombreCompleto(m)
+  visorFotoOpen.value = true
+}
+
+function verFotoMoto(m) {
+  const src = fotoMotoUrl(m)
+  if (!src) return
+  const moto = motocicletaPrincipal(m)
+  visorFotoSrc.value = src
+  visorFotoTitulo.value = `Motocicleta · ${moto?.modelo || nombreCompleto(m)}`
+  visorFotoOpen.value = true
+}
 
 function motocicletaPrincipal(m) {
   const lista = Array.isArray(m?.motocicletas)
@@ -2612,4 +2644,32 @@ onMounted(async () => {
   font-weight: 500;
 }
 
+
+.mototaxista-card {
+  overflow: hidden;
+  border: 1px solid #dfe8e1;
+  border-top: 3px solid #2e7d32;
+  box-shadow: 0 10px 28px rgba(27,94,32,.065);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.mototaxista-card:hover {
+  transform: translateY(-4px);
+  border-color: #cbded0;
+  box-shadow: 0 18px 38px rgba(27,94,32,.12);
+}
+
+.mototaxista-card__avatar,
+.credencial-foto {
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px #dce7df, 0 9px 22px rgba(25,83,41,.14);
+}
+
+.moto-credencial-img {
+  cursor: zoom-in;
+}
+</style>
+
+<style scoped>
+:deep(.q-card){border-radius:18px}:deep(.q-table__container){border-radius:18px;overflow:hidden}:deep(.q-avatar img){object-fit:cover}:deep(.q-btn:not(.q-btn--round)){border-radius:11px}.motrix-logo-box,.federacion-logo,.sindicato-logo{background:#fff;border:1px solid #e1ebe3;border-radius:16px;box-shadow:0 10px 24px rgba(25,75,43,.06)}
 </style>

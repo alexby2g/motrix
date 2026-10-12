@@ -348,7 +348,7 @@ async function registrar() {
 }
 
 function volver() {
-  router.push('/inicio')
+  router.push('/presentacion')
 }
 
 function irLogin() {

@@ -13,10 +13,10 @@
           @click="toggleLeftDrawer"
         />
 
-        <q-icon
-          name="two_wheeler"
-          size="28px"
-          class="brand-icon q-mr-md"
+        <img
+          src="/motrix-logo-oficial.png"
+          alt="MOTRIX"
+          class="brand-logo-img q-mr-md"
         />
 
         <q-toolbar-title class="q-pa-none">
@@ -186,10 +186,10 @@
       <div class="drawer-content">
         <!-- IDENTIDAD DEL SISTEMA -->
         <div class="drawer-brand">
-          <q-icon
-            name="two_wheeler"
-            size="48px"
-            class="drawer-logo"
+          <img
+            src="/motrix-logo-oficial.png"
+            alt="MOTRIX"
+            class="drawer-logo-img"
           />
 
           <div class="text-h6 text-weight-bold q-mt-sm">
@@ -2310,7 +2310,7 @@ async function cerrarSesion() {
     usuario.value = null
     cerrandoSesion.value = false
 
-    await router.replace('/inicio')
+    await router.replace('/presentacion')
 
     $q.notify({
       type: 'positive',
@@ -2401,8 +2401,12 @@ onBeforeUnmount(() => {
   color: #38413c;
 }
 
-.brand-icon {
-  color: var(--motrix-primary);
+.brand-logo-img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 13px;
+  box-shadow: 0 8px 20px rgba(31,109,43,.16);
 }
 
 .brand-title {
@@ -2477,8 +2481,14 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
-.drawer-logo {
-  color: #79c884;
+.drawer-logo-img {
+  width: 64px;
+  height: 64px;
+  display: block;
+  margin: 0 auto;
+  object-fit: contain;
+  border-radius: 20px;
+  box-shadow: 0 16px 34px rgba(0,0,0,.20);
 }
 
 .drawer-brand-caption {
@@ -2751,4 +2761,102 @@ onBeforeUnmount(() => {
     border-radius: 0;
   }
 }
+
+
+/* ===== MOTRIX UI PRO · shell ===== */
+.motrix-header {
+  border-bottom-color: #e4ebe6;
+  box-shadow: 0 7px 24px rgba(18,57,31,.055);
+}
+
+.motrix-toolbar {
+  min-height: 70px;
+  padding-right: 22px;
+  padding-left: 18px;
+}
+
+.brand-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: #26793a;
+  background: #edf7ef;
+  border: 1px solid #d9e9dd;
+  border-radius: 12px;
+}
+
+.brand-title {
+  letter-spacing: -.015em;
+}
+
+.header-location {
+  padding: 8px 11px;
+  background: #f7f9f7;
+  border: 1px solid #e6ebe7;
+  border-radius: 12px;
+}
+
+.account-trigger {
+  background: #f5f8f6;
+  border: 1px solid #e5ebe6;
+}
+
+.drawer-brand {
+  position: relative;
+  padding-top: 28px;
+  padding-bottom: 22px;
+  background: radial-gradient(circle at 50% -20%, rgba(118,207,132,.18), transparent 58%);
+}
+
+.drawer-logo {
+  width: 62px;
+  height: 62px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+  color: #a3e0ad;
+  background: rgba(255,255,255,.075);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 19px;
+  box-shadow: 0 12px 28px rgba(0,0,0,.10);
+}
+
+.drawer-user {
+  margin-right: 11px;
+  margin-left: 11px;
+  padding: 13px;
+  border-radius: 15px;
+}
+
+.menu-item {
+  margin: 2px 0;
+  min-height: 48px;
+  border-radius: 12px;
+}
+
+:deep(.menu-item-active) {
+  background: linear-gradient(90deg, rgba(89,165,102,.36), rgba(72,139,84,.22)) !important;
+  box-shadow: inset 3px 0 0 #79d286, inset 0 0 0 1px rgba(255,255,255,.055) !important;
+}
+
+.drawer-footer {
+  padding: 14px 11px 16px;
+}
+
+.logout-button {
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+@media (max-width: 599px) {
+  .motrix-toolbar { min-height: 62px; padding: 0 10px; }
+  .brand-icon { width: 34px; height: 34px; }
+  .brand-title { font-size: 21px; }
+}
+
+</style>
+
+<style scoped>
+.motrix-page-container{background:linear-gradient(180deg,#f5f8f5 0%,#f7f9f7 100%)!important}.motrix-toolbar{min-height:76px!important}.motrix-header{box-shadow:0 7px 24px rgba(24,60,43,.07)!important}.motrix-drawer{box-shadow:8px 0 28px rgba(12,48,29,.10)}.drawer-brand{padding-top:28px!important}.drawer-user{border-radius:16px!important;background:rgba(255,255,255,.07)!important}.menu-item{border-radius:12px!important;margin-bottom:3px}.account-trigger{background:#f5f8f5}.header-location{padding:9px 13px;border:1px solid #e0e9e2;border-radius:13px;background:#fbfdfb}
 </style>

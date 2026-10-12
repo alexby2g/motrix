@@ -166,7 +166,7 @@ onMounted(() => {
   profile.value = pendiente.profile
 
   if (!registrationToken.value || !profile.value) {
-    router.replace('/inicio')
+    router.replace('/presentacion')
   }
 })
 
@@ -222,7 +222,7 @@ async function completarRegistro() {
 
 function volver() {
   limpiarGooglePendiente()
-  router.push('/inicio')
+  router.push('/presentacion')
 }
 </script>
 
