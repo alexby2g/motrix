@@ -95,7 +95,7 @@
           <div class="qr-box">
             <img src="/motrix-qr-presentacion-final-v34.png" alt="Código QR oficial de MOTRIX">
             <strong>Escanea y abre MOTRIX</strong>
-            <small>piloto.motrixbolivia.com</small>
+            <small>motrixbolivia.com</small>
           </div>
         </div>
       </section>
