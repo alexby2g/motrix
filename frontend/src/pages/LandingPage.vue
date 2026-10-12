@@ -1,125 +1,274 @@
 <template>
   <div class="landing-page">
-    <header class="site-header">
-      <div class="header-inner">
-        <button class="brand" type="button" @click="goTop">
-          <img src="/motrix-logo-oficial.png" alt="MOTRIX">
-          <span>
+    <header class="landing-header">
+      <div class="container header-inner">
+        <button class="brand" type="button" @click="scrollToSection('inicio')">
+          <img src="/motrix-logo-oficial.png" alt="Logo oficial MOTRIX">
+          <div class="brand-copy">
             <strong>MOTRIX</strong>
-            <small>Tu mototaxi más cerca</small>
-          </span>
+            <small>TU MOTOTAXI MÁS CERCA</small>
+          </div>
         </button>
 
         <nav class="desktop-nav" aria-label="Navegación principal">
-          <button @click="goTop">Inicio</button>
-          <button @click="goTo('beneficios')">Beneficios</button>
-          <button @click="goTo('como')">Cómo funciona</button>
-          <button @click="goTo('descarga')">Descargar app</button>
-          <button @click="goTo('trinidad')">Trinidad</button>
+          <button @click="scrollToSection('inicio')">Inicio</button>
+          <button @click="scrollToSection('beneficios')">Beneficios</button>
+          <button @click="scrollToSection('como-funciona')">Cómo funciona</button>
+          <button @click="scrollToSection('descarga')">Descargar app</button>
+          <button @click="scrollToSection('trinidad')">Trinidad</button>
         </nav>
 
         <div class="header-actions">
-          <span class="city-pill"><q-icon name="place" /> Trinidad · Beni</span>
-          <q-btn outline no-caps color="green-9" icon="person_outline" label="Iniciar sesión" @click="irLogin" />
-          <q-btn unelevated no-caps color="green-8" icon="person_add" label="Regístrate" @click="irRegistro" />
+          <q-btn outline color="green-8" no-caps icon="person_outline" label="Iniciar sesión" @click="router.push('/login')" />
+          <q-btn unelevated color="green-8" no-caps icon="person_add" label="Regístrate" @click="router.push('/registro-pasajero')" />
         </div>
 
-        <button class="mobile-menu-btn" type="button" aria-label="Abrir menú" @click="menuOpen = !menuOpen">
-          <q-icon :name="menuOpen ? 'close' : 'menu'" />
-        </button>
+        <q-btn
+          class="mobile-menu-btn"
+          flat
+          round
+          icon="menu"
+          color="green-9"
+          @click="menuOpen = !menuOpen"
+        />
       </div>
 
-      <transition name="menu-fade">
-        <div v-if="menuOpen" class="mobile-menu">
-          <button @click="mobileGo('top')">Inicio</button>
-          <button @click="mobileGo('beneficios')">Beneficios</button>
-          <button @click="mobileGo('como')">Cómo funciona</button>
-          <button @click="mobileGo('descarga')">Descargar app</button>
-          <button @click="mobileGo('trinidad')">Trinidad</button>
-          <button @click="irLogin">Iniciar sesión</button>
-          <button class="primary" @click="irRegistro">Regístrate</button>
+      <div v-if="menuOpen" class="mobile-menu">
+        <button @click="goMobile('inicio')">Inicio</button>
+        <button @click="goMobile('beneficios')">Beneficios</button>
+        <button @click="goMobile('como-funciona')">Cómo funciona</button>
+        <button @click="goMobile('descarga')">Descargar app</button>
+        <button @click="goMobile('trinidad')">Trinidad</button>
+
+        <div class="mobile-menu-actions">
+          <q-btn outline color="green-8" no-caps label="Iniciar sesión" @click="goLogin" />
+          <q-btn unelevated color="green-8" no-caps label="Regístrate" @click="goRegister" />
         </div>
-      </transition>
+      </div>
     </header>
 
-    <main>
-      <section class="hero">
-        <div class="hero-copy">
-          <span class="location-tag"><q-icon name="place" /> Trinidad · Beni · Bolivia</span>
-          <h1>Tu mototaxi <span>fácil, seguro</span> y al instante</h1>
-          <p>MOTRIX conecta pasajeros, mototaxistas, sindicatos y federaciones en Trinidad para una movilidad más segura, ordenada y moderna.</p>
-          <div class="hero-actions">
-            <button class="btn btn-primary" @click="irRegistro"><q-icon name="near_me" /> Comenzar ahora <q-icon name="arrow_forward" /></button>
-            <button class="btn btn-secondary" @click="goTo('como')"><q-icon name="play_circle_outline" /> Ver cómo funciona</button>
+    <!-- HERO: igual al estilo de la segunda referencia, dividido 50/50 -->
+    <section id="inicio" class="hero-split">
+      <div class="hero-copy-panel">
+        <div class="hero-copy-inner">
+          <div class="location-pill">
+            <q-icon name="location_on" />
+            <span>TRINIDAD · BENI · BOLIVIA</span>
           </div>
-          <div class="hero-mini"><q-icon name="android" /> App Android oficial · descarga directa mientras llega Google Play.</div>
-        </div>
-        <div class="hero-visual" aria-hidden="true" />
-      </section>
 
-      <section id="beneficios" class="benefits section-shell">
+          <h1>
+            Tu mototaxi
+            <span>fácil, seguro</span>
+            y al instante
+          </h1>
+
+          <p>
+            MOTRIX conecta pasajeros, mototaxistas, sindicatos y federaciones
+            en Trinidad para una movilidad más segura, ordenada y moderna.
+          </p>
+
+          <div class="hero-actions">
+            <q-btn
+              unelevated
+              color="green-6"
+              no-caps
+              icon="download"
+              label="Descargar APK"
+              @click="descargarApk"
+            />
+            <q-btn
+              outline
+              color="white"
+              no-caps
+              icon="play_circle"
+              label="Ver cómo funciona"
+              @click="scrollToSection('como-funciona')"
+            />
+          </div>
+
+          <div class="hero-badges">
+            <span><q-icon name="verified_user" /> Seguro</span>
+            <span><q-icon name="groups" /> Confiable</span>
+            <span><q-icon name="location_city" /> 100% Trinidad</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-photo-panel" aria-label="MOTRIX en Trinidad" />
+    </section>
+
+    <section id="beneficios" class="benefits">
+      <div class="container benefits-grid">
         <article v-for="item in benefits" :key="item.title" class="benefit-card">
-          <div class="benefit-icon"><q-icon :name="item.icon" /></div>
-          <div><h2>{{ item.title }}</h2><p>{{ item.text }}</p></div>
+          <div class="benefit-icon">
+            <q-icon :name="item.icon" />
+          </div>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.text }}</p>
         </article>
-      </section>
+      </div>
+    </section>
 
-      <section id="como" class="how section-shell">
-        <div class="section-heading">
-          <span>Cómo funciona</span>
-          <h2>Tu próximo viaje en 4 pasos</h2>
-          <p>Solicita, espera, viaja y llega. Así de simple.</p>
+    <section id="como-funciona" class="steps">
+      <div class="container">
+        <div class="section-heading center">
+          <h2>¿Cómo funciona?</h2>
+          <p>Tu mototaxi en 4 simples pasos.</p>
         </div>
-        <div class="steps">
+
+        <div class="steps-grid">
           <article v-for="(step, index) in steps" :key="step.title" class="step-card">
             <span class="step-number">{{ index + 1 }}</span>
-            <div class="step-icon"><q-icon :name="step.icon" /></div>
+            <div class="step-icon">
+              <q-icon :name="step.icon" />
+            </div>
             <h3>{{ step.title }}</h3>
             <p>{{ step.text }}</p>
           </article>
         </div>
-      </section>
-
-      <section id="descarga" class="download-wrap section-shell">
-        <div class="download-panel">
-          <div class="download-copy">
-            <span class="eyebrow">Descarga oficial</span>
-            <h2>Descarga MOTRIX para Android</h2>
-            <p>Instala la APK oficial desde nuestro sitio mientras completamos la publicación en Google Play.</p>
-            <div class="download-actions">
-              <button class="btn btn-primary big" @click="descargarApk"><q-icon name="download" /> Descargar APK oficial</button>
-              <span class="play-soon"><q-icon name="shop" /> Próximamente en Google Play</span>
-            </div>
-            <div class="trust-row"><span><q-icon name="verified_user" /> Sitio oficial</span><span><q-icon name="shield" /> Descarga segura</span><span><q-icon name="update" /> Siempre actualizado</span></div>
-          </div>
-          <div class="qr-box">
-            <img src="/motrix-qr-presentacion-final-v34.png" alt="Código QR oficial de MOTRIX">
-            <strong>Escanea y abre MOTRIX</strong>
-            <small>motrixbolivia.com</small>
-          </div>
-        </div>
-      </section>
-
-      <section id="trinidad" class="city-section">
-        <div class="city-overlay" />
-        <div class="city-content section-shell">
-          <span class="eyebrow light">MOTRIX en Trinidad</span>
-          <h2>Una ciudad que se mueve contigo</h2>
-          <p>Movilidad conectada, segura y organizada para nuestra ciudad.</p>
-          <div class="city-grid">
-            <article v-for="item in cityItems" :key="item.title"><q-icon :name="item.icon" /><div><strong>{{ item.title }}</strong><small>{{ item.text }}</small></div></article>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="footer">
-      <div class="footer-inner section-shell">
-        <div class="footer-brand"><img src="/motrix-logo-oficial.png" alt="MOTRIX"><div><strong>MOTRIX</strong><small>Tu mototaxi más cerca</small></div></div>
-        <div class="footer-links"><button @click="goTop">Inicio</button><button @click="goTo('beneficios')">Beneficios</button><button @click="goTo('como')">Cómo funciona</button><button @click="goTo('descarga')">Descargar app</button></div>
-        <div class="footer-city"><q-icon name="place" /><div><strong>Trinidad · Beni · Bolivia</strong><small>Personas que mueven nuestra ciudad.</small></div></div>
       </div>
-      <div class="footer-bottom section-shell">MOTRIX · Todos los derechos reservados.</div>
+    </section>
+
+    <!-- DESCARGA: sin la imagen fea, reemplazada por tarjeta visual limpia -->
+    <section id="descarga" class="download">
+      <div class="container download-grid">
+        <div class="download-card">
+          <div class="app-mark">
+            <img src="/motrix-logo-oficial.png" alt="MOTRIX">
+          </div>
+
+          <div class="download-card-copy">
+            <span class="app-kicker">APP OFICIAL</span>
+            <strong>MOTRIX para Android</strong>
+            <p>Tu mototaxi, más cerca.</p>
+          </div>
+
+          <div class="phone-preview">
+            <div class="phone-top">
+              <span>9:41</span>
+              <q-icon name="signal_cellular_alt" />
+            </div>
+
+            <div class="phone-brand">
+              <img src="/motrix-logo-oficial.png" alt="">
+              <strong>MOTRIX</strong>
+            </div>
+
+            <div class="phone-map">
+              <q-icon name="location_on" class="pin pin-start" />
+              <div class="route-line" />
+              <q-icon name="two_wheeler" class="bike" />
+              <q-icon name="location_on" class="pin pin-end" />
+            </div>
+
+            <div class="phone-status">
+              <small>Tu mototaxi llegará en</small>
+              <strong>3 min</strong>
+            </div>
+          </div>
+
+          <div class="download-card-footer">
+            <span><q-icon name="verified" /> APK oficial</span>
+            <span><q-icon name="security" /> Descarga segura</span>
+          </div>
+        </div>
+
+        <div class="download-copy">
+          <span class="eyebrow">DESCARGA OFICIAL</span>
+          <h2>Descarga MOTRIX para Android</h2>
+          <p>
+            Instala la aplicación oficial de MOTRIX directamente desde nuestro sitio.
+            Sin QR y sin pasos innecesarios.
+          </p>
+
+          <div class="download-points">
+            <span><q-icon name="check_circle" /> Instalación guiada</span>
+            <span><q-icon name="lock" /> Acceso seguro</span>
+            <span><q-icon name="system_update_alt" /> Siempre actualizada</span>
+          </div>
+
+          <div class="download-actions">
+            <q-btn
+              unelevated
+              color="green-8"
+              no-caps
+              icon="download"
+              label="Descargar APK oficial"
+              @click="descargarApk"
+            />
+            <q-btn
+              outline
+              color="green-8"
+              no-caps
+              icon="person_add"
+              label="Crear cuenta"
+              @click="router.push('/registro-pasajero')"
+            />
+          </div>
+
+          <small class="download-note">
+            Disponible para Android. La descarga inicia directamente desde motrixbolivia.com.
+          </small>
+        </div>
+      </div>
+    </section>
+
+    <section id="trinidad" class="trinidad">
+      <div class="trinidad-overlay" />
+      <div class="container trinidad-inner">
+        <div class="trinidad-copy">
+          <h2>MOTRIX en Trinidad</h2>
+          <p>Una ciudad en movimiento, más unida y más cerca de ti.</p>
+        </div>
+
+        <div class="trinidad-box">
+          <strong><q-icon name="place" /> Trinidad, Beni, Bolivia</strong>
+          <p>
+            Apoyamos el transporte local y trabajamos junto a mototaxistas,
+            sindicatos y federaciones para una Trinidad más conectada.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="landing-footer">
+      <div class="container footer-grid">
+        <div class="footer-brand">
+          <img src="/motrix-logo-oficial.png" alt="Logo MOTRIX">
+          <div>
+            <strong>MOTRIX</strong>
+            <small>TU MOTOTAXI MÁS CERCA</small>
+          </div>
+        </div>
+
+        <div class="footer-links">
+          <strong>Enlaces</strong>
+          <button @click="scrollToSection('inicio')">Inicio</button>
+          <button @click="scrollToSection('beneficios')">Beneficios</button>
+          <button @click="scrollToSection('como-funciona')">Cómo funciona</button>
+          <button @click="scrollToSection('descarga')">Descarga</button>
+        </div>
+
+        <div class="footer-links">
+          <strong>Legal</strong>
+          <span>Términos y condiciones</span>
+          <span>Política de privacidad</span>
+          <span>Centro de ayuda</span>
+        </div>
+
+        <div class="footer-location">
+          <q-icon name="location_on" />
+          <div>
+            <strong>Trinidad, Beni · Bolivia</strong>
+            <small>Tu mototaxi más cerca.</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="container footer-bottom">
+        <span>© MOTRIX. Todos los derechos reservados.</span>
+        <span>Movilidad segura para Trinidad.</span>
+      </div>
     </footer>
   </div>
 </template>
@@ -130,49 +279,1098 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const menuOpen = ref(false)
-const apkUrl = '/downloads/MOTRIX.apk'
 
 const benefits = [
-  { icon: 'two_wheeler', title: 'Solicita tu mototaxi', text: 'Pide tu viaje desde la app estés donde estés en Trinidad.' },
-  { icon: 'verified_user', title: 'Viaja con seguridad', text: 'Conductores identificados, viajes registrados y seguimiento.' },
-  { icon: 'groups', title: 'Gestión sindical', text: 'Herramientas modernas para sindicatos y federaciones.' },
-  { icon: 'payments', title: 'Pagos flexibles', text: 'Efectivo, QR o modalidad mixta según el servicio.' }
+  {
+    icon: 'two_wheeler',
+    title: 'Solicita tu mototaxi',
+    text: 'Pide un mototaxi desde tu celular en segundos.'
+  },
+  {
+    icon: 'shield',
+    title: 'Viaja con seguridad',
+    text: 'Conductores verificados y viajes monitoreados.'
+  },
+  {
+    icon: 'groups',
+    title: 'Gestión sindical',
+    text: 'Conectamos mototaxistas, sindicatos y federaciones.'
+  },
+  {
+    icon: 'payments',
+    title: 'Pagos flexibles',
+    text: 'Efectivo o métodos digitales, tú eliges.'
+  }
 ]
 
 const steps = [
-  { icon: 'phone_android', title: 'Solicita', text: 'Ingresa tu destino y solicita tu mototaxi.' },
-  { icon: 'place', title: 'Espera', text: 'Un mototaxista cercano acepta tu viaje.' },
-  { icon: 'two_wheeler', title: 'Viaja', text: 'Sigue el estado de tu viaje en tiempo real.' },
-  { icon: 'flag', title: 'Llega', text: 'Finaliza y califica tu servicio.' }
-]
-
-const cityItems = [
-  { icon: 'people', title: 'Pasajeros', text: 'Movilidad segura, rápida y accesible.' },
-  { icon: 'two_wheeler', title: 'Mototaxistas', text: 'Más oportunidades y mejor organización.' },
-  { icon: 'handshake', title: 'Sindicatos', text: 'Gestión moderna y transparente.' },
-  { icon: 'location_city', title: 'Trinidad', text: 'Una ciudad más conectada y en movimiento.' }
-]
-
-function irLogin () { menuOpen.value = false; router.push('/login') }
-function irRegistro () { menuOpen.value = false; router.push('/registro-pasajero') }
-function goTop () { menuOpen.value = false; window.scrollTo({ top: 0, behavior: 'smooth' }) }
-function goTo (id) { menuOpen.value = false; document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
-function mobileGo (id) { if (id === 'top') goTop(); else goTo(id) }
-async function descargarApk () {
-  try {
-    const r = await fetch(apkUrl, { method: 'HEAD', cache: 'no-store' })
-    if (r.ok) { window.location.href = apkUrl; return }
-  } catch (error) {
-    console.warn('No se pudo verificar la APK:', error)
+  {
+    icon: 'smartphone',
+    title: 'Solicita',
+    text: 'Ingresa tu destino y solicita tu mototaxi.'
+  },
+  {
+    icon: 'person_pin_circle',
+    title: 'Espera',
+    text: 'Un mototaxista cercano acepta tu viaje.'
+  },
+  {
+    icon: 'two_wheeler',
+    title: 'Viaja',
+    text: 'Sigue el estado de tu viaje en tiempo real.'
+  },
+  {
+    icon: 'flag',
+    title: 'Llega',
+    text: 'Finaliza y califica tu servicio.'
   }
-  window.alert('La APK oficial de MOTRIX aún está en preparación. Se habilitará aquí cuando esté publicada.')
+]
+
+function scrollToSection(id) {
+  menuOpen.value = false
+  requestAnimationFrame(() => {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    })
+  })
+}
+
+function goMobile(id) {
+  scrollToSection(id)
+}
+
+function goLogin() {
+  menuOpen.value = false
+  router.push('/login')
+}
+
+function goRegister() {
+  menuOpen.value = false
+  router.push('/registro-pasajero')
+}
+
+function descargarApk() {
+  window.location.href = 'https://motrixbolivia.com/downloads/MOTRIX.apk'
 }
 </script>
 
 <style scoped>
-:global(html){scroll-behavior:smooth}:global(body){margin:0;background:#fff;color:#10271a;font-family:Inter,Roboto,Arial,sans-serif}.landing-page{--green:#078b42;--green2:#16bd63;--deep:#06321d;--ink:#10271a;--muted:#6e7d74;min-height:100vh;background:#fff}.section-shell{width:min(1180px,calc(100% - 36px));margin:0 auto}.site-header{position:sticky;top:0;z-index:80;border-bottom:1px solid #e5eee7;background:rgba(255,255,255,.97);backdrop-filter:blur(14px)}.header-inner{width:min(1180px,calc(100% - 28px));min-height:76px;margin:0 auto;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:28px}.brand{display:flex;align-items:center;gap:11px;border:0;background:none;padding:0;text-align:left;color:var(--ink);cursor:pointer}.brand img{width:52px;height:52px;object-fit:contain;border-radius:14px}.brand span{display:grid;line-height:1}.brand strong{font-size:27px;font-weight:900;letter-spacing:-.04em}.brand small{margin-top:5px;color:#278040;font-size:9px;font-weight:900;text-transform:uppercase}.desktop-nav{display:flex;justify-content:center;gap:25px}.desktop-nav button,.footer-links button{border:0;background:none;color:#24392c;font-weight:800;cursor:pointer}.desktop-nav button:hover,.footer-links button:hover{color:var(--green)}.header-actions{display:flex;align-items:center;gap:10px}.city-pill{display:inline-flex;align-items:center;gap:6px;padding:11px 14px;border-radius:999px;background:#eef8f1;color:#176a37;font-size:11px;font-weight:900;white-space:nowrap}.header-actions :deep(.q-btn){min-height:43px;border-radius:13px;font-weight:800}.mobile-menu-btn,.mobile-menu{display:none}.hero{min-height:570px;display:grid;grid-template-columns:minmax(0,48%) minmax(0,52%);background:linear-gradient(135deg,#032c18 0%,#074d2b 100%)}.hero-copy{padding:72px max(32px,calc((100vw - 1180px)/2)) 62px;color:#fff;display:flex;flex-direction:column;justify-content:center}.location-tag{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid rgba(75,235,142,.65);border-radius:999px;background:rgba(8,116,56,.38);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.05em}.hero h1{max-width:610px;margin:20px 0 14px;font-size:clamp(46px,5.3vw,78px);line-height:.94;letter-spacing:-.055em;font-weight:900}.hero h1 span{color:#38e486}.hero-copy p{max-width:620px;margin:0;color:rgba(255,255,255,.92);font-size:18px;line-height:1.5}.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}.btn{min-height:52px;padding:0 20px;border-radius:14px;border:1px solid transparent;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:900;cursor:pointer}.btn-primary{color:#fff;background:linear-gradient(135deg,#18c765,#078b42);box-shadow:0 12px 28px rgba(0,0,0,.16)}.btn-secondary{color:#fff;border-color:rgba(255,255,255,.75);background:rgba(0,0,0,.18)}.hero-mini{margin-top:17px;color:rgba(255,255,255,.76);font-size:12px}.hero-visual{min-height:570px;background:url('/motrix-hero-visual-final.jpg') center/cover no-repeat}.benefits{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:24px 0}.benefit-card{display:flex;gap:14px;padding:20px;border:1px solid #e1eae3;border-radius:18px;background:#fff;box-shadow:0 10px 26px rgba(11,73,36,.05)}.benefit-icon{flex:0 0 54px;width:54px;height:54px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(135deg,#18c765,#078b42);color:#fff;font-size:27px}.benefit-card h2{margin:2px 0 6px;font-size:16px}.benefit-card p{margin:0;color:#6f7e74;font-size:12px;line-height:1.45}.how{padding:48px 0 56px}.section-heading span,.eyebrow{color:var(--green);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.12em}.section-heading h2,.download-copy h2,.city-content h2{margin:7px 0 7px;font-size:clamp(32px,3.6vw,48px);line-height:1;letter-spacing:-.045em}.section-heading p,.download-copy p,.city-content>p{margin:0;color:#6d7b73;font-size:15px}.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:28px}.step-card{position:relative;text-align:center;padding:18px 12px}.step-number{position:absolute;top:6px;left:calc(50% - 44px);width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:var(--green);color:#fff;font-weight:900}.step-icon{width:82px;height:82px;margin:0 auto 10px;display:grid;place-items:center;border-radius:50%;background:#eaf8ef;color:var(--green);font-size:42px}.step-card h3{margin:0 0 6px;font-size:17px}.step-card p{margin:0 auto;max-width:190px;color:#718077;font-size:12px;line-height:1.4}.download-wrap{padding-bottom:54px}.download-panel{display:grid;grid-template-columns:1fr auto;gap:28px;align-items:center;padding:34px 38px;border:1px solid #d8ecde;border-radius:24px;background:linear-gradient(135deg,#effbf3,#f8fffa)}.download-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:20px}.btn.big{min-height:56px;padding-inline:24px}.play-soon{display:inline-flex;align-items:center;gap:7px;padding:14px 16px;border:1px solid #d6e8dc;border-radius:13px;background:#fff;color:#41614d;font-size:12px;font-weight:800}.trust-row{display:flex;gap:18px;flex-wrap:wrap;margin-top:17px;color:#4d6757;font-size:11px;font-weight:800}.trust-row span{display:inline-flex;align-items:center;gap:5px}.qr-box{width:220px;padding:17px;border:1px solid #dfe9e1;border-radius:20px;background:#fff;text-align:center}.qr-box img{width:150px;height:150px;object-fit:contain}.qr-box strong,.qr-box small{display:block}.qr-box strong{margin-top:8px}.qr-box small{margin-top:4px;color:#76827a}.city-section{position:relative;min-height:470px;background:url('/motrix-trinidad-final.png') center/cover no-repeat;color:#fff}.city-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(2,42,22,.94),rgba(3,54,29,.56) 55%,rgba(4,44,25,.3))}.city-content{position:relative;z-index:2;padding:58px 0}.eyebrow.light{color:#58ed9b}.city-content>p{color:rgba(255,255,255,.86)}.city-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:36px}.city-grid article{min-height:130px;padding:22px;display:flex;align-items:center;gap:14px;border:1px solid rgba(81,238,145,.36);border-radius:18px;background:rgba(4,74,38,.72);backdrop-filter:blur(8px)}.city-grid .q-icon{font-size:34px;color:#5cf09e}.city-grid strong,.city-grid small{display:block}.city-grid strong{font-size:17px}.city-grid small{margin-top:7px;color:rgba(255,255,255,.82);font-size:12px;line-height:1.4}.footer{background:#033d24;color:#fff}.footer-inner{padding:30px 0;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;gap:24px}.footer-brand{display:flex;align-items:center;gap:12px}.footer-brand img{width:54px;height:54px;border-radius:14px}.footer-brand strong,.footer-brand small{display:block}.footer-brand strong{font-size:25px}.footer-brand small{margin-top:4px;color:#5df09c;font-size:9px;font-weight:900;text-transform:uppercase}.footer-links{display:grid;grid-template-columns:repeat(2,auto);gap:7px 18px}.footer-links button{color:#fff;text-align:left}.footer-city{display:flex;gap:10px;justify-content:flex-end}.footer-city>.q-icon{font-size:26px;color:#58ef9c}.footer-city strong,.footer-city small{display:block}.footer-city small{margin-top:6px;color:rgba(255,255,255,.72)}.footer-bottom{padding:14px 0 20px;border-top:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.68);font-size:11px}
+:global(html) { scroll-behavior: smooth; }
+:global(body) { margin: 0; background: #fff; }
 
-@media (max-width:1050px){.header-inner{grid-template-columns:auto 1fr auto}.desktop-nav{display:none}.hero{grid-template-columns:1fr 1fr}.benefits{grid-template-columns:repeat(2,1fr)}.city-grid{grid-template-columns:repeat(2,1fr)}.header-actions .city-pill{display:none}}
-@media (max-width:820px){.header-inner{min-height:64px;grid-template-columns:1fr auto}.brand img{width:44px;height:44px}.brand strong{font-size:23px}.brand small{font-size:8px}.header-actions{display:none}.mobile-menu-btn{display:grid;width:42px;height:42px;place-items:center;border:1px solid #dce8df;border-radius:12px;background:#fff;color:#17472b;font-size:23px}.mobile-menu{position:fixed;top:68px;left:10px;right:10px;z-index:90;display:grid;gap:6px;padding:12px;border:1px solid #dce8df;border-radius:18px;background:#fff;box-shadow:0 22px 50px rgba(7,62,33,.16)}.mobile-menu button{padding:13px 14px;border:0;border-radius:11px;background:#f3f9f5;color:#18462a;text-align:left;font-weight:850}.mobile-menu .primary{background:var(--green);color:#fff;text-align:center}.hero{display:flex;flex-direction:column;min-height:0}.hero-visual{order:1;min-height:280px;background-position:center}.hero-copy{order:2;padding:28px 18px 34px}.hero h1{font-size:clamp(40px,11vw,56px)}.hero-copy p{font-size:15px}.benefits{grid-template-columns:1fr;padding:16px 0}.how{padding:36px 0 42px}.steps{grid-template-columns:repeat(2,1fr)}.download-panel{grid-template-columns:1fr;padding:26px 22px}.qr-box{width:100%;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:15px;text-align:left}.qr-box img{width:120px;height:120px}.city-grid{grid-template-columns:1fr 1fr}.footer-inner{grid-template-columns:1fr;align-items:start}.footer-city{justify-content:flex-start}.footer-links{grid-template-columns:repeat(2,max-content)}}
-@media (max-width:520px){.section-shell{width:min(100% - 22px,1180px)}.hero-visual{min-height:235px;background-position:54% center}.hero-copy{padding:24px 13px 28px}.location-tag{font-size:9px}.hero h1{margin-top:14px;font-size:39px}.hero-copy p{font-size:13px}.hero-actions{display:grid}.btn{width:100%}.benefit-card{padding:15px}.steps{grid-template-columns:1fr}.step-card{display:grid;grid-template-columns:auto 1fr;grid-template-areas:'icon title' 'icon text';text-align:left;gap:2px 12px;padding:10px}.step-number{left:5px;top:5px}.step-icon{grid-area:icon;width:68px;height:68px;margin:0}.step-card h3{grid-area:title;align-self:end}.step-card p{grid-area:text;margin:0;max-width:none}.download-panel{padding:22px 16px}.download-copy h2,.city-content h2,.section-heading h2{font-size:31px}.download-actions{display:grid}.play-soon{justify-content:center}.trust-row{gap:10px}.qr-box{grid-template-columns:1fr;text-align:center}.qr-box img{margin:auto}.city-section{min-height:0}.city-content{padding:42px 0}.city-grid{grid-template-columns:1fr}.city-grid article{min-height:100px}.footer-inner{padding:24px 0}.footer-links{grid-template-columns:1fr 1fr}.footer-bottom{text-align:center}}
+.landing-page {
+  background: #fff;
+  color: #10271a;
+  overflow-x: hidden;
+}
+
+.container {
+  width: min(1180px, calc(100% - 36px));
+  margin: 0 auto;
+}
+
+/* HEADER */
+.landing-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255,255,255,.98);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid #e5ebe7;
+}
+
+.header-inner {
+  min-height: 86px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+}
+
+.brand,
+.desktop-nav button,
+.footer-links button,
+.mobile-menu button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+}
+
+.brand img,
+.footer-brand img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 16px;
+}
+
+.brand-copy,
+.footer-brand div {
+  display: grid;
+  text-align: left;
+}
+
+.brand-copy strong,
+.footer-brand strong {
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -.03em;
+}
+
+.brand-copy small,
+.footer-brand small {
+  margin-top: 4px;
+  color: #108845;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.desktop-nav {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+}
+
+.desktop-nav button {
+  color: #21382b;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.header-actions :deep(.q-btn) {
+  min-height: 44px;
+  border-radius: 14px;
+  font-weight: 800;
+  padding-inline: 18px;
+}
+
+.mobile-menu-btn,
+.mobile-menu {
+  display: none;
+}
+
+/* HERO SPLIT */
+.hero-split {
+  display: grid;
+  grid-template-columns: 48% 52%;
+  min-height: 620px;
+  background: #04371f;
+}
+
+.hero-copy-panel {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  background: #04371f;
+}
+
+.hero-copy-inner {
+  width: min(100%, 570px);
+  padding: 54px 56px 54px 28px;
+  color: #fff;
+}
+
+.hero-photo-panel {
+  min-height: 620px;
+  background:
+    url('/motrix-hero-visual-final.jpg')
+    58% center / cover no-repeat;
+}
+
+.location-pill {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid #35dc84;
+  background: rgba(6,92,49,.28);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.hero-split h1 {
+  margin: 20px 0 18px;
+  font-size: clamp(58px, 5vw, 78px);
+  line-height: .92;
+  letter-spacing: -.06em;
+  font-weight: 900;
+}
+
+.hero-split h1 span {
+  display: block;
+  color: #35ea86;
+}
+
+.hero-split p {
+  margin: 0;
+  max-width: 500px;
+  font-size: 18px;
+  line-height: 1.55;
+  color: rgba(255,255,255,.96);
+}
+
+.hero-actions {
+  margin-top: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hero-actions :deep(.q-btn) {
+  min-height: 54px;
+  border-radius: 14px;
+  font-weight: 900;
+  padding-inline: 24px;
+}
+
+.hero-badges {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.hero-badges span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* BENEFITS */
+.benefits {
+  padding: 26px 0;
+  background: linear-gradient(180deg,#eef8f2,#fbfdfc);
+}
+
+.benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 16px;
+}
+
+.benefit-card {
+  padding: 24px 18px;
+  text-align: center;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid #e2ece5;
+  box-shadow: 0 12px 28px rgba(16,84,49,.06);
+}
+
+.benefit-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 12px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg,#17b85f,#0a873f);
+  color: #fff;
+  font-size: 30px;
+}
+
+.benefit-card h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.benefit-card p {
+  margin: 0;
+  color: #66766d;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* STEPS */
+.steps {
+  padding: 70px 0 56px;
+  background:
+    radial-gradient(circle at 50% 0%,#effbf4 0%,transparent 58%),
+    #fff;
+}
+
+.section-heading.center {
+  text-align: center;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: clamp(38px,4vw,54px);
+  font-weight: 900;
+  line-height: .98;
+  letter-spacing: -.04em;
+}
+
+.section-heading p {
+  margin: 8px 0 0;
+  color: #607167;
+  font-size: 16px;
+}
+
+.steps-grid {
+  margin-top: 36px;
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 18px;
+}
+
+.step-card {
+  position: relative;
+  padding: 16px;
+  text-align: center;
+}
+
+.step-number {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 58px);
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #0a8b43;
+  color: #fff;
+  font-weight: 900;
+}
+
+.step-icon {
+  width: 108px;
+  height: 108px;
+  margin: 0 auto 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #eaf8ef;
+  color: #0a8740;
+  font-size: 50px;
+}
+
+.step-card h3 {
+  margin: 0 0 6px;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.step-card p {
+  margin: 0 auto;
+  max-width: 220px;
+  color: #69786f;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* DOWNLOAD */
+.download {
+  padding: 56px 0 64px;
+  background: #fff;
+}
+
+.download-grid {
+  display: grid;
+  grid-template-columns: .92fr 1.08fr;
+  align-items: center;
+  gap: 56px;
+}
+
+.download-card {
+  position: relative;
+  min-height: 440px;
+  padding: 32px;
+  overflow: hidden;
+  border-radius: 30px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 80% 20%,rgba(64,232,135,.32),transparent 32%),
+    linear-gradient(145deg,#0d7f41,#04371f);
+  box-shadow: 0 26px 68px rgba(6,73,39,.22);
+}
+
+.app-mark {
+  width: 78px;
+  height: 78px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(0,0,0,.16);
+}
+
+.app-mark img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.download-card-copy {
+  margin-top: 22px;
+  display: grid;
+}
+
+.app-kicker {
+  color: #8ff2b5;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .13em;
+}
+
+.download-card-copy strong {
+  margin-top: 5px;
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.download-card-copy p {
+  margin: 7px 0 0;
+  color: rgba(255,255,255,.82);
+  font-size: 14px;
+}
+
+.phone-preview {
+  position: absolute;
+  right: 28px;
+  bottom: -48px;
+  width: 205px;
+  height: 350px;
+  padding: 14px 13px;
+  border: 8px solid #111;
+  border-radius: 34px;
+  background: #f8fbf9;
+  color: #123423;
+  box-shadow: 0 26px 54px rgba(0,0,0,.28);
+  transform: rotate(4deg);
+}
+
+.phone-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.phone-brand {
+  margin-top: 13px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #08783c;
+}
+
+.phone-brand img {
+  width: 27px;
+  height: 27px;
+  object-fit: contain;
+}
+
+.phone-brand strong {
+  font-size: 15px;
+}
+
+.phone-map {
+  position: relative;
+  height: 160px;
+  margin-top: 13px;
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    linear-gradient(90deg,transparent 49%,#e7eee9 50%,transparent 51%),
+    linear-gradient(0deg,transparent 49%,#e7eee9 50%,transparent 51%),
+    #eef5f0;
+  background-size: 34px 34px;
+}
+
+.pin,
+.bike {
+  position: absolute;
+  z-index: 3;
+  color: #0d9348;
+}
+
+.pin-start {
+  left: 22px;
+  bottom: 25px;
+  color: #e74636;
+}
+
+.pin-end {
+  right: 18px;
+  top: 20px;
+}
+
+.bike {
+  left: 83px;
+  top: 82px;
+}
+
+.route-line {
+  position: absolute;
+  left: 38px;
+  top: 92px;
+  width: 110px;
+  height: 4px;
+  background: #15964d;
+  border-radius: 99px;
+  transform: rotate(-32deg);
+}
+
+.phone-status {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.phone-status small {
+  display: block;
+  color: #76867d;
+  font-size: 9px;
+}
+
+.phone-status strong {
+  display: block;
+  margin-top: 2px;
+  color: #0b8b43;
+  font-size: 25px;
+}
+
+.download-card-footer {
+  position: absolute;
+  left: 32px;
+  bottom: 26px;
+  display: grid;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.download-card-footer span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.download-copy .eyebrow {
+  display: inline-block;
+  margin-bottom: 10px;
+  color: #0f8a43;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.download-copy h2 {
+  margin: 0 0 12px;
+  font-size: clamp(42px,4.5vw,60px);
+  line-height: .98;
+  letter-spacing: -.05em;
+  font-weight: 900;
+}
+
+.download-copy p {
+  margin: 0;
+  max-width: 560px;
+  color: #5f7067;
+  font-size: 16px;
+  line-height: 1.58;
+}
+
+.download-points {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  color: #274537;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.download-points span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.download-points .q-icon {
+  color: #169247;
+  font-size: 20px;
+}
+
+.download-actions {
+  margin-top: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.download-actions :deep(.q-btn) {
+  min-height: 54px;
+  border-radius: 14px;
+  font-weight: 900;
+  padding-inline: 22px;
+}
+
+.download-note {
+  display: block;
+  margin-top: 12px;
+  color: #87948c;
+  font-size: 12px;
+}
+
+/* TRINIDAD */
+.trinidad {
+  position: relative;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  background: url('/motrix-trinidad-final.png') center center / cover no-repeat;
+}
+
+.trinidad-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg,rgba(3,37,22,.84),rgba(3,37,22,.52) 55%,rgba(3,37,22,.24));
+}
+
+.trinidad-inner {
+  position: relative;
+  z-index: 2;
+  padding: 58px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 30px;
+  color: #fff;
+}
+
+.trinidad-copy h2 {
+  margin: 0;
+  font-size: clamp(44px,4vw,62px);
+  line-height: .95;
+  font-weight: 900;
+  letter-spacing: -.04em;
+}
+
+.trinidad-copy p {
+  margin: 14px 0 0;
+  font-size: 21px;
+}
+
+.trinidad-box {
+  width: min(390px,100%);
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(3,35,20,.58);
+  backdrop-filter: blur(10px);
+}
+
+.trinidad-box strong {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+}
+
+.trinidad-box p {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255,255,255,.9);
+}
+
+/* FOOTER */
+.landing-footer {
+  padding: 34px 0 20px;
+  background: #063a22;
+  color: #fff;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1.2fr .8fr .8fr 1.1fr;
+  gap: 30px;
+}
+
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-links {
+  display: grid;
+  gap: 7px;
+}
+
+.footer-links strong {
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.footer-links button,
+.footer-links span {
+  padding: 0;
+  text-align: left;
+  color: rgba(255,255,255,.76);
+  font-size: 12px;
+}
+
+.footer-location {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.footer-location > .q-icon {
+  font-size: 28px;
+  color: #93e7b1;
+}
+
+.footer-location div {
+  display: grid;
+}
+
+.footer-location strong {
+  font-size: 14px;
+}
+
+.footer-location small {
+  margin-top: 5px;
+  color: rgba(255,255,255,.66);
+  font-size: 11px;
+}
+
+.footer-bottom {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,.12);
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  color: rgba(255,255,255,.6);
+  font-size: 11px;
+}
+
+/* TABLET */
+@media (max-width: 1080px) {
+  .desktop-nav,
+  .header-actions {
+    display: none;
+  }
+
+  .mobile-menu-btn {
+    display: inline-flex;
+    justify-self: end;
+  }
+
+  .header-inner {
+    grid-template-columns: 1fr auto;
+  }
+
+  .mobile-menu {
+    display: grid;
+    gap: 4px;
+    padding: 10px 18px 18px;
+    background: #fff;
+    border-top: 1px solid #e7eee9;
+  }
+
+  .mobile-menu button {
+    padding: 12px 6px;
+    text-align: left;
+    font-weight: 800;
+    color: #1d3929;
+  }
+
+  .mobile-menu-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .benefits-grid {
+    grid-template-columns: repeat(2,1fr);
+  }
+
+  .steps-grid {
+    grid-template-columns: repeat(2,1fr);
+  }
+
+  .download-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .download-card {
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .trinidad-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* MOBILE */
+@media (max-width: 767px) {
+  .container {
+    width: min(100% - 24px,640px);
+  }
+
+  .header-inner {
+    min-height: 72px;
+  }
+
+  .brand img {
+    width: 48px;
+    height: 48px;
+  }
+
+  .brand-copy strong {
+    font-size: 22px;
+  }
+
+  .brand-copy small {
+    font-size: 8px;
+  }
+
+  .hero-split {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .hero-photo-panel {
+    order: 1;
+    min-height: 330px;
+    background-position: 58% center;
+  }
+
+  .hero-copy-panel {
+    order: 2;
+    justify-content: stretch;
+  }
+
+  .hero-copy-inner {
+    width: 100%;
+    padding: 30px 20px 42px;
+  }
+
+  .hero-split h1 {
+    font-size: clamp(44px,13vw,58px);
+  }
+
+  .hero-split p {
+    font-size: 15px;
+  }
+
+  .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .hero-actions :deep(.q-btn) {
+    width: 100%;
+  }
+
+  .benefits-grid {
+    grid-template-columns: repeat(2,1fr);
+    gap: 10px;
+  }
+
+  .benefit-card {
+    padding: 18px 12px;
+  }
+
+  .benefit-icon {
+    width: 54px;
+    height: 54px;
+    font-size: 26px;
+  }
+
+  .benefit-card h3 {
+    font-size: 15px;
+  }
+
+  .benefit-card p {
+    font-size: 11px;
+  }
+
+  .steps {
+    padding: 50px 0 34px;
+  }
+
+  .steps-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 26px;
+  }
+
+  .step-card {
+    min-height: 92px;
+    padding: 14px 12px 14px 92px;
+    text-align: left;
+  }
+
+  .step-number {
+    left: 4px;
+    top: 6px;
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
+  }
+
+  .step-icon {
+    position: absolute;
+    left: 22px;
+    top: 18px;
+    width: 58px;
+    height: 58px;
+    margin: 0;
+    font-size: 30px;
+  }
+
+  .step-card h3 {
+    font-size: 17px;
+  }
+
+  .step-card p {
+    max-width: none;
+    margin: 0;
+    font-size: 12px;
+  }
+
+  .download {
+    padding: 38px 0 48px;
+  }
+
+  .download-card {
+    min-height: 430px;
+    padding: 24px;
+    border-radius: 24px;
+  }
+
+  .download-card-copy strong {
+    font-size: 28px;
+  }
+
+  .phone-preview {
+    right: 18px;
+    width: 175px;
+    height: 315px;
+  }
+
+  .download-card-footer {
+    left: 24px;
+    bottom: 20px;
+    max-width: 125px;
+    font-size: 10px;
+  }
+
+  .download-copy h2 {
+    font-size: 40px;
+  }
+
+  .download-copy p {
+    font-size: 14px;
+  }
+
+  .download-points {
+    display: grid;
+    gap: 10px;
+  }
+
+  .download-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .download-actions :deep(.q-btn) {
+    width: 100%;
+  }
+
+  .trinidad {
+    min-height: 380px;
+    background-position: 56% center;
+  }
+
+  .trinidad-inner {
+    padding: 48px 0;
+  }
+
+  .trinidad-copy h2 {
+    font-size: 42px;
+  }
+
+  .trinidad-copy p {
+    font-size: 17px;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 430px) {
+  .brand-copy strong {
+    font-size: 20px;
+  }
+
+  .brand-copy small {
+    font-size: 7px;
+  }
+
+  .benefits-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-photo-panel {
+    min-height: 290px;
+  }
+
+  .hero-split h1 {
+    font-size: 40px;
+  }
+
+  .phone-preview {
+    right: 12px;
+    width: 158px;
+    height: 285px;
+  }
+
+  .download-card {
+    min-height: 400px;
+  }
+}
 </style>
