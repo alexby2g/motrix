@@ -4,8 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
-      - v5-suscripciones
+      - release-piloto-motrix
     paths:
       - 'frontend/**'
       - '.github/workflows/android-apk.yml'
@@ -42,8 +41,6 @@ jobs:
 
       - name: Configurar Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: platform-tools
 
       - name: Instalar Android API 36
         shell: bash
@@ -65,30 +62,30 @@ jobs:
           npm config set fetch-retry-maxtimeout 60000
 
           for intento in 1 2 3; do
-            echo "Intento npm ${intento}/3 para dependencias Capacitor"
+            echo "Intento npm ${intento}/3"
 
             if npm install --no-audit --no-fund; then
               exit 0
             fi
 
             if [ "$intento" -eq 3 ]; then
-              echo "npm install falló después de 3 intentos."
               exit 1
             fi
 
-            echo "Descarga interrumpida. Limpiando instalación parcial y reintentando..."
             rm -rf node_modules/sharp node_modules/@img || true
             sleep 12
           done
 
-      - name: Crear plataforma Android
+      - name: Crear plataforma Android si falta
         working-directory: frontend/src-capacitor
         shell: bash
         run: |
           mkdir -p www
+
           if [ ! -f www/index.html ]; then
             printf '<!doctype html><html><body>MOTRIX</body></html>\n' > www/index.html
           fi
+
           if [ ! -d android ]; then
             npx cap add android
           fi
@@ -100,17 +97,20 @@ jobs:
           npx @capacitor/assets generate \
             --android \
             --assetPath assets \
-            --iconBackgroundColor '#176B2C' \
-            --iconBackgroundColorDark '#0A2E0A' \
-            --splashBackgroundColor '#176B2C' \
-            --splashBackgroundColorDark '#0A2E0A' \
+            --iconBackgroundColor '#029037' \
+            --iconBackgroundColorDark '#029037' \
+            --splashBackgroundColor '#029037' \
+            --splashBackgroundColorDark '#029037' \
             --logoSplashScale 0.28
 
-      - name: Compilar interfaz MOTRIX y sincronizar Capacitor
+      - name: Compilar frontend y sincronizar Capacitor
         working-directory: frontend
+        env:
+          VITE_API_URL: https://backend.motrixbolivia.com/api
+          VITE_REVERB_HOST: backend.motrixbolivia.com
         run: npx quasar build -m capacitor -T android --skip-pkg
 
-      - name: Configurar permisos y SDK Android
+      - name: Configurar permisos Android
         shell: bash
         run: |
           python3 <<'PY'
@@ -130,6 +130,7 @@ jobs:
           variables.write_text(text, encoding='utf-8')
 
           xml = manifest.read_text(encoding='utf-8')
+
           permisos = [
               '<uses-permission android:name="android.permission.INTERNET" />',
               '<uses-permission android:name="android.permission.CAMERA" />',
@@ -143,60 +144,22 @@ jobs:
 
           if faltantes:
               match = re.search(r'<manifest\b[^>]*>', xml, flags=re.DOTALL)
+
               if not match:
                   raise RuntimeError(
-                      'No se encontró la etiqueta <manifest> en AndroidManifest.xml'
+                      'No se encontró la etiqueta <manifest>'
                   )
 
               cierre = match.end()
+
               xml = (
                   xml[:cierre]
                   + '\n    '
                   + '\n    '.join(faltantes)
                   + xml[cierre:]
               )
+
               manifest.write_text(xml, encoding='utf-8')
-          PY
-
-      - name: Configurar Firebase Android
-        shell: bash
-        env:
-          GOOGLE_SERVICES_JSON_B64: ${{ secrets.MOTRIX_GOOGLE_SERVICES_JSON_B64 }}
-        run: |
-          if [ -z "$GOOGLE_SERVICES_JSON_B64" ]; then
-            echo "Falta el secret MOTRIX_GOOGLE_SERVICES_JSON_B64."
-            exit 1
-          fi
-
-          printf '%s' "$GOOGLE_SERVICES_JSON_B64" \
-            | base64 --decode \
-            > frontend/src-capacitor/android/app/google-services.json
-
-          python3 <<'PY'
-          import json
-          from pathlib import Path
-
-          archivo = Path(
-              'frontend/src-capacitor/android/app/google-services.json'
-          )
-
-          data = json.loads(archivo.read_text(encoding='utf-8'))
-
-          paquetes = {
-              cliente.get('client_info', {})
-              .get('android_client_info', {})
-              .get('package_name')
-              for cliente in data.get('client', [])
-          }
-
-          esperado = 'bo.edu.josecastillo.motrix'
-
-          if esperado not in paquetes:
-              raise RuntimeError(
-                  f'google-services.json no corresponde a {esperado}'
-              )
-
-          print('Firebase Android configurado correctamente.')
           PY
 
       - name: Compilar APK debug instalable
@@ -213,23 +176,22 @@ jobs:
             fi
 
             if [ "$intento" -eq 3 ]; then
-              echo "Gradle falló después de 3 intentos."
               exit 1
             fi
 
-            echo "Descarga/compilación interrumpida. Reintentando en 12 segundos..."
             sleep 12
           done
 
-      - name: Preparar APK final
+      - name: Preparar APK MOTRIX
         shell: bash
         run: |
           mkdir -p dist-apk
+
           cp \
             frontend/src-capacitor/android/app/build/outputs/apk/debug/app-debug.apk \
             dist-apk/MOTRIX-Android-debug.apk
 
-      - name: Publicar APK como artefacto
+      - name: Publicar APK
         uses: actions/upload-artifact@v4
         with:
           name: MOTRIX-Android-APK
