@@ -3572,46 +3572,128 @@ function limpiarMapa() {
   )
 }
 
-function usarUbicacionActual() {
-  if (!navigator.geolocation) {
-    $q.notify({
-      type: 'negative',
-      message: 'Tu navegador no permite obtener la ubicación.'
-    })
-
-    return
-  }
-
+async function usarUbicacionActual() {
   obteniendoUbicacion.value = true
 
-  navigator.geolocation.getCurrentPosition(
-    async (posicion) => {
-      const lat = posicion.coords.latitude
-      const lng = posicion.coords.longitude
+  try {
+    let posicion
 
-      await colocarOrigen(lat, lng)
+    const gpsNativo =
+      window.__MOTRIX_NATIVE_GEOLOCATION__
 
-      mapa?.setView([lat, lng], 16)
-      obteniendoUbicacion.value = false
-    },
-    (error) => {
-      console.error('Error de GPS:', error)
+    if (gpsNativo) {
+      let permisos =
+        await gpsNativo.checkPermissions()
 
-      obteniendoUbicacion.value = false
+      if (
+        permisos.location !== 'granted'
+        && permisos.coarseLocation !== 'granted'
+      ) {
+        permisos =
+          await gpsNativo.requestPermissions({
+            permissions: [
+              'location',
+              'coarseLocation'
+            ]
+          })
+      }
 
-      $q.notify({
-        type: 'negative',
-        message: 'No se pudo obtener tu ubicación. Revisa el permiso del GPS.'
-      })
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 12000,
-      maximumAge: 30000
+      if (
+        permisos.location !== 'granted'
+        && permisos.coarseLocation !== 'granted'
+      ) {
+        throw new Error(
+          'Permiso de ubicación denegado'
+        )
+      }
+
+      try {
+        posicion =
+          await gpsNativo.getCurrentPosition({
+            enableHighAccuracy: true,
+            timeout: 30000,
+            maximumAge: 10000
+          })
+      } catch (primerError) {
+        console.warn(
+          'Primer intento GPS:',
+          primerError
+        )
+
+        posicion =
+          await gpsNativo.getCurrentPosition({
+            enableHighAccuracy: false,
+            timeout: 20000,
+            maximumAge: 60000
+          })
+      }
+    } else {
+      if (!navigator.geolocation) {
+        throw new Error(
+          'Geolocalización no disponible'
+        )
+      }
+
+      posicion = await new Promise(
+        (resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            reject,
+            {
+              enableHighAccuracy: true,
+              timeout: 20000,
+              maximumAge: 30000
+            }
+          )
+        }
+      )
     }
-  )
-}
 
+    const lat =
+      Number(posicion?.coords?.latitude)
+
+    const lng =
+      Number(posicion?.coords?.longitude)
+
+    if (
+      !Number.isFinite(lat)
+      || !Number.isFinite(lng)
+    ) {
+      throw new Error(
+        'GPS sin coordenadas válidas'
+      )
+    }
+
+    await colocarOrigen(
+      lat,
+      lng
+    )
+
+    mapa?.setView(
+      [lat, lng],
+      16
+    )
+  } catch (error) {
+    console.error(
+      'Error de GPS:',
+      error
+    )
+
+    $q.notify({
+      type: 'negative',
+      timeout: 6000,
+      message:
+        'No se pudo obtener tu ubicación. Verifica que la ubicación del teléfono esté activada.',
+      caption: String(
+        error?.code
+        || error?.message
+        || ''
+      )
+    })
+  } finally {
+    obteniendoUbicacion.value = false
+  }
+}
 
 function normalizarEstadoSolicitud(solicitud) {
   return String(solicitud?.estado || '')

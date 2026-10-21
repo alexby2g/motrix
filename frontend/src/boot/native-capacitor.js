@@ -173,9 +173,10 @@ function instalarEscanerQrNativo() {
 }
 
 export default () => {
+  window.__MOTRIX_NATIVE_APP__ = true
+  window.__MOTRIX_NATIVE_GEOLOCATION__ = Geolocation
+
   instalarGeolocalizacionNativa()
   instalarHapticos()
   instalarEscanerQrNativo()
-
-  window.__MOTRIX_NATIVE_APP__ = true
 }
