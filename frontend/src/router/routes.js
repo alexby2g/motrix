@@ -75,7 +75,7 @@ const routes = [
     children: [
       {
         path: '',
-        redirect: '/monitoreo'
+        redirect: '/presentacion'
       },
       {
         path: 'monitoreo',
@@ -91,7 +91,7 @@ const routes = [
         path: 'personas',
         component: () => import('pages/personas/PersonasPage.vue'),
         meta: {
-          roles: ['admin_general', 'admin_registro', 'secretario']
+          roles: ['admin_general', 'admin_registro', 'secretario', 'representante_federacion']
         }
       },
       {

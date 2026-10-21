@@ -197,6 +197,8 @@
       <q-separator />
 
       <q-table
+            :grid="$q.screen.lt.md"
+            :dense="$q.screen.lt.md"
         flat
         :rows="pagos"
         :columns="columnas"

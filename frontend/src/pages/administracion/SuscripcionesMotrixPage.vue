@@ -327,6 +327,8 @@
       <q-separator />
 
       <q-table
+            :grid="$q.screen.lt.md"
+            :dense="$q.screen.lt.md"
         flat
         row-key="id"
         :rows="suscripciones"
@@ -432,6 +434,8 @@
       </q-card-section>
       <q-separator />
       <q-table
+            :grid="$q.screen.lt.md"
+            :dense="$q.screen.lt.md"
         flat
         row-key="id_sindicato"
         :rows="panel.sindicatos || []"
@@ -491,9 +495,10 @@
             </div>
           </div>
           <q-table
+            :grid="$q.screen.lt.md"
+            :dense="$q.screen.lt.md"
             flat
             bordered
-            dense
             row-key="id"
             :rows="detalle.pagos || []"
             :columns="columnasPagos"

@@ -1682,7 +1682,7 @@ class MototaxistaController extends Controller
                 ->format('Y-m-d H:i:s');
 
         /*
-         * Este mismo endpoint controla el turno individual de 30 segundos.
+         * Este mismo endpoint controla el turno individual de 45 segundos.
          * Así la reasignación no depende de que el pasajero mantenga abierta
          * su pantalla o haga polling en ese momento.
          */
@@ -1856,7 +1856,7 @@ class MototaxistaController extends Controller
                 );
                 $solicitud->setAttribute(
                     'segundos_respuesta_total',
-                    $tiempoRespuesta['segundos_totales'] ?? 30
+                    $tiempoRespuesta['segundos_totales'] ?? 45
                 );
                 $solicitud->setAttribute(
                     'segundos_respuesta_restantes',
@@ -1944,7 +1944,7 @@ class MototaxistaController extends Controller
         $this->pushService->sendToUser(
             $userId ? (int) $userId : null,
             'Nueva solicitud de viaje',
-            'Tienes 30 segundos para aceptar la solicitud #' . $solicitud->id . '.',
+            'Tienes 45 segundos para responder a la solicitud #' . $solicitud->id . '.',
             [
                 'tipo' => $tipoEvento,
                 'solicitud_id' => $solicitud->id,

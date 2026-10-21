@@ -875,13 +875,14 @@ class SolicitudController extends Controller
         ]);
 
         /*
-         * La tarifa que llega desde el frontend es solamente visual.
-         * El backend impone nuevamente la tarifa oficial antes de
-         * guardar la solicitud.
+         * Nuevo flujo MOTRIX: el pasajero NO fija ni visualiza una tarifa
+         * antes de solicitar. El conductor asignado propone el monto y el
+         * pasajero decide si lo acepta o lo rechaza.
+         *
+         * Se guarda 0.00 para conservar compatibilidad con instalaciones
+         * donde la columna precio todavía no sea nullable.
          */
-        $datos['precio'] = $this->calcularTarifaPasajero(
-            (float) $datos['distancia_km']
-        );
+        $datos['precio'] = 0.00;
 
         /*
          * Antes de crear otra solicitud, se marcan como expiradas
@@ -900,6 +901,7 @@ class SolicitudController extends Controller
             ->whereIn('estado', [
                 'Pendiente',
                 'Buscando conductor',
+                'Oferta enviada',
                 'Aceptado',
                 'Llegó',
                 'En Curso',
@@ -959,7 +961,7 @@ class SolicitudController extends Controller
             $this->notificarPushConductor(
                 $solicitud,
                 'Nueva solicitud de viaje',
-                'Tienes 30 segundos para aceptar la solicitud #' . $solicitud->id . '.',
+                'Tienes 45 segundos para responder a la solicitud #' . $solicitud->id . '.',
                 'nueva_solicitud'
             );
         }
@@ -1064,6 +1066,14 @@ class SolicitudController extends Controller
             ], 403);
         }
 
+        /*
+         * También revisamos si la tarifa propuesta
+         * venció mientras el pasajero estaba esperando.
+         */
+        $this->procesarOfertaPasajeroExpirada(
+            $pasajeroId
+        );
+
         $this->marcarSolicitudesExpiradas(
             $pasajeroId
         );
@@ -1115,7 +1125,7 @@ class SolicitudController extends Controller
                     $this->notificarPushConductor(
                         $solicitudActualizada,
                         'Nueva solicitud de viaje',
-                        'Tienes 30 segundos para aceptar la solicitud #' . $solicitudActualizada->id . '.',
+                        'Tienes 45 segundos para responder a la solicitud #' . $solicitudActualizada->id . '.',
                         $tipoEvento
                     );
                 }
@@ -1134,6 +1144,7 @@ class SolicitudController extends Controller
             ->whereIn('estado', [
                 'Pendiente',
                 'Buscando conductor',
+                'Oferta enviada',
                 'Aceptado',
                 'Llegó',
                 'En Curso',
@@ -1388,6 +1399,7 @@ class SolicitudController extends Controller
                     [
                         'Pendiente',
                         'Buscando conductor',
+                        'Oferta enviada',
                         'Aceptado',
                         'Llegó',
                     ],
@@ -1489,12 +1501,394 @@ class SolicitudController extends Controller
     */
 
     /**
+     * El conductor reservado propone la tarifa al pasajero.
+     * El viaje todavía NO se considera aceptado hasta que el pasajero
+     * confirme expresamente la oferta.
+     */
+    public function proponerTarifa(
+        Request $request,
+        $id
+    ) {
+        $datos = $request->validate([
+            'precio' => [
+                'required',
+                'numeric',
+                'min:1',
+                'max:100',
+            ],
+        ]);
+
+        $mototaxistaId = $this->resolverMototaxistaIdSeguro(
+            $request
+        );
+
+        $this->asignacionService
+            ->revisarAsignacionPendiente((int) $id);
+
+        $solicitud = DB::transaction(
+            function () use (
+                $id,
+                $mototaxistaId,
+                $datos
+            ) {
+                $solicitud = Solicitud::query()
+                    ->lockForUpdate()
+                    ->findOrFail($id);
+
+                if (
+                    (int) ($solicitud->mototaxista_id ?? 0)
+                        !== (int) $mototaxistaId
+                ) {
+                    abort(
+                        403,
+                        'La solicitud ya no está reservada para este conductor.'
+                    );
+                }
+
+                if (!in_array(
+                    $solicitud->estado,
+                    ['Pendiente', 'Buscando conductor'],
+                    true
+                )) {
+                    abort(
+                        409,
+                        'La solicitud ya no está disponible para proponer una tarifa.'
+                    );
+                }
+
+                if (
+                    $solicitud->expira_en
+                    && Carbon::parse(
+                        $solicitud->expira_en,
+                        'UTC'
+                    )->lessThanOrEqualTo(
+                        Carbon::now('UTC')
+                    )
+                ) {
+                    abort(409, 'Tu tiempo para responder terminó.');
+                }
+
+                $mototaxista = Mototaxista::query()
+                    ->lockForUpdate()
+                    ->findOrFail($mototaxistaId);
+
+                $mototaxista->loadMissing('usuarioConductor');
+
+                if (
+                    ! $mototaxista->habilitadoSindicalmente()
+                    || $mototaxista->usuarioConductor === null
+                ) {
+                    abort(
+                        409,
+                        'No puedes proponer una tarifa mientras tu habilitación no esté vigente.'
+                    );
+                }
+
+                $solicitud->precio = round(
+                    (float) $datos['precio'],
+                    2
+                );
+                $solicitud->estado = 'Oferta enviada';
+                $solicitud->oferta_en = Carbon::now(
+                    'America/La_Paz'
+                )->format('Y-m-d H:i:s');
+                $solicitud->oferta_aceptada_en = null;
+
+                /*
+                 * El pasajero dispone de 30 segundos
+                 * para aceptar o rechazar la tarifa.
+                 *
+                 * Se guarda en UTC para que el tiempo
+                 * no dependa del navegador ni del celular.
+                 */
+                $solicitud->expira_en = Carbon::now('UTC')
+                    ->addSeconds(30)
+                    ->format('Y-m-d H:i:s');
+
+                $solicitud->save();
+
+                // Mientras el pasajero decide, este conductor queda reservado.
+                $mototaxista->disponible = 0;
+                $mototaxista->save();
+
+                $solicitud->load([
+                    'pasajero.persona',
+                    'mototaxista.persona.imagenes',
+                    'mototaxista.sindicato',
+                    'mototaxista.motocicletas',
+                ]);
+
+                $this->adjuntarReputacionConductor($solicitud);
+
+                return $solicitud;
+            }
+        );
+
+        broadcast(
+            new SolicitudActualizada(
+                $solicitud,
+                'tarifa_propuesta'
+            )
+        )->toOthers();
+
+        $this->notificarPushPasajero(
+            $solicitud,
+            'Tu mototaxista propuso una tarifa',
+            'Revisa la oferta de Bs. ' . number_format((float) $solicitud->precio, 2) . ' y confirma si estás de acuerdo.',
+            'tarifa_propuesta'
+        );
+
+        return response()->json([
+            'mensaje' => 'Tarifa enviada al pasajero. Espera su confirmación.',
+            'solicitud' => $solicitud,
+        ], 200);
+    }
+
+    /**
+     * El pasajero acepta la tarifa propuesta por el conductor.
+     * Recién en este momento se confirma el viaje y se crea el servicio.
+     */
+    public function aceptarOfertaPasajero(
+        Request $request,
+        $id
+    ) {
+        $pasajeroId = (int) (
+            $request->user()?->pasajero_id ?? 0
+        );
+
+        if ($pasajeroId <= 0) {
+            return response()->json([
+                'mensaje' => 'La cuenta no está vinculada a un pasajero.',
+            ], 403);
+        }
+
+        $solicitud = DB::transaction(
+            function () use ($id, $pasajeroId) {
+                $solicitud = Solicitud::query()
+                    ->where('id', $id)
+                    ->where('id_pasajero', $pasajeroId)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($solicitud->estado !== 'Oferta enviada') {
+                    abort(409, 'Esta oferta ya no está disponible.');
+                }
+
+                /*
+                 * Nunca aceptar una tarifa cuyo tiempo ya terminó,
+                 * aunque el navegador todavía muestre la oferta.
+                 */
+                if (
+                    $solicitud->expira_en
+                    && Carbon::parse(
+                        $solicitud->expira_en,
+                        'UTC'
+                    )->lessThanOrEqualTo(
+                        Carbon::now('UTC')
+                    )
+                ) {
+                    abort(
+                        409,
+                        'El tiempo para aceptar esta tarifa terminó.'
+                    );
+                }
+
+                if (
+                    ! $solicitud->mototaxista_id
+                    || (float) $solicitud->precio <= 0
+                ) {
+                    abort(409, 'La solicitud no tiene una oferta válida.');
+                }
+
+                $mototaxista = Mototaxista::query()
+                    ->lockForUpdate()
+                    ->findOrFail($solicitud->mototaxista_id);
+
+                $solicitud->estado = 'Aceptado';
+                $solicitud->oferta_aceptada_en = Carbon::now(
+                    'America/La_Paz'
+                )->format('Y-m-d H:i:s');
+                $solicitud->expira_en = null;
+                $solicitud->save();
+
+                $mototaxista->disponible = 0;
+                $mototaxista->save();
+
+                Servicio::firstOrCreate(
+                    [
+                        'id_solicitud' => $solicitud->id,
+                    ],
+                    [
+                        'hora_inicio' => Carbon::now(
+                            'America/La_Paz'
+                        )->format('H:i:s'),
+                        'hora_fin' => null,
+                        'estado' => 'Activo',
+                        'id_mototaxista' => $mototaxista->id,
+                    ]
+                );
+
+                $this->asignacionService->olvidarRechazos(
+                    $solicitud->id
+                );
+                $this->asignacionService
+                    ->olvidarSeguimientoAsignacion(
+                        $solicitud->id
+                    );
+
+                $solicitud->load([
+                    'pasajero.persona',
+                    'mototaxista.persona.imagenes',
+                    'mototaxista.sindicato',
+                    'mototaxista.motocicletas',
+                ]);
+
+                $this->adjuntarReputacionConductor($solicitud);
+
+                return $solicitud;
+            }
+        );
+
+        broadcast(
+            new SolicitudActualizada(
+                $solicitud,
+                'oferta_aceptada'
+            )
+        )->toOthers();
+
+        $this->notificarPushConductor(
+            $solicitud,
+            'Tarifa aceptada',
+            'El pasajero aceptó tu tarifa. Dirígete al punto de recogida.',
+            'oferta_aceptada'
+        );
+
+        return response()->json([
+            'mensaje' => 'Tarifa aceptada. Tu mototaxista va en camino.',
+            'solicitud' => $solicitud,
+        ], 200);
+    }
+
+    /**
+     * El pasajero rechaza la tarifa. Se libera al conductor actual y la
+     * solicitud vuelve a buscar al siguiente conductor disponible.
+     */
+    public function rechazarOfertaPasajero(
+        Request $request,
+        $id
+    ) {
+        $pasajeroId = (int) (
+            $request->user()?->pasajero_id ?? 0
+        );
+
+        if ($pasajeroId <= 0) {
+            return response()->json([
+                'mensaje' => 'La cuenta no está vinculada a un pasajero.',
+            ], 403);
+        }
+
+        $mototaxistaAnteriorId = DB::transaction(
+            function () use ($id, $pasajeroId) {
+                $solicitud = Solicitud::query()
+                    ->where('id', $id)
+                    ->where('id_pasajero', $pasajeroId)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($solicitud->estado !== 'Oferta enviada') {
+                    abort(409, 'Esta oferta ya no está disponible.');
+                }
+
+                $mototaxistaAnteriorId = (int) (
+                    $solicitud->mototaxista_id ?? 0
+                );
+
+                if ($mototaxistaAnteriorId <= 0) {
+                    abort(409, 'La oferta no tiene un conductor asignado.');
+                }
+
+                $solicitud->oferta_rechazada_en = Carbon::now(
+                    'America/La_Paz'
+                )->format('Y-m-d H:i:s');
+                $solicitud->precio = 0.00;
+                $solicitud->estado = 'Buscando conductor';
+                $solicitud->expira_en = Carbon::now('UTC')
+                    ->addMinutes(self::MINUTOS_EXPIRACION)
+                    ->format('Y-m-d H:i:s');
+                $solicitud->save();
+
+                $mototaxista = Mototaxista::query()
+                    ->lockForUpdate()
+                    ->find($mototaxistaAnteriorId);
+
+                if ($mototaxista) {
+                    $mototaxista->loadMissing('usuarioConductor');
+                    $mototaxista->disponible = (
+                        $mototaxista->habilitadoSindicalmente()
+                        && $mototaxista->usuarioConductor !== null
+                    );
+                    $mototaxista->save();
+                }
+
+                return $mototaxistaAnteriorId;
+            }
+        );
+
+        $resultado = $this->asignacionService
+            ->rechazarYReasignar(
+                (int) $id,
+                $mototaxistaAnteriorId
+            );
+
+        $solicitud = Solicitud::query()
+            ->with([
+                'pasajero.persona',
+                'mototaxista.persona.imagenes',
+                'mototaxista.sindicato',
+                'mototaxista.motocicletas',
+            ])
+            ->findOrFail($id);
+
+        $this->adjuntarReputacionConductor($solicitud);
+
+        broadcast(
+            new SolicitudActualizada(
+                $solicitud,
+                $resultado['conductor'] !== null
+                    ? 'conductor_reasignado'
+                    : 'oferta_rechazada'
+            )
+        )->toOthers();
+
+        if ($resultado['conductor'] !== null) {
+            $this->notificarPushConductor(
+                $solicitud,
+                'Nueva solicitud de viaje',
+                'Revisa el origen, destino y propone tu tarifa.',
+                'conductor_reasignado'
+            );
+        }
+
+        return response()->json([
+            'mensaje' => $resultado['conductor'] !== null
+                ? 'Oferta rechazada. Estamos consultando a otro mototaxista.'
+                : 'Oferta rechazada. Por ahora no encontramos otro conductor disponible.',
+            'reasignado' => $resultado['conductor'] !== null,
+            'solicitud' => $solicitud,
+        ], $resultado['ok'] ? 200 : 409);
+    }
+
+    /**
      * Asignación segura del viaje al conductor reservado.
      */
     public function aceptar(
         Request $request,
         $id
     ) {
+        return response()->json([
+            'mensaje' => 'Ahora debes proponer una tarifa y esperar la confirmación del pasajero.',
+        ], 409);
+
         $datos = $request->validate([
             'mototaxista_id' => [
                 'nullable',
@@ -1512,7 +1906,7 @@ class SolicitudController extends Controller
         /*
          * También se valida el límite de respuesta al momento de aceptar.
          * Así un conductor no puede aceptar una reserva cuyo turno de
-         * 30 segundos ya venció aunque el pasajero todavía no haya hecho poll.
+         * 45 segundos ya venció aunque el pasajero todavía no haya hecho poll.
          */
         $this->asignacionService
             ->revisarAsignacionPendiente((int) $id);
@@ -1772,7 +2166,7 @@ class SolicitudController extends Controller
             $this->notificarPushConductor(
                 $solicitudActualizada,
                 'Nueva solicitud de viaje',
-                'Tienes 30 segundos para aceptar la solicitud #' . $solicitudActualizada->id . '.',
+                'Tienes 45 segundos para responder a la solicitud #' . $solicitudActualizada->id . '.',
                 'conductor_reasignado'
             );
         }
@@ -2533,6 +2927,108 @@ class SolicitudController extends Controller
      * Cambia a Expirado las solicitudes pendientes
      * cuyo límite de tiempo ya terminó.
      */
+    /**
+     * Si la oferta del conductor venció, libera al conductor
+     * y vuelve a buscar al siguiente disponible.
+     *
+     * Se ejecuta desde el polling normal del pasajero.
+     */
+    private function procesarOfertaPasajeroExpirada(
+        int $pasajeroId
+    ): void {
+        $solicitud = Solicitud::query()
+            ->where('id_pasajero', $pasajeroId)
+            ->where('estado', 'Oferta enviada')
+            ->whereNotNull('oferta_en')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $solicitud) {
+            return;
+        }
+
+        $venceEn = Carbon::parse(
+            $solicitud->oferta_en,
+            'America/La_Paz'
+        )->addSeconds(30);
+
+        if (
+            Carbon::now('America/La_Paz')
+                ->lessThan($venceEn)
+        ) {
+            return;
+        }
+
+        DB::transaction(
+            function () use ($solicitud) {
+                $bloqueada = Solicitud::query()
+                    ->lockForUpdate()
+                    ->find($solicitud->id);
+
+                if (
+                    ! $bloqueada
+                    || $bloqueada->estado !== 'Oferta enviada'
+                    || ! $bloqueada->oferta_en
+                ) {
+                    return;
+                }
+
+                $venceEnBloqueada = Carbon::parse(
+                    $bloqueada->oferta_en,
+                    'America/La_Paz'
+                )->addSeconds(30);
+
+                if (
+                    Carbon::now('America/La_Paz')
+                        ->lessThan($venceEnBloqueada)
+                ) {
+                    return;
+                }
+
+                $mototaxistaAnteriorId = (int) (
+                    $bloqueada->mototaxista_id ?? 0
+                );
+
+                $bloqueada->precio = 0.00;
+                $bloqueada->estado = 'Expirado';
+                $bloqueada->motivo_cancelacion =
+                    'Oferta vencida sin respuesta del pasajero';
+                $bloqueada->expira_en = null;
+                $bloqueada->save();
+
+                if ($mototaxistaAnteriorId > 0) {
+                    $mototaxista = Mototaxista::query()
+                        ->lockForUpdate()
+                        ->find($mototaxistaAnteriorId);
+
+                    if ($mototaxista) {
+                        $mototaxista->loadMissing(
+                            'usuarioConductor'
+                        );
+
+                        $mototaxista->disponible = (
+                            $mototaxista->habilitadoSindicalmente()
+                            && $mototaxista->usuarioConductor !== null
+                        );
+
+                        $mototaxista->save();
+                    }
+                }
+
+                $this->asignacionService
+                    ->olvidarRechazos(
+                        $bloqueada->id
+                    );
+
+                $this->asignacionService
+                    ->olvidarSeguimientoAsignacion(
+                        $bloqueada->id
+                    );
+            }
+        );
+    }
+
+
     private function marcarSolicitudesExpiradas(
         int $pasajeroId
     ): void {

@@ -106,7 +106,7 @@ export default ({ router }) => {
         || !rol
       )
     ) {
-      return '/inicio'
+      return '/presentacion'
     }
 
     const requiereAutenticacion =

@@ -171,6 +171,8 @@
           </div>
 
           <q-table
+            :grid="$q.screen.lt.md"
+            :dense="$q.screen.lt.md"
             flat
             bordered
             row-key="__row"

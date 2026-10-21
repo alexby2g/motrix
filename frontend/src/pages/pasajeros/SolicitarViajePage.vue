@@ -180,7 +180,10 @@
                           </div>
 
                           <div class="text-h6 text-weight-bold text-positive">
-                            {{ formatearPrecio(viajeActivo.precio) }}
+                            {{ Number(viajeActivo.precio || 0) > 0
+                              ? formatearPrecio(viajeActivo.precio)
+                              : 'Por definir'
+                            }}
                           </div>
                         </div>
 
@@ -359,6 +362,52 @@
                           </div>
                         </div>
                       </div>
+
+                      <q-card
+                        v-if="hayOfertaPendiente"
+                        flat
+                        bordered
+                        class="bg-green-1 q-mt-md"
+                      >
+                        <q-card-section>
+                          <div class="text-caption text-green-9 text-uppercase text-weight-bold">
+                            Tarifa propuesta por el mototaxista
+                          </div>
+                          <div class="text-h4 text-weight-bold text-positive q-mt-xs">
+                            {{ formatearPrecio(viajeActivo.precio) }}
+                          </div>
+                          <div class="text-body2 text-grey-8 q-mt-sm">
+                            Revisa el recorrido. Si estás de acuerdo, confirma el viaje. Si no, MOTRIX buscará otro mototaxista.
+                          </div>
+
+                          <div class="row q-col-gutter-sm q-mt-md">
+                            <div class="col-5">
+                              <q-btn
+                                outline
+                                color="negative"
+                                icon="close"
+                                label="Rechazar"
+                                class="full-width"
+                                :loading="rechazandoOferta"
+                                :disable="aceptandoOferta || rechazandoOferta"
+                                @click="rechazarOferta"
+                              />
+                            </div>
+                            <div class="col-7">
+                              <q-btn
+                                color="positive"
+                                icon="check_circle"
+                                label="Aceptar tarifa"
+                                class="full-width text-weight-bold"
+                                unelevated
+                                :loading="aceptandoOferta"
+                                :disable="aceptandoOferta || rechazandoOferta"
+                                @click="aceptarOferta"
+                              />
+                            </div>
+                          </div>
+                        </q-card-section>
+                      </q-card>
 
                       <q-separator class="q-my-md" />
 
@@ -862,6 +911,7 @@
                         @click="usarUbicacionActual"
                       />
 
+
                       <q-input
                         v-model="busquedaDestino"
                         outlined
@@ -899,6 +949,7 @@
                           </q-btn>
                         </template>
                       </q-input>
+
 
                       <div
                         v-if="busquedaDestino && busquedaDestino.trim().length >= 3 && !form.destino"
@@ -996,22 +1047,21 @@
                             <q-avatar
                               color="green-1"
                               text-color="positive"
-                              icon="payments"
+                              icon="request_quote"
                               size="50px"
                               class="q-mr-md"
                             />
 
                             <div class="col">
-                              <div class="text-caption text-grey-6">
-                                Tarifa estimada
+                              <div class="text-subtitle1 text-weight-bold text-grey-9">
+                                El mototaxista propondrá la tarifa
                               </div>
-
-                              <div class="text-h5 text-weight-bold text-positive">
-                                {{ distanciaKm > 0 ? formatearPrecio(form.precio) : '—' }}
+                              <div class="text-caption text-grey-6">
+                                Solicita primero. El conductor revisará el recorrido y te enviará su precio para que tú decidas si aceptarlo.
                               </div>
                             </div>
 
-                            <div class="text-right">
+                            <div class="text-right q-ml-md">
                               <div class="text-caption text-grey-6">
                                 Distancia
                               </div>
@@ -1027,19 +1077,6 @@
                         </q-card-section>
                       </q-card>
 
-                      <q-banner
-                        dense
-                        rounded
-                        class="bg-grey-2 text-grey-8"
-                      >
-                        <template #avatar>
-                          <q-icon name="info" color="primary" />
-                        </template>
-
-                        Tarifas de referencia en Trinidad: Bs. 6 hasta
-                        2 km; Bs. 8 hasta 4 km; Bs. 10 para viajes más largos.
-                        De 23:00 a 06:00: Bs. 15.
-                      </q-banner>
                     </div>
                   </div>
 
@@ -1384,6 +1421,7 @@
 
 <script setup>
 import { fechaDDMMYYYY, fechaISOHoyBolivia } from 'src/utils/motrixDate.js'
+import catalogoTrinidad from 'src/data/trinidad/catalogoFinalTrinidad.json'
 
 import {
   computed,
@@ -1418,14 +1456,6 @@ const PASAJERO_ID = Number(
 const LAT_TRINIDAD = -14.8308
 const LNG_TRINIDAD = -64.9024
 
-const TARIFA_CORTA_MAX_KM = 2
-const TARIFA_MEDIA_MAX_KM = 4
-const TARIFA_CORTA_BS = 6
-const TARIFA_MEDIA_BS = 8
-const TARIFA_LARGA_BS = 10
-const TARIFA_NOCTURNA_BS = 15
-const HORA_INICIO_NOCTURNA = 23
-const HORA_FIN_NOCTURNA = 6
 
 const RADIO_BUSQUEDA_TRINIDAD_KM = 35
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search'
@@ -1433,11 +1463,14 @@ const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search'
 const cargandoInicial = ref(true)
 const cargandoViaje = ref(false)
 const enviando = ref(false)
+const aceptandoOferta = ref(false)
+const rechazandoOferta = ref(false)
 const cancelando = ref(false)
 const obteniendoUbicacion = ref(false)
 const buscandoDestino = ref(false)
 const busquedaDestino = ref('')
 const resultadosDestino = ref([])
+const destinoLocalSeleccionado = ref(null)
 const busquedaDestinoRealizada = ref(false)
 let temporizadorBusquedaDestino = null
 let secuenciaBusquedaDestino = 0
@@ -1550,7 +1583,7 @@ const form = reactive({
   origen: '',
   destino: '',
   fecha: obtenerFechaActual(),
-  precio: TARIFA_CORTA_BS,
+  precio: 0,
   metodo_pago: 'Efectivo'
 })
 
@@ -1575,10 +1608,15 @@ const estaBuscando = computed(() => {
     .includes(estadoNormalizado.value)
 })
 
+const hayOfertaPendiente = computed(() => {
+  return estadoNormalizado.value === 'oferta enviada'
+})
+
 const puedeCancelar = computed(() => {
   return [
     'pendiente',
     'buscando conductor',
+    'oferta enviada',
     'aceptado',
     'llegó'
   ].includes(estadoNormalizado.value)
@@ -1591,6 +1629,10 @@ const estadoColor = computed(() => {
 
   if (estadoNormalizado.value === 'buscando conductor') {
     return 'orange-8'
+  }
+
+  if (estadoNormalizado.value === 'oferta enviada') {
+    return 'green-8'
   }
 
   if (estadoNormalizado.value === 'aceptado') {
@@ -1617,6 +1659,10 @@ const estadoColor = computed(() => {
 })
 
 const estadoIcono = computed(() => {
+  if (estadoNormalizado.value === 'oferta enviada') {
+    return 'request_quote'
+  }
+
   if (estadoNormalizado.value === 'aceptado') {
     return 'person_pin_circle'
   }
@@ -1637,8 +1683,12 @@ const tituloEstado = computed(() => {
     return 'Buscando un mototaxista cercano'
   }
 
+  if (estadoNormalizado.value === 'oferta enviada') {
+    return 'Tu mototaxista propuso una tarifa'
+  }
+
   if (estadoNormalizado.value === 'aceptado') {
-    return 'Tu mototaxista aceptó la solicitud'
+    return 'Viaje confirmado'
   }
 
   if (estadoNormalizado.value === 'llegó') {
@@ -1657,8 +1707,12 @@ const descripcionEstado = computed(() => {
     return 'MOTRIX está localizando al conductor disponible más cercano.'
   }
 
+  if (estadoNormalizado.value === 'oferta enviada') {
+    return 'Revisa el precio propuesto y decide si deseas confirmar el viaje.'
+  }
+
   if (estadoNormalizado.value === 'aceptado') {
-    return 'El conductor se dirige hacia el punto de origen.'
+    return 'Aceptaste la tarifa. El conductor se dirige hacia el punto de origen.'
   }
 
   if (estadoNormalizado.value === 'llegó') {
@@ -1675,6 +1729,10 @@ const descripcionEstado = computed(() => {
 const bannerEstadoClase = computed(() => {
   if (estaBuscando.value) {
     return 'bg-orange-1 text-orange-10'
+  }
+
+  if (estadoNormalizado.value === 'oferta enviada') {
+    return 'bg-green-1 text-green-10'
   }
 
   if (estadoNormalizado.value === 'aceptado') {
@@ -2038,28 +2096,8 @@ function extraerMensajeError(error) {
 }
 
 function calcularTarifa() {
-  const hora = new Date().getHours()
-  const esNocturno = (
-    hora >= HORA_INICIO_NOCTURNA
-    || hora < HORA_FIN_NOCTURNA
-  )
-
-  if (esNocturno) {
-    form.precio = TARIFA_NOCTURNA_BS
-    return
-  }
-
-  if (distanciaKm.value <= TARIFA_CORTA_MAX_KM) {
-    form.precio = TARIFA_CORTA_BS
-    return
-  }
-
-  if (distanciaKm.value <= TARIFA_MEDIA_MAX_KM) {
-    form.precio = TARIFA_MEDIA_BS
-    return
-  }
-
-  form.precio = TARIFA_LARGA_BS
+  // Nuevo flujo: el conductor propone la tarifa después de recibir la solicitud.
+  form.precio = 0
 }
 
 function numeroSeguro(valor) {
@@ -2534,6 +2572,17 @@ function formatearDireccionNominatim(datos) {
     || ''
   ).trim()
 
+  const referencia = String(
+    datos?.name
+    || direccion.amenity
+    || direccion.shop
+    || direccion.tourism
+    || direccion.leisure
+    || direccion.building
+    || direccion.place
+    || ''
+  ).trim()
+
   const ciudad = String(
     direccion.city
     || direccion.town
@@ -2547,7 +2596,7 @@ function formatearDireccionNominatim(datos) {
     .join(' ')
     .trim()
 
-  const partes = [calle, zona, ciudad]
+  const partes = [calle, referencia, zona, ciudad]
     .filter(Boolean)
     .filter(
       (valor, indice, lista) =>
@@ -2588,8 +2637,10 @@ async function obtenerDireccion(lat, lng) {
           lon: lng,
           format: 'jsonv2',
           addressdetails: 1,
-          zoom: 18
-        }
+          zoom: 18,
+          'accept-language': 'es'
+        },
+        timeout: 3000
       }
     )
 
@@ -2598,6 +2649,15 @@ async function obtenerDireccion(lat, lng) {
     )
 
     if (direccion) {
+      const valor = direccion.toLocaleLowerCase('es')
+
+      if (
+        valor.includes('santísima trinidad')
+        || valor.includes('cercado')
+      ) {
+        return 'Trinidad'
+      }
+
       return direccion
     }
   } catch (error) {
@@ -2647,12 +2707,13 @@ function nombreResultadoDestino(resultado) {
   const direccion = resultado?.address || {}
 
   return String(
-    resultado?.name
-    || direccion?.road
-    || direccion?.pedestrian
+    resultado?.namedetails?.name
     || direccion?.neighbourhood
     || direccion?.suburb
     || direccion?.quarter
+    || resultado?.name
+    || direccion?.road
+    || direccion?.pedestrian
     || direccion?.amenity
     || direccion?.shop
     || resultado?.display_name?.split(',')?.[0]
@@ -2682,7 +2743,7 @@ function limpiarDestinoSeleccionado(limpiarBusqueda = true) {
   destinoCoords.value = null
   distanciaKm.value = 0
   form.destino = ''
-  form.precio = TARIFA_CORTA_BS
+  form.precio = 0
 
   resultadosDestino.value = []
   busquedaDestinoRealizada.value = false
@@ -2730,6 +2791,162 @@ function alEditarBusquedaDestino(valor) {
   }, 650)
 }
 
+function normalizarTextoBusqueda(texto) {
+  return String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es')
+    .trim()
+}
+
+function buscarLugaresLocalesTrinidad(consulta) {
+  const texto = normalizarTextoBusqueda(consulta)
+
+  if (texto.length < 2) {
+    return []
+  }
+
+  const lugares = Array.isArray(
+    catalogoTrinidad?.lugares
+  )
+    ? catalogoTrinidad.lugares
+    : []
+
+  return lugares
+    .map((lugar) => {
+      const nombre =
+        normalizarTextoBusqueda(
+          lugar.nombre
+        )
+
+      const aliases =
+        Array.isArray(lugar.aliases)
+          ? lugar.aliases.map(
+              alias =>
+                normalizarTextoBusqueda(
+                  alias
+                )
+            )
+          : []
+
+      let puntaje = 0
+
+      if (nombre === texto) {
+        puntaje += 1000
+      } else if (
+        nombre.startsWith(texto)
+      ) {
+        puntaje += 700
+      } else if (
+        nombre.includes(texto)
+      ) {
+        puntaje += 500
+      }
+
+      for (const alias of aliases) {
+        if (alias === texto) {
+          puntaje = Math.max(
+            puntaje,
+            900
+          )
+        } else if (
+          alias.startsWith(texto)
+        ) {
+          puntaje = Math.max(
+            puntaje,
+            650
+          )
+        } else if (
+          alias.includes(texto)
+        ) {
+          puntaje = Math.max(
+            puntaje,
+            450
+          )
+        }
+      }
+
+      if (puntaje === 0) {
+        return null
+      }
+
+      puntaje += Number(
+        lugar.prioridad || 0
+      )
+
+      const lat =
+        Number.parseFloat(
+          lugar.lat
+        )
+
+      const lng =
+        Number.parseFloat(
+          lugar.lng
+        )
+
+      // SIN_COORDENADAS_OCULTO
+      // Barrios y urbanizaciones sin
+      // coordenadas verificadas no se
+      // muestran en el buscador local.
+      if (
+        ['Barrio', 'Urbanización'].includes(
+          lugar.tipo
+        )
+        && (
+          !Number.isFinite(lat)
+          || !Number.isFinite(lng)
+        )
+      ) {
+        return null
+      }
+
+      return {
+        id:
+          lugar.id
+          || `local-${lugar.nombre}`,
+
+        esLocal: true,
+
+        nombre:
+          lugar.nombre,
+
+        direccion: [
+          lugar.nombre,
+          lugar.tipo,
+          'Trinidad'
+        ]
+          .filter(Boolean)
+          .join(' · '),
+
+        tipo:
+          lugar.tipo
+          || 'Lugar',
+
+        distrito:
+          lugar.distrito
+          || null,
+
+        lat:
+          Number.isFinite(lat)
+            ? lat
+            : null,
+
+        lng:
+          Number.isFinite(lng)
+            ? lng
+            : null,
+
+        puntaje
+      }
+    })
+    .filter(Boolean)
+    .sort(
+      (a, b) =>
+        b.puntaje - a.puntaje
+    )
+    .slice(0, 8)
+}
+
 async function buscarDestino(opciones = {}) {
   const consulta = String(
     opciones?.consulta ?? busquedaDestino.value ?? ''
@@ -2746,6 +2963,8 @@ async function buscarDestino(opciones = {}) {
     return
   }
 
+  const resultadosLocales = buscarLugaresLocalesTrinidad(consulta)
+
   const secuencia = ++secuenciaBusquedaDestino
   buscandoDestino.value = true
   resultadosDestino.value = []
@@ -2759,7 +2978,8 @@ async function buscarDestino(opciones = {}) {
           q: `${consulta}, Trinidad, Beni, Bolivia`,
           format: 'jsonv2',
           addressdetails: 1,
-          limit: 5,
+          namedetails: 1,
+          limit: 8,
           countrycodes: 'bo',
           'accept-language': 'es',
           viewbox: '-65.02,-14.74,-64.80,-14.95'
@@ -2767,15 +2987,48 @@ async function buscarDestino(opciones = {}) {
       }
     )
 
-    const resultados = Array.isArray(respuesta.data)
+    let resultados = Array.isArray(respuesta.data)
       ? respuesta.data
       : []
+
+    if (resultados.length === 0) {
+      const consultasAlternativas = [
+        `${consulta}, Beni, Bolivia`,
+        consulta
+      ]
+
+      for (const qAlternativa of consultasAlternativas) {
+        const alternativa = await axios.get(
+          NOMINATIM_SEARCH_URL,
+          {
+            params: {
+              q: qAlternativa,
+              format: 'jsonv2',
+              addressdetails: 1,
+              namedetails: 1,
+              limit: 8,
+              countrycodes: 'bo',
+              'accept-language': 'es',
+              viewbox: '-65.02,-14.74,-64.80,-14.95'
+            }
+          }
+        ).catch(() => ({ data: [] }))
+
+        if (
+          Array.isArray(alternativa.data)
+          && alternativa.data.length > 0
+        ) {
+          resultados = alternativa.data
+          break
+        }
+      }
+    }
 
     if (secuencia !== secuenciaBusquedaDestino) {
       return
     }
 
-    resultadosDestino.value = resultados
+    const resultadosExternos = resultados
       .map((resultado) => {
         const lat = Number.parseFloat(resultado?.lat)
         const lng = Number.parseFloat(resultado?.lon)
@@ -2803,6 +3056,8 @@ async function buscarDestino(opciones = {}) {
       })
       .filter(Boolean)
 
+    resultadosDestino.value = [...resultadosLocales, ...resultadosExternos].slice(0, 10)
+
     busquedaDestinoRealizada.value = true
   } catch (error) {
     console.error('Error buscando destino:', error)
@@ -2824,34 +3079,298 @@ async function buscarDestino(opciones = {}) {
   }
 }
 
+async function resolverDestinoLocalAutomaticamente(resultado) {
+  const nombre = String(
+    resultado?.nombre || ''
+  ).trim()
+
+  if (!nombre) {
+    return null
+  }
+
+  const consultas = [
+    `${nombre}, Trinidad, Beni, Bolivia`,
+    `Barrio ${nombre}, Trinidad, Beni, Bolivia`,
+    `${nombre}, Beni, Bolivia`
+  ]
+
+  let candidatos = []
+
+  for (const consulta of consultas) {
+    try {
+      const respuesta = await axios.get(
+        NOMINATIM_SEARCH_URL,
+        {
+          params: {
+            q: consulta,
+            format: 'jsonv2',
+            addressdetails: 1,
+            namedetails: 1,
+            limit: 8,
+            countrycodes: 'bo',
+            'accept-language': 'es',
+            viewbox:
+              '-65.02,-14.74,-64.80,-14.95'
+          },
+          timeout: 4500
+        }
+      )
+
+      const encontrados =
+        Array.isArray(respuesta.data)
+          ? respuesta.data
+          : []
+
+      candidatos.push(
+        ...encontrados
+      )
+
+      if (encontrados.length > 0) {
+        break
+      }
+    } catch (error) {
+      console.warn(
+        'No se pudo resolver destino local:',
+        consulta,
+        error
+      )
+    }
+  }
+
+  if (!candidatos.length) {
+    return null
+  }
+
+  const nombreBuscado =
+    normalizarTextoBusqueda(nombre)
+
+  const validos = candidatos
+    .map((item) => {
+      const lat =
+        Number.parseFloat(item?.lat)
+
+      const lng =
+        Number.parseFloat(item?.lon)
+
+      if (
+        !Number.isFinite(lat)
+        || !Number.isFinite(lng)
+      ) {
+        return null
+      }
+
+      const distanciaCentro =
+        calcularDistanciaRecta(
+          [LAT_TRINIDAD, LNG_TRINIDAD],
+          [lat, lng]
+        )
+
+      if (
+        distanciaCentro
+        > RADIO_BUSQUEDA_TRINIDAD_KM
+      ) {
+        return null
+      }
+
+      const textoResultado =
+        normalizarTextoBusqueda(
+          [
+            item?.name,
+            item?.display_name,
+            item?.namedetails?.name,
+            item?.address?.neighbourhood,
+            item?.address?.suburb,
+            item?.address?.quarter
+          ]
+            .filter(Boolean)
+            .join(' ')
+        )
+
+      let puntaje = 0
+
+      if (
+        textoResultado.includes(
+          nombreBuscado
+        )
+      ) {
+        puntaje += 100
+      }
+
+      if (
+        normalizarTextoBusqueda(
+          item?.name
+        ) === nombreBuscado
+      ) {
+        puntaje += 100
+      }
+
+      return {
+        lat,
+        lng,
+        puntaje,
+        item
+      }
+    })
+    .filter(Boolean)
+    .sort(
+      (a, b) =>
+        b.puntaje - a.puntaje
+    )
+
+  if (!validos.length) {
+    return null
+  }
+
+  return {
+    lat: validos[0].lat,
+    lng: validos[0].lng,
+    direccion: nombre
+  }
+}
+
 async function seleccionarResultadoDestino(resultado) {
   if (!resultado) {
     return
   }
 
   if (temporizadorBusquedaDestino) {
-    window.clearTimeout(temporizadorBusquedaDestino)
+    window.clearTimeout(
+      temporizadorBusquedaDestino
+    )
+
     temporizadorBusquedaDestino = null
   }
+
   secuenciaBusquedaDestino += 1
   buscandoDestino.value = false
 
   resultadosDestino.value = []
   busquedaDestinoRealizada.value = false
-  busquedaDestino.value = resultado.direccion
+
+  let lat =
+    Number.parseFloat(
+      resultado.lat
+    )
+
+  let lng =
+    Number.parseFloat(
+      resultado.lng
+    )
+
+  /*
+   * Lugar local con coordenadas conocidas.
+   */
+  if (
+    resultado.esLocal
+    && Number.isFinite(lat)
+    && Number.isFinite(lng)
+  ) {
+    destinoLocalSeleccionado.value = null
+
+    busquedaDestino.value =
+      resultado.nombre
+
+    await colocarDestino(
+      lat,
+      lng,
+      resultado.nombre
+    )
+
+    mapa?.setView(
+      [lat, lng],
+      16
+    )
+
+    return
+  }
+
+  /*
+   * Lugar local SIN coordenadas.
+   *
+   * MOTRIX intenta resolverlo solo.
+   * El pasajero NO tiene que marcar
+   * manualmente el mapa.
+   */
+  if (resultado.esLocal) {
+    buscandoDestino.value = true
+
+    try {
+      const resuelto =
+        await resolverDestinoLocalAutomaticamente(
+          resultado
+        )
+
+      if (!resuelto) {
+        busquedaDestino.value =
+          resultado.nombre
+
+        form.destino = ''
+
+        $q.notify({
+          type: 'warning',
+          message:
+            `No pudimos ubicar automáticamente ${resultado.nombre}. Prueba escribiendo una calle, colegio, mercado o referencia cercana.`
+        })
+
+        return
+      }
+
+      lat = resuelto.lat
+      lng = resuelto.lng
+
+      destinoLocalSeleccionado.value = null
+
+      busquedaDestino.value =
+        resultado.nombre
+
+      await colocarDestino(
+        lat,
+        lng,
+        resultado.nombre
+      )
+
+      mapa?.setView(
+        [lat, lng],
+        16
+      )
+
+      return
+    } finally {
+      buscandoDestino.value = false
+    }
+  }
+
+  /*
+   * Resultado externo normal.
+   */
+  destinoLocalSeleccionado.value = null
+
+  if (
+    !Number.isFinite(lat)
+    || !Number.isFinite(lng)
+  ) {
+    $q.notify({
+      type: 'warning',
+      message:
+        'No pudimos obtener la ubicación de este destino.'
+    })
+
+    return
+  }
+
+  busquedaDestino.value =
+    resultado.direccion
 
   await colocarDestino(
-    resultado.lat,
-    resultado.lng,
+    lat,
+    lng,
     resultado.direccion
   )
 
-  if (!origenCoords.value) {
-    mapa?.setView(
-      [resultado.lat, resultado.lng],
-      16
-    )
-  }
+  mapa?.setView(
+    [lat, lng],
+    16
+  )
 }
 
 async function colocarDestino(lat, lng, direccionConocida = null) {
@@ -2930,8 +3449,8 @@ function inicializarMapa() {
       }
 
       if (!destinoCoords.value) {
-        await colocarDestino(lat, lng)
-        return
+        await colocarDestino(lat, lng, destinoLocalSeleccionado.value?.nombre || null)
+        destinoLocalSeleccionado.value = null
       }
 
       $q.notify({
@@ -3041,7 +3560,7 @@ function limpiarMapa() {
 
   form.origen = ''
   form.destino = ''
-  form.precio = TARIFA_CORTA_BS
+  form.precio = 0
 
   busquedaDestino.value = ''
   resultadosDestino.value = []
@@ -3317,6 +3836,16 @@ function construirNotificacionEstado(
       icono: 'travel_explore',
       color: 'orange-8',
       destacada: false
+    }
+  }
+
+  if (estado === 'oferta enviada') {
+    return {
+      solicitudId,
+      titulo: 'Tarifa propuesta',
+      mensaje: `El mototaxista propuso ${formatearPrecio(solicitud?.precio)}. Revisa la oferta y confirma si estás de acuerdo.`,
+      icono: 'request_quote',
+      color: 'positive'
     }
   }
 
@@ -4082,6 +4611,7 @@ async function cargarViajeActivo(
   }
 }
 
+
 async function enviarSolicitud() {
   if (!rutaCompleta.value) {
     $q.notify({
@@ -4104,7 +4634,6 @@ async function enviarSolicitud() {
     longitud_destino: destinoCoords.value[1],
 
     fecha: form.fecha,
-    precio: Number.parseFloat(form.precio),
     distancia_km: Number.parseFloat(distanciaKm.value),
     metodo_pago: form.metodo_pago
   }
@@ -4154,6 +4683,67 @@ async function enviarSolicitud() {
     })
   } finally {
     enviando.value = false
+  }
+}
+
+async function aceptarOferta() {
+  if (!viajeActivo.value?.id || !hayOfertaPendiente.value) return
+
+  aceptandoOferta.value = true
+
+  try {
+    const respuesta = await api.post(
+      `/pasajero/solicitudes/${viajeActivo.value.id}/oferta/aceptar`,
+      {}
+    )
+
+    viajeActivo.value = respuesta.data?.solicitud || viajeActivo.value
+
+    $q.notify({
+      type: 'positive',
+      icon: 'check_circle',
+      message: respuesta.data?.mensaje || 'Tarifa aceptada. Tu mototaxista va en camino.',
+      position: 'top'
+    })
+  } catch (error) {
+    console.error('Error aceptando oferta:', error)
+    $q.notify({
+      type: 'negative',
+      message: extraerMensajeError(error)
+    })
+  } finally {
+    aceptandoOferta.value = false
+  }
+}
+
+async function rechazarOferta() {
+  if (!viajeActivo.value?.id || !hayOfertaPendiente.value) return
+
+  rechazandoOferta.value = true
+
+  try {
+    const respuesta = await api.post(
+      `/pasajero/solicitudes/${viajeActivo.value.id}/oferta/rechazar`,
+      {}
+    )
+
+    viajeActivo.value = respuesta.data?.solicitud || viajeActivo.value
+
+    $q.notify({
+      type: respuesta.data?.reasignado ? 'info' : 'warning',
+      message: respuesta.data?.mensaje || 'Oferta rechazada. Buscando otro mototaxista.',
+      position: 'top'
+    })
+
+    await cargarViajeActivo(true)
+  } catch (error) {
+    console.error('Error rechazando oferta:', error)
+    $q.notify({
+      type: 'negative',
+      message: extraerMensajeError(error)
+    })
+  } finally {
+    rechazandoOferta.value = false
   }
 }
 

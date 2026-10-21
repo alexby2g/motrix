@@ -680,6 +680,7 @@
                   <div class="text-body2 text-weight-medium text-grey-9">
                     {{ viaje.origen || 'Origen no registrado' }}
                   </div>
+
                 </div>
               </div>
 
@@ -738,12 +739,41 @@
                 </div>
 
                 <div class="text-right">
-                  <div class="text-caption text-grey-6">Tarifa fija</div>
-                  <div class="text-h5 text-weight-bold text-positive">
-                    {{ formatearMonto(viaje.precio) }}
+                  <div class="text-caption text-grey-6">Tarifa</div>
+                  <div class="text-subtitle1 text-weight-bold text-positive">
+                    La defines tú
                   </div>
                 </div>
               </div>
+              <q-banner
+                rounded
+                class="bg-amber-1 text-amber-10"
+              >
+                <template #avatar>
+                  <q-icon name="info" color="amber-9" />
+                </template>
+                <div class="text-weight-bold">Referencia de cobro habitual en Trinidad</div>
+                <div class="text-caption q-mt-xs">
+                  Centro/casco viejo aprox. Bs. 6 · zonas intermedias Bs. 7–8 · barrios alejados Bs. 10 · periferia Bs. 12 · aeropuerto o zonas especiales Bs. 12–15.
+                  Cobra responsablemente y evita sobreprecios.
+                </div>
+              </q-banner>
+
+              <q-input
+                v-model.number="tarifasPropuestas[viaje.id]"
+                type="number"
+                min="1"
+                max="100"
+                step="1"
+                outlined
+                prefix="Bs."
+                label="Tu tarifa para este viaje"
+                class="q-mt-md"
+              >
+                <template #prepend>
+                  <q-icon name="request_quote" color="positive" />
+                </template>
+              </q-input>
             </q-card-section>
 
             <q-card-actions class="q-pa-md bg-grey-1">
@@ -764,12 +794,12 @@
                 <div class="col-7">
                   <q-btn
                     color="positive"
-                    icon="check"
-                    label="Aceptar viaje"
+                    icon="send"
+                    label="Proponer tarifa"
                     class="full-width text-weight-bold"
-                    :loading="accionando === `aceptar-${viaje.id}`"
-                    :disable="Boolean(accionando) || turnoRespuestaVencido(viaje)"
-                    @click="aceptarViaje(viaje)"
+                    :loading="accionando === `proponer-${viaje.id}`"
+                    :disable="Boolean(accionando) || turnoRespuestaVencido(viaje) || !Number(tarifasPropuestas[viaje.id] || 0)"
+                    @click="proponerTarifa(viaje)"
                   />
                 </div>
               </div>
@@ -1105,7 +1135,7 @@
           </div>
         </q-card-section>
 
-        <q-card-section>
+        <q-card-section class="nueva-solicitud-body">
           <div class="row items-center no-wrap q-mb-md">
             <q-avatar
               color="green-1"
@@ -1125,8 +1155,8 @@
 
             <div class="text-right q-ml-md">
               <div class="text-caption text-grey-6">Tarifa</div>
-              <div class="text-h5 text-weight-bold text-positive">
-                {{ formatearMonto(solicitudDestacada.precio) }}
+              <div class="text-subtitle1 text-weight-bold text-positive">
+                Propón tu precio
               </div>
             </div>
           </div>
@@ -1178,6 +1208,34 @@
               </div>
             </div>
           </div>
+          <q-banner
+            rounded
+            class="bg-amber-1 text-amber-10 q-mt-md"
+          >
+            <template #avatar>
+              <q-icon name="info" color="amber-9" />
+            </template>
+            <div class="text-weight-bold">Referencia de cobro habitual</div>
+            <div class="text-caption">
+              Centro Bs. 6 aprox. · intermedias Bs. 7–8 · alejadas Bs. 10 · periferia Bs. 12 · aeropuerto/especiales Bs. 12–15. Evita sobreprecios.
+            </div>
+          </q-banner>
+
+          <q-input
+            v-model.number="tarifasPropuestas[solicitudDestacada.id]"
+            type="number"
+            min="1"
+            max="100"
+            step="1"
+            outlined
+            prefix="Bs."
+            label="Tu tarifa para este viaje"
+            class="q-mt-md"
+          >
+            <template #prepend>
+              <q-icon name="request_quote" color="positive" />
+            </template>
+          </q-input>
         </q-card-section>
 
         <q-card-actions class="q-pa-md bg-grey-1">
@@ -1198,12 +1256,12 @@
             <div class="col-7">
               <q-btn
                 color="positive"
-                icon="check"
-                label="Aceptar viaje"
+                icon="send"
+                label="Proponer tarifa"
                 class="full-width text-weight-bold"
-                :loading="accionando === `aceptar-${solicitudDestacada.id}`"
-                :disable="Boolean(accionando) || turnoRespuestaVencido(solicitudDestacada)"
-                @click="aceptarViaje(solicitudDestacada)"
+                :loading="accionando === `proponer-${solicitudDestacada.id}`"
+                :disable="Boolean(accionando) || turnoRespuestaVencido(solicitudDestacada) || !Number(tarifasPropuestas[solicitudDestacada.id] || 0)"
+                @click="proponerTarifa(solicitudDestacada)"
               />
             </div>
           </div>
@@ -1587,6 +1645,7 @@ import {
   nextTick,
   onBeforeUnmount,
   onMounted,
+  reactive,
   ref,
   watch
 } from 'vue'
@@ -1639,6 +1698,7 @@ const validarSesionConductor = () => {
 const mototaxista = ref(null)
 const disponible = ref(false)
 const solicitudes = ref([])
+const tarifasPropuestas = reactive({})
 const viajeActivo = ref(null)
 const loading = ref(false)
 const cambiandoDisponibilidad = ref(false)
@@ -2579,7 +2639,7 @@ const mostrarAlertaSolicitud = async (solicitud) => {
     textColor: 'white',
     icon: 'notifications_active',
     message: `Nueva solicitud de ${getPasajeroNombre(solicitud)}.`,
-    caption: `${formatearDistancia(solicitud.distancia_recogida_km)} hasta el pasajero · ${formatearMonto(solicitud.precio)}`,
+    caption: `${formatearDistancia(solicitud.distancia_recogida_km)} hasta el pasajero · revisa el recorrido y propone tu tarifa`,
     position: 'top',
     timeout: 7000,
     actions: [
@@ -3322,46 +3382,51 @@ const detenerSeguimientoGPS = () => {
   gpsMensaje.value = 'GPS desactivado'
 }
 
-const aceptarViaje = async (viaje) => {
+const proponerTarifa = async (viaje) => {
   if (turnoRespuestaVencido(viaje)) {
     cerrarAlertaSolicitud(viaje.id)
-
-    $q.notify({
-      type: 'info',
-      message: 'Tu tiempo para responder terminó. La solicitud pasará al siguiente conductor.',
-      position: 'top'
-    })
-
     await cargarSolicitudesDisponibles()
     return
   }
 
-  accionando.value = `aceptar-${viaje.id}`
+  const precio = Number(tarifasPropuestas[viaje.id] || 0)
+
+  if (!Number.isFinite(precio) || precio <= 0) {
+    $q.notify({
+      type: 'warning',
+      message: 'Ingresa una tarifa válida antes de enviarla.',
+      position: 'top'
+    })
+    return
+  }
+
+  accionando.value = `proponer-${viaje.id}`
 
   try {
-    await api.post(
-      `/conductor/solicitudes/${viaje.id}/aceptar`,
-      {}
+    const response = await api.post(
+      `/conductor/solicitudes/${viaje.id}/proponer-tarifa`,
+      { precio }
     )
 
     solicitudes.value = []
     disponible.value = false
     cerrarAlertaSolicitud(viaje.id)
+    delete tarifasPropuestas[viaje.id]
 
     $q.notify({
       type: 'positive',
-      icon: 'check_circle',
-      message: 'Viaje aceptado correctamente.',
+      icon: 'request_quote',
+      message: response.data?.mensaje || 'Tarifa enviada. Espera la respuesta del pasajero.',
       position: 'top'
     })
 
     await refrescarOperacion()
   } catch (error) {
-    console.error('Error aceptando viaje:', error)
+    console.error('Error proponiendo tarifa:', error)
 
     $q.notify({
       type: 'negative',
-      message: obtenerMensajeError(error, 'No se pudo aceptar el viaje.')
+      message: obtenerMensajeError(error, 'No se pudo enviar la tarifa.')
     })
 
     await refrescarOperacion()
@@ -3849,8 +3914,26 @@ onBeforeUnmount(() => {
 .nueva-solicitud-dialog {
   width: min(94vw, 560px);
   max-width: 560px;
+  max-height: calc(100vh - 24px);
   overflow: hidden;
   border-top: 6px solid #21ba45;
+  display: flex;
+  flex-direction: column;
+}
+
+.nueva-solicitud-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.nueva-solicitud-dialog > .q-card__actions {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .solicitud-alerta-avatar {

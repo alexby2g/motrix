@@ -13,7 +13,7 @@ class AsignacionConductorService
     private const RADIO_MAXIMO_KM = 4.0;
     private const MINUTOS_CONEXION_VALIDA = 3;
     private const MINUTOS_BLOQUEO_RECHAZO = 15;
-    private const SEGUNDOS_RESPUESTA_CONDUCTOR = 30;
+    private const SEGUNDOS_RESPUESTA_CONDUCTOR = 45;
     private const MINUTOS_SEGUIMIENTO_ASIGNACION = 5;
 
     public function asignarConductorMasCercano(
@@ -391,7 +391,7 @@ class AsignacionConductorService
     /**
      * Revisa la reserva actual de una solicitud pendiente.
      *
-     * Cada conductor dispone de 30 segundos para responder. Si el tiempo
+     * Cada conductor dispone de 45 segundos para responder. Si el tiempo
      * vence, la reserva se libera y se intenta asignar al siguiente conductor
      * disponible. El lock de la solicitud evita competir con aceptar().
      */

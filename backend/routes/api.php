@@ -269,6 +269,14 @@ Route::middleware([
             );
 
             Route::post(
+                '/solicitudes/{id}/proponer-tarifa',
+                [
+                    SolicitudController::class,
+                    'proponerTarifa',
+                ]
+            );
+
+            Route::post(
                 '/solicitudes/{id}/aceptar',
                 [
                     SolicitudController::class,
@@ -353,6 +361,22 @@ Route::middleware([
                 [
                     SolicitudController::class,
                     'viajeActivoPasajero',
+                ]
+            );
+
+            Route::post(
+                '/solicitudes/{id}/oferta/aceptar',
+                [
+                    SolicitudController::class,
+                    'aceptarOfertaPasajero',
+                ]
+            );
+
+            Route::post(
+                '/solicitudes/{id}/oferta/rechazar',
+                [
+                    SolicitudController::class,
+                    'rechazarOfertaPasajero',
                 ]
             );
 

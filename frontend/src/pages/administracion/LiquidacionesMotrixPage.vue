@@ -243,6 +243,8 @@
       <q-separator />
 
       <q-table
+            :grid="$q.screen.lt.md"
+            :dense="$q.screen.lt.md"
         flat
         :rows="liquidaciones"
         :columns="columnas"
@@ -553,6 +555,8 @@
           </div>
 
           <q-table
+            :grid="$q.screen.lt.md"
+            :dense="$q.screen.lt.md"
             flat
             bordered
             :rows="detalle.transferencias || []"
@@ -641,6 +645,8 @@
           </div>
 
           <q-table
+            :grid="$q.screen.lt.md"
+            :dense="$q.screen.lt.md"
             flat
             bordered
             :rows="detalle.detalles || []"

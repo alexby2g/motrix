@@ -94,6 +94,8 @@
 
     <q-card flat bordered>
       <q-table
+            :grid="$q.screen.lt.md"
+            :dense="$q.screen.lt.md"
         flat
         row-key="id"
         :rows="pagos"
