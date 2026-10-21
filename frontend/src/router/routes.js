@@ -1,3 +1,4 @@
+import { ES_APLICACION_NATIVA } from 'src/config/runtime.js'
 function esContenedorNativo() {
   if (typeof window === 'undefined') return false
 
@@ -75,7 +76,10 @@ const routes = [
     children: [
       {
         path: '',
-        redirect: '/presentacion'
+        redirect: () =>
+          ES_APLICACION_NATIVA
+            ? '/login'
+            : '/presentacion'
       },
       {
         path: 'monitoreo',

@@ -1,3 +1,4 @@
+import { ES_APLICACION_NATIVA } from 'src/config/runtime.js'
 function obtenerUsuario() {
   try {
     return JSON.parse(
@@ -106,7 +107,9 @@ export default ({ router }) => {
         || !rol
       )
     ) {
-      return '/presentacion'
+      return ES_APLICACION_NATIVA
+        ? '/login'
+        : '/presentacion'
     }
 
     const requiereAutenticacion =
