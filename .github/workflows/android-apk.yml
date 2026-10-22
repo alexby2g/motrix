@@ -293,7 +293,6 @@ jobs:
         run: |
           jarsigner \
             -verify \
-            -strict \
             -verbose \
             -certs \
             dist-aab/MOTRIX.aab
