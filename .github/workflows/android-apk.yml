@@ -248,6 +248,71 @@ jobs:
             sleep 12
           done
 
+      - name: Compilar AAB Google Play
+        working-directory: frontend/src-capacitor/android
+        shell: bash
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleRelease --stacktrace
+
+      - name: Localizar y firmar AAB Google Play
+        shell: bash
+        env:
+          MOTRIX_KEYSTORE_PASSWORD: ${{ secrets.MOTRIX_KEYSTORE_PASSWORD }}
+          MOTRIX_KEY_PASSWORD: ${{ secrets.MOTRIX_KEY_PASSWORD }}
+        run: |
+          AAB_RELEASE="$(
+            find frontend/src-capacitor/android/app/build/outputs/bundle/release \
+              -maxdepth 1 \
+              -type f \
+              -name '*.aab' \
+              | head -n 1
+          )"
+
+          if [ -z "$AAB_RELEASE" ]; then
+            echo "No se encontró el AAB release."
+            exit 1
+          fi
+
+          mkdir -p dist-aab
+
+          cp "$AAB_RELEASE" dist-aab/MOTRIX.aab
+
+          jarsigner \
+            -verbose \
+            -sigalg SHA256withRSA \
+            -digestalg SHA-256 \
+            -keystore "$RUNNER_TEMP/motrix-signing/motrix-release-key.jks" \
+            -storepass "$MOTRIX_KEYSTORE_PASSWORD" \
+            -keypass "$MOTRIX_KEY_PASSWORD" \
+            dist-aab/MOTRIX.aab \
+            motrix
+
+      - name: Verificar firma AAB Google Play
+        shell: bash
+        run: |
+          jarsigner \
+            -verify \
+            -strict \
+            -verbose \
+            -certs \
+            dist-aab/MOTRIX.aab
+
+      - name: Generar SHA256 AAB
+        shell: bash
+        run: |
+          sha256sum dist-aab/MOTRIX.aab \
+            > dist-aab/MOTRIX.aab.sha256
+
+      - name: Publicar AAB Google Play
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOTRIX-Google-Play
+          path: |
+            dist-aab/MOTRIX.aab
+            dist-aab/MOTRIX.aab.sha256
+          if-no-files-found: error
+
       - name: Localizar APK release
         shell: bash
         run: |
