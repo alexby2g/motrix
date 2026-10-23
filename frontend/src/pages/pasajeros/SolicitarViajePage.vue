@@ -1037,6 +1037,22 @@
                         </div>
                       </div>
 
+                      <q-input
+                        v-model="form.observacion_pasajero"
+                        outlined
+                        type="textarea"
+                        autogrow
+                        maxlength="200"
+                        counter
+                        label="Nota para el mototaxista (opcional)"
+                        hint="Ej.: Somos 2 personas, llevo una caja grande o equipaje pesado."
+                        class="q-mt-md"
+                      >
+                        <template #prepend>
+                          <q-icon name="speaker_notes" />
+                        </template>
+                      </q-input>
+
                       <q-card
                         flat
                         bordered
@@ -1584,7 +1600,8 @@ const form = reactive({
   destino: '',
   fecha: obtenerFechaActual(),
   precio: 0,
-  metodo_pago: 'Efectivo'
+  metodo_pago: 'Efectivo',
+  observacion_pasajero: ''
 })
 
 const rutaCompleta = computed(() => {
@@ -3561,7 +3578,7 @@ function limpiarMapa() {
   form.origen = ''
   form.destino = ''
   form.precio = 0
-
+  form.observacion_pasajero = ''
   busquedaDestino.value = ''
   resultadosDestino.value = []
   busquedaDestinoRealizada.value = false
@@ -4717,7 +4734,9 @@ async function enviarSolicitud() {
 
     fecha: form.fecha,
     distancia_km: Number.parseFloat(distanciaKm.value),
-    metodo_pago: form.metodo_pago
+    metodo_pago: form.metodo_pago,
+    observacion_pasajero:
+      form.observacion_pasajero.trim() || null
   }
 
   try {

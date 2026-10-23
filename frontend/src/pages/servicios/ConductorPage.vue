@@ -1183,6 +1183,29 @@
             </div>
           </div>
 
+          <q-banner
+            v-if="String(
+              solicitudDestacada.observacion_pasajero || ''
+            ).trim()"
+            rounded
+            class="bg-blue-1 text-blue-10 q-mt-md"
+          >
+            <template #avatar>
+              <q-icon
+                name="speaker_notes"
+                color="blue-8"
+              />
+            </template>
+
+            <div class="text-weight-bold">
+              Nota del pasajero
+            </div>
+
+            <div class="text-body2">
+              {{ solicitudDestacada.observacion_pasajero }}
+            </div>
+          </q-banner>
+
           <div class="row q-col-gutter-sm q-mt-md">
             <div class="col-6">
               <div class="request-detail">

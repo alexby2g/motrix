@@ -872,6 +872,12 @@ class SolicitudController extends Controller
                 'string',
                 'in:Efectivo,QR,Transferencia / QR,Mixto',
             ],
+
+            'observacion_pasajero' => [
+                'nullable',
+                'string',
+                'max:200',
+            ],
         ]);
 
         /*

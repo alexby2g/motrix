@@ -31,6 +31,7 @@ class Solicitud extends Model
 
         'mototaxista_id',
         'metodo_pago',
+        'observacion_pasajero',
         'expira_en',
         'motivo_cancelacion',
 
