@@ -73,6 +73,8 @@ class FcmPushService
                                     'priority' => 'high',
                                     'notification' => [
                                         'sound' => 'default',
+                                        'channel_id' => 'motrix_viajes_urgentes_v1',
+                                        'default_vibrate_timings' => true,
                                     ],
                                 ],
                             ],
