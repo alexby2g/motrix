@@ -2379,10 +2379,11 @@ const calcularRutaNavegacion = async (forzar = false) => {
 const ajustarVistaMapaNavegacion = () => {
   if (!mapaNavegacion) return
 
+  // Al iniciar el viaje centramos la ruta conductor → destino;
+  // el punto de recogida ya no debe alejar la vista del trayecto.
   const puntos = [
     obtenerCoordenadasConductor(),
-    obtenerCoordenadasOrigenViaje(),
-    obtenerCoordenadasDestinoViaje()
+    obtenerObjetivoNavegacion()
   ].filter(Boolean)
 
   if (puntos.length >= 2) {
