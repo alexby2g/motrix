@@ -1426,20 +1426,6 @@ let notificacionesHabilitadas = false
 
 const firmasNotificadas = new Set()
 
-const metodosPago = [
-  {
-    label: 'Efectivo',
-    value: 'Efectivo'
-  },
-  {
-    label: 'Pago por QR',
-    value: 'QR'
-  },
-  {
-    label: 'Pago mixto: efectivo + QR',
-    value: 'Mixto'
-  }
-]
 
 function obtenerFechaActual() {
   return fechaISOHoyBolivia()
