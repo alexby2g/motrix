@@ -2486,10 +2486,10 @@ const calcularRutaNavegacion = async (forzar = false) => {
 const ajustarVistaMapaNavegacion = () => {
   if (!mapaNavegacion) return
 
+  // En curso: enfocar al conductor y el destino, no la recogida anterior.
   const puntos = [
     obtenerCoordenadasConductor(),
-    obtenerCoordenadasOrigenViaje(),
-    obtenerCoordenadasDestinoViaje()
+    obtenerObjetivoNavegacion()
   ].filter(Boolean)
 
   if (puntos.length >= 2) {
@@ -2594,38 +2594,39 @@ const prepararAudioNotificaciones = async () => {
 }
 
 const reproducirSonidoSolicitud = async () => {
-  const audioDisponible = await prepararAudioNotificaciones()
-
-  if (!audioDisponible || !audioContexto) return
-
+  // El aviso se reproduce desde un gesto previo del conductor que habilitó audio.
+  // Un sonido local permite una alerta más reconocible que tres pitidos simples.
   try {
-    const inicio = audioContexto.currentTime
-    const tonos = [880, 1046, 1318]
+    await prepararAudioNotificaciones()
 
-    tonos.forEach((frecuencia, indice) => {
-      const oscilador = audioContexto.createOscillator()
-      const ganancia = audioContexto.createGain()
-      const empieza = inicio + (indice * 0.24)
-      const termina = empieza + 0.18
-
-      oscilador.type = 'sine'
-      oscilador.frequency.setValueAtTime(frecuencia, empieza)
-
-      ganancia.gain.setValueAtTime(0.0001, empieza)
-      ganancia.gain.exponentialRampToValueAtTime(0.32, empieza + 0.025)
-      ganancia.gain.exponentialRampToValueAtTime(0.0001, termina)
-
-      oscilador.connect(ganancia)
-      ganancia.connect(audioContexto.destination)
-      oscilador.start(empieza)
-      oscilador.stop(termina)
-    })
+    const audio = new Audio('/sounds/motrix_solicitud.wav')
+    audio.volume = 1
+    await audio.play()
 
     if (typeof navigator.vibrate === 'function') {
-      navigator.vibrate([250, 120, 250, 120, 400])
+      navigator.vibrate([300, 120, 300, 120, 450])
     }
   } catch (error) {
-    console.warn('No se pudo reproducir el sonido de la solicitud:', error)
+    // Respaldo cuando el navegador impide reproducir archivos de sonido.
+    // El sistema seguirá mostrando la alerta visual aunque se bloquee el audio.
+    console.warn('MOTRIX: sonido de solicitud no disponible:', error)
+    if (audioContexto?.state === 'running') {
+      const inicio = audioContexto.currentTime
+      ;[880, 1175, 1480, 1175, 1480].forEach((frecuencia, indice) => {
+        const oscilador = audioContexto.createOscillator()
+        const ganancia = audioContexto.createGain()
+        const empieza = inicio + indice * 0.22
+        oscilador.type = 'triangle'
+        oscilador.frequency.setValueAtTime(frecuencia, empieza)
+        ganancia.gain.setValueAtTime(0.0001, empieza)
+        ganancia.gain.exponentialRampToValueAtTime(0.62, empieza + 0.02)
+        ganancia.gain.exponentialRampToValueAtTime(0.0001, empieza + 0.19)
+        oscilador.connect(ganancia)
+        ganancia.connect(audioContexto.destination)
+        oscilador.start(empieza)
+        oscilador.stop(empieza + 0.20)
+      })
+    }
   }
 }
 

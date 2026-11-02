@@ -1,4 +1,5 @@
 import { ES_APLICACION_NATIVA } from 'src/config/runtime.js'
+import { inicializarPushMotrix } from 'src/services/pushNotifications.js'
 function obtenerUsuario() {
   try {
     return JSON.parse(
@@ -81,6 +82,17 @@ function obtenerInicioPorRol(role) {
 }
 
 export default ({ router }) => {
+  // Al abrir la app y después del login, registrar FCM con la cuenta vigente.
+  // Sin sesión no se registra ningún dispositivo; en navegador no hace nada.
+  router.afterEach((to) => {
+    if (ES_APLICACION_NATIVA && localStorage.getItem('motrix_token')
+      && to.matched.some((ruta) => ruta.meta?.requiresAuth === true)) {
+      inicializarPushMotrix(router).catch((error) => {
+        console.warn('No fue posible activar avisos push MOTRIX:', error)
+      })
+    }
+  })
+
   router.beforeEach((to) => {
     const token =
       localStorage.getItem(

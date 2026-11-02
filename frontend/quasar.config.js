@@ -6,6 +6,7 @@ import { defineConfig } from '#q-app/wrappers'
 export default defineConfig((ctx) => {
   return {
     boot: [
+      'push-safe',
       'axios',
       'auth',
       ...(ctx.mode.capacitor ? ['native-capacitor'] : [])

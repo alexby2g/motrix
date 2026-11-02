@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - release-piloto-motrix
+      - pruebas-firebase-motrix
     paths:
       - 'frontend/**'
       - '.github/workflows/android-apk.yml'
@@ -140,6 +141,41 @@ jobs:
           if [ ! -d android ]; then
             npx cap add android
           fi
+
+      - name: Configurar Firebase Android
+        shell: bash
+        env:
+          FIREBASE_JSON_B64: ${{ secrets.MOTRIX_GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          if [ -z "$FIREBASE_JSON_B64" ]; then
+            echo "ERROR: falta el secreto MOTRIX_GOOGLE_SERVICES_JSON_B64"
+            exit 1
+          fi
+
+          mkdir -p frontend/src-capacitor/android/app
+
+          printf '%s' "$FIREBASE_JSON_B64" | base64 --decode \
+            > frontend/src-capacitor/android/app/google-services.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          ruta = Path('frontend/src-capacitor/android/app/google-services.json')
+          datos = json.loads(ruta.read_text(encoding='utf-8'))
+
+          paquetes = [
+              cliente.get('client_info', {})
+              .get('android_client_info', {})
+              .get('package_name')
+              for cliente in datos.get('client', [])
+          ]
+
+          if 'bo.edu.josecastillo.motrix' not in paquetes:
+              raise SystemExit('ERROR: Firebase no corresponde a MOTRIX')
+
+          print('Firebase Android MOTRIX verificado')
+          PY
 
       - name: Generar icono y splash MOTRIX
         working-directory: frontend/src-capacitor

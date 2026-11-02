@@ -22,7 +22,14 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Una petición antigua o pública no debe cerrar la sesión vigente.
+    const bearerEnviado = String(error.config?.headers?.Authorization || '')
+    const tokenActual = localStorage.getItem('motrix_token')
+    const sesionActualRechazada = error.response?.status === 401
+      && Boolean(tokenActual)
+      && bearerEnviado === `Bearer ${tokenActual}`
+
+    if (sesionActualRechazada) {
       localStorage.removeItem('motrix_token')
       localStorage.removeItem('motrix_user')
       localStorage.removeItem('mototaxista_id')

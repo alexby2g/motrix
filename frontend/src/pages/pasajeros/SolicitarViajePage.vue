@@ -1009,33 +1009,14 @@
                         con otra referencia o márcalo manualmente en el mapa.
                       </q-banner>
 
-                      <div class="row q-col-gutter-sm">
-                        <div class="col-12 col-sm-6">
-                          <q-input
-                            v-model="form.fecha"
-                            outlined
-                            type="date"
-                            label="Fecha"
-                            stack-label
-                            readonly
-                          />
-                        </div>
-
-                        <div class="col-12 col-sm-6">
-                          <q-select
-                            v-model="form.metodo_pago"
-                            :options="metodosPago"
-                            outlined
-                            label="Método de pago"
-                            emit-value
-                            map-options
-                          >
-                            <template #prepend>
-                              <q-icon name="payments" />
-                            </template>
-                          </q-select>
-                        </div>
-                      </div>
+                      <q-input
+                        v-model="form.fecha"
+                        outlined
+                        type="date"
+                        label="Fecha"
+                        stack-label
+                        readonly
+                      />
 
                       <q-input
                         v-model="form.observacion_pasajero"
@@ -1575,21 +1556,6 @@ let audioContexto = null
 let notificacionesHabilitadas = false
 
 const firmasNotificadas = new Set()
-
-const metodosPago = [
-  {
-    label: 'Efectivo',
-    value: 'Efectivo'
-  },
-  {
-    label: 'Pago por QR',
-    value: 'QR'
-  },
-  {
-    label: 'Pago mixto: efectivo + QR',
-    value: 'Mixto'
-  }
-]
 
 function obtenerFechaActual() {
   return fechaISOHoyBolivia()
