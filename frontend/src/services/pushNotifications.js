@@ -106,6 +106,24 @@ export async function inicializarPushMotrix(router) {
       listenersRegistrados = true
     }
 
+    // Android 8+: un canal de alta importancia permite alertas audibles
+    // incluso cuando MOTRIX está en segundo plano.
+    if (typeof push.createChannel === 'function') {
+      try {
+        await push.createChannel({
+          id: 'motrix_viajes_urgentes_v1',
+          name: 'Solicitudes de viajes MOTRIX',
+          description: 'Avisos de nuevas solicitudes para mototaxistas',
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+          sound: 'default'
+        })
+      } catch (error) {
+        console.warn('No se pudo configurar el canal de alertas MOTRIX:', error)
+      }
+    }
+
     await push.register()
     return true
   } catch (error) {
