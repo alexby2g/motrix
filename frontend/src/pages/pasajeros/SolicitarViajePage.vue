@@ -2838,13 +2838,15 @@ function alEditarBusquedaDestino(valor) {
     return
   }
 
-  // Autocompletado con debounce: evita una petición por cada tecla.
+  // Sugerencias inmediatas desde el catalogo local, sin solicitudes
+  // al servidor publico de Nominatim por cada tecla.
   temporizadorBusquedaDestino = window.setTimeout(() => {
     buscarDestino({
       consulta: texto,
-      silencioso: true
+      silencioso: true,
+      soloLocal: true
     }).catch(() => {})
-  }, 650)
+  }, 200)
 }
 
 function normalizarTextoBusqueda(texto) {
@@ -3021,6 +3023,16 @@ async function buscarDestino(opciones = {}) {
 
   const resultadosLocales = buscarLugaresLocalesTrinidad(consulta)
 
+  // Autocompletado 100% local. La lupa o Enter solicitan una
+  // busqueda puntual en OSM cuando el lugar no esta en el catalogo.
+  if (opciones?.soloLocal === true) {
+    ++secuenciaBusquedaDestino
+    resultadosDestino.value = resultadosLocales
+    busquedaDestinoRealizada.value = true
+    buscandoDestino.value = false
+    return
+  }
+
   const secuencia = ++secuenciaBusquedaDestino
   buscandoDestino.value = true
   resultadosDestino.value = []
@@ -3047,38 +3059,8 @@ async function buscarDestino(opciones = {}) {
       ? respuesta.data
       : []
 
-    if (resultados.length === 0) {
-      const consultasAlternativas = [
-        `${consulta}, Beni, Bolivia`,
-        consulta
-      ]
-
-      for (const qAlternativa of consultasAlternativas) {
-        const alternativa = await axios.get(
-          NOMINATIM_SEARCH_URL,
-          {
-            params: {
-              q: qAlternativa,
-              format: 'jsonv2',
-              addressdetails: 1,
-              namedetails: 1,
-              limit: 8,
-              countrycodes: 'bo',
-              'accept-language': 'es',
-              viewbox: '-65.02,-14.74,-64.80,-14.95'
-            }
-          }
-        ).catch(() => ({ data: [] }))
-
-        if (
-          Array.isArray(alternativa.data)
-          && alternativa.data.length > 0
-        ) {
-          resultados = alternativa.data
-          break
-        }
-      }
-    }
+    // Una sola consulta puntual por busqueda explicita. La API publica
+    // no admite autocompletado ni rafagas de peticiones.
 
     if (secuencia !== secuenciaBusquedaDestino) {
       return
