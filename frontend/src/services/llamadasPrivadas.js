@@ -1,4 +1,4 @@
-﻿import { Room, RoomEvent, Track } from 'livekit-client'
+import { Room, RoomEvent, Track } from 'livekit-client'
 import { api } from 'src/boot/axios.js'
 
 export async function iniciarLlamadaPrivada(viajeId, onEstado = () => {}) {
@@ -39,15 +39,23 @@ export async function iniciarLlamadaPrivada(viajeId, onEstado = () => {}) {
     onEstado('desconectada')
   })
 
+  let etapa = 'conexion LiveKit'
+
   try {
     onEstado('conectando')
     await room.connect(data.url, data.token)
+
+    etapa = 'reproduccion de audio'
     await room.startAudio()
+
+    etapa = 'activacion del microfono'
     await room.localParticipant.setMicrophoneEnabled(true)
+
     onEstado('conectada')
   } catch (error) {
-    await room.disconnect()
-    throw error
+    const mensaje = error?.message || 'Error desconocido'
+    await room.disconnect().catch(() => {})
+    throw new Error(`Fallo en ${etapa}: ${mensaje}`)
   }
 
   return {

@@ -123,12 +123,6 @@
                         </q-chip>
                       </div>
 
-                      <LlamadaPrivadaPrueba
-  v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
-  :viaje-id="viajeActivo.id"
-  :estado="viajeActivo.estado"
-  class="q-pa-md"
-/>
 <div class="route-item">
                         <q-icon
                           name="radio_button_checked"
@@ -432,6 +426,13 @@
                           {{ incidenciaActiva.tipo }} · La central MOTRIX fue informada.
                         </div>
                       </q-banner>
+
+                      <LlamadaPrivadaPrueba
+                      v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
+                      :viaje-id="viajeActivo.id"
+                      :estado="viajeActivo.estado"
+                      class="q-pa-md"
+                      />
 
                       <q-btn
                         v-if="sosDisponible"
@@ -2755,12 +2756,13 @@ async function obtenerDireccion(lat, lng) {
     const a = respuesta.data?.address || {}
 
     calle = String(
-      a.road || a.pedestrian || a.residential
-      || a.footway || a.path || ''
+      a.road || a.pedestrian || a.footway
+      || a.path || ''
     ).trim()
 
     zona = String(
-      a.neighbourhood || a.suburb || a.quarter || ''
+      a.neighbourhood || a.suburb || a.quarter
+      || a.residential || ''
     ).trim()
   } catch (error) {
     console.warn('No se pudo identificar la calle:', error)
