@@ -161,6 +161,7 @@ let consultando = false
 let autoconectarIntentado = false
 let desmontado = false
 let siguienteConsultaPermitida = 0
+let siguienteIntentoAudioPermitido = 0
 
 let contextoTono = null
 let intervaloTono = null
@@ -360,6 +361,10 @@ async function responder(accion) {
 async function conectarAudio() {
   if (conexion.value || conectando.value || desmontado) return
   if (estadoLlamada.value !== 'contestada') return
+  if (Date.now() < siguienteIntentoAudioPermitido) {
+    error.value = 'Demasiados intentos. Espera antes de volver a conectar.'
+    return
+  }
 
   conectando.value = true
   error.value = ''
@@ -380,10 +385,17 @@ async function conectarAudio() {
 
     conexion.value = nueva
   } catch (e) {
-    error.value =
-      e?.response?.data?.message ||
-      e?.message ||
-      'No se pudo conectar el microfono'
+    if (e?.response?.status === 429) {
+      const cabecera = Number(e?.response?.headers?.['retry-after'] || 0)
+      const segundos = Number.isFinite(cabecera) && cabecera > 0 ? cabecera : 60
+      siguienteIntentoAudioPermitido = Date.now() + Math.max(10, segundos) * 1000
+      error.value = 'Hay demasiados intentos. Vuelve a conectar en unos momentos.'
+    } else {
+      error.value =
+        e?.response?.data?.message ||
+        e?.message ||
+        'No se pudo conectar el microfono'
+    }
   } finally {
     conectando.value = false
   }
