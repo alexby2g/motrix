@@ -27,6 +27,7 @@ export function barrioLocalConfiable(lugares, lat, lng) {
   // o donde dos referencias compiten por la misma ubicacion.
   if (primero.metros > 400) return null
   const ventaja = segundo ? segundo.metros - primero.metros : Infinity
+  if (ventaja < 60) return null
   if (primero.metros > 100 && ventaja < 120) return null
   if (primero.metros > 300 && ventaja < 180) return null
 
