@@ -2651,6 +2651,20 @@ function referenciaCercanaOrigen(lat, lng) {
     } else if (tipo === 'Referencia') {
       limite = 100
       penalizacion = 60
+    } else if ([
+      'Institución',
+      'Unidad Educativa',
+      'Universidad',
+      'Salud',
+      'Mercado',
+      'Parque',
+      'Comercio',
+      'Turismo',
+      'Transporte',
+      'Banco'
+    ].includes(tipo)) {
+      limite = 60
+      penalizacion = 25
     } else {
       continue
     }
@@ -2727,6 +2741,17 @@ async function obtenerDireccion(lat, lng) {
       }
     )
 
+    const nombreLugar = String(
+      respuesta.data?.name
+      || respuesta.data?.address?.amenity
+      || respuesta.data?.address?.building
+      || ''
+    ).trim()
+
+    if (nombreLugar) {
+      return `${nombreLugar}, Trinidad`
+    }
+
     const a = respuesta.data?.address || {}
 
     calle = String(
@@ -2765,7 +2790,7 @@ async function obtenerDireccion(lat, lng) {
     return `${referencia}, Trinidad`
   }
 
-  return `Punto de recogida (${lat.toFixed(5)}, ${lng.toFixed(5)})`
+  return `Ubicación seleccionada, Trinidad`
 }
 
 function eliminarMarcador(marcador) {
