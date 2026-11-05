@@ -91,6 +91,15 @@
             />
 
             <q-btn
+              v-if="conexion && requiereActivarAudio"
+              color="positive"
+              icon="volume_up"
+              label="Activar altavoz"
+              :loading="activandoAudio"
+              @click="activarAudio"
+            />
+
+            <q-btn
               v-if="conexion"
               outline
               icon="mic_off"
@@ -139,6 +148,8 @@ const props = defineProps({
 const abierto = ref(false)
 const ocupado = ref(false)
 const conectando = ref(false)
+const activandoAudio = ref(false)
+const requiereActivarAudio = ref(false)
 const silenciado = ref(false)
 const soyReceptor = ref(false)
 const estadoLlamada = ref('sin_llamada')
@@ -149,6 +160,7 @@ let intervalo = null
 let consultando = false
 let autoconectarIntentado = false
 let desmontado = false
+let siguienteConsultaPermitida = 0
 
 let contextoTono = null
 let intervaloTono = null
@@ -224,6 +236,7 @@ async function desconectarAudio() {
   const actual = conexion.value
   conexion.value = null
   silenciado.value = false
+  requiereActivarAudio.value = false
 
   if (actual) {
     try {
@@ -237,6 +250,7 @@ async function desconectarAudio() {
 async function consultar() {
   if (consultando || desmontado) return
   if (!estadosPermitidos.includes(props.estado)) return
+  if (Date.now() < siguienteConsultaPermitida) return
 
   consultando = true
 
@@ -272,8 +286,14 @@ async function consultar() {
       }
       autoconectarIntentado = false
     }
-  } catch {
-    // Un fallo temporal de red no debe cerrar la llamada.
+  } catch (e) {
+    // Respetar el limite de solicitudes del servidor sin cerrar la llamada.
+    if (e?.response?.status === 429) {
+      const cabecera = Number(e?.response?.headers?.['retry-after'] || 0)
+      const segundos = Number.isFinite(cabecera) && cabecera > 0 ? cabecera : 30
+      siguienteConsultaPermitida = Date.now() + Math.max(10, segundos) * 1000
+      error.value = 'El servidor esta ocupado. Se reintentara automaticamente.'
+    }
   } finally {
     consultando = false
   }
@@ -345,8 +365,12 @@ async function conectarAudio() {
   error.value = ''
 
   try {
+    requiereActivarAudio.value = false
     const nueva = await iniciarLlamadaPrivada(
-      props.viajeId
+      props.viajeId,
+      (estado) => {
+        if (estado === 'audio_bloqueado') requiereActivarAudio.value = true
+      }
     )
 
     if (desmontado || estadoLlamada.value !== 'contestada') {
@@ -362,6 +386,21 @@ async function conectarAudio() {
       'No se pudo conectar el microfono'
   } finally {
     conectando.value = false
+  }
+}
+
+async function activarAudio() {
+  if (!conexion.value || activandoAudio.value) return
+  activandoAudio.value = true
+  try {
+    // Se invoca directamente desde el toque del usuario.
+    await conexion.value.activarAudio()
+    requiereActivarAudio.value = false
+    error.value = ''
+  } catch {
+    error.value = 'No se pudo activar el altavoz. Comprueba el volumen del telefono.'
+  } finally {
+    activandoAudio.value = false
   }
 }
 
@@ -413,7 +452,7 @@ watch(
 
 onMounted(() => {
   consultar()
-  intervalo = window.setInterval(consultar, 2500)
+  intervalo = window.setInterval(consultar, 5000)
 })
 
 onUnmounted(() => {
