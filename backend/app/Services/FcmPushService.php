@@ -72,7 +72,13 @@ class FcmPushService
                                 'android' => [
                                     'priority' => 'high',
                                     'notification' => [
-                                        'sound' => 'default',
+                                        'sound' => ($data['tipo'] ?? '') === 'llamada_entrante'
+                                            ? 'motrix_llamada'
+                                            : 'motrix_solicitud',
+                                        'channel_id' => ($data['tipo'] ?? '') === 'llamada_entrante'
+                                            ? 'motrix_llamadas_v1'
+                                            : 'motrix_alertas_fuerte_v2',
+                                        'default_vibrate_timings' => true,
                                     ],
                                 ],
                             ],

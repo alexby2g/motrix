@@ -2563,6 +2563,7 @@ class SolicitudController extends Controller
             ->select(
                 'pagos.id',
                 'pagos.monto',
+                'pagos.completado_en',
                 'pagos.monto_efectivo',
                 'pagos.monto_qr',
                 'pagos.metodo',
@@ -2651,7 +2652,57 @@ class SolicitudController extends Controller
             ->limit(10)
             ->get();
 
+        $hoy = now('America/La_Paz')->toDateString();
+        $mes = substr($hoy, 0, 7);
+
+        $gananciasHoy = 0.0;
+        $viajesHoy = 0;
+        $gananciasMes = 0.0;
+        $historialDiario = [];
+
+        foreach ($pagos as $pago) {
+            if (!$pago->completado_en) {
+                continue;
+            }
+
+            $fecha = substr((string) $pago->completado_en, 0, 10);
+            $monto = (float) $pago->monto;
+
+            if ($fecha === $hoy) {
+                $gananciasHoy += $monto;
+                $viajesHoy++;
+            }
+
+            if (substr($fecha, 0, 7) === $mes) {
+                $gananciasMes += $monto;
+            }
+
+            if (!isset($historialDiario[$fecha])) {
+                $historialDiario[$fecha] = [
+                    'fecha' => $fecha,
+                    'viajes' => 0,
+                    'total' => 0.0,
+                ];
+            }
+
+            $historialDiario[$fecha]['viajes']++;
+            $historialDiario[$fecha]['total'] += $monto;
+        }
+
+        krsort($historialDiario);
+
+        $historialDiario = array_values(array_map(
+            function ($fila) {
+                $fila['total'] = round($fila['total'], 2);
+                return $fila;
+            },
+            $historialDiario
+        ));
         return response()->json([
+            'ganancias_hoy' => round($gananciasHoy, 2),
+            'viajes_hoy' => $viajesHoy,
+            'ganancias_mes' => round($gananciasMes, 2),
+            'historial_diario' => $historialDiario,
             'viajes_totales' =>
                 $pagos->count(),
 

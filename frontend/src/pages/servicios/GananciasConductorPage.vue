@@ -184,7 +184,98 @@
 
             <q-separator class="q-my-lg" />
 
-            <!-- HISTORIAL -->
+            <!-- RESUMEN DIARIO MOTRIX -->
+<div class="q-mb-lg">
+  <div class="text-h6 text-weight-bold q-mb-md">
+    Mis ganancias por fecha
+  </div>
+
+  <div class="row q-col-gutter-md">
+    <div class="col-12 col-sm-4">
+      <q-card flat bordered class="full-height">
+        <q-card-section>
+          <div class="text-caption text-grey-7">
+            Ganancias de hoy
+          </div>
+          <div class="text-h5 text-weight-bold text-positive">
+            {{ formatearMonto(resumen.ganancias_hoy) }}
+          </div>
+          <div class="text-caption">
+            {{ resumen.viajes_hoy }} viajes cobrados hoy
+          </div>
+        </q-card-section>
+      </q-card>
+    </div>
+
+    <div class="col-12 col-sm-4">
+      <q-card flat bordered class="full-height">
+        <q-card-section>
+          <div class="text-caption text-grey-7">
+            Ganancias del mes
+          </div>
+          <div class="text-h5 text-weight-bold text-green-9">
+            {{ formatearMonto(resumen.ganancias_mes) }}
+          </div>
+        </q-card-section>
+      </q-card>
+    </div>
+
+    <div class="col-12 col-sm-4">
+      <q-card flat bordered class="full-height">
+        <q-card-section>
+          <div class="text-caption text-grey-7">
+            Total histórico
+          </div>
+          <div class="text-h5 text-weight-bold">
+            {{ formatearMonto(resumen.total_recaudado) }}
+          </div>
+          <div class="text-caption">
+            {{ resumen.viajes_totales }} pagos completados
+          </div>
+        </q-card-section>
+      </q-card>
+    </div>
+  </div>
+
+  <div class="text-subtitle1 text-weight-bold q-mt-lg q-mb-sm">
+    Historial diario de cobros
+  </div>
+
+  <q-list bordered separator class="rounded-borders">
+    <q-item
+      v-for="dia in historialDiario"
+      :key="dia.fecha"
+    >
+      <q-item-section>
+        <q-item-label>{{ dia.fecha }}</q-item-label>
+        <q-item-label caption>
+          {{ dia.viajes }} viajes cobrados
+        </q-item-label>
+      </q-item-section>
+
+      <q-item-section side>
+        <span class="text-weight-bold text-positive">
+          {{ formatearMonto(dia.total) }}
+        </span>
+      </q-item-section>
+    </q-item>
+
+    <q-item v-if="historialDiario.length === 0">
+      <q-item-section>
+        <q-item-label class="text-grey-7">
+          Todavía no hay cobros con fecha registrada.
+        </q-item-label>
+      </q-item-section>
+    </q-item>
+  </q-list>
+
+  <div class="text-caption text-grey-7 q-mt-sm">
+    Los pagos históricos sin fecha de cobro se incluyen
+    en el total acumulado, pero no en los resúmenes por día.
+  </div>
+</div>
+
+<!-- HISTORIAL -->
             <div class="row items-center q-mb-md">
               <div>
                 <div class="text-h6 text-weight-bold text-grey-9">
@@ -431,11 +522,15 @@ const resumen = ref({
   ganancia_efectivo: 0,
   ganancia_qr: 0,
   total_recaudado: 0,
+  ganancias_hoy: 0,
+  viajes_hoy: 0,
+  ganancias_mes: 0,
   promedio_calificacion: 0,
   total_calificaciones: 0
 })
 
 const historial = ref([])
+const historialDiario = ref([])
 const comentarios = ref([])
 
 const promedioEstrellas = computed(() => {
@@ -477,12 +572,26 @@ async function cargarGanancias() {
       total_recaudado:
         Number(response.data?.total_recaudado) || 0,
 
+      ganancias_hoy:
+        Number(response.data?.ganancias_hoy) || 0,
+
+      viajes_hoy:
+        Number(response.data?.viajes_hoy) || 0,
+
+      ganancias_mes:
+        Number(response.data?.ganancias_mes) || 0,
+
       promedio_calificacion:
         Number(response.data?.promedio_calificacion) || 0,
 
       total_calificaciones:
         Number(response.data?.total_calificaciones) || 0
     }
+
+    historialDiario.value =
+      Array.isArray(response.data?.historial_diario)
+        ? response.data.historial_diario
+        : []
 
     historial.value =
       Array.isArray(response.data?.detalles_pagos)

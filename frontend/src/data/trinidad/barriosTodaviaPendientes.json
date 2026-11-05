@@ -1,0 +1,231 @@
+{
+  "generadoEn": "2026-10-20T22:27:58.726Z",
+  "total": 45,
+  "barrios": [
+    {
+      "nombre": "12 de Abril",
+      "tipo": "Barrio",
+      "distrito": 7
+    },
+    {
+      "nombre": "1ro. de Mayo",
+      "tipo": "Barrio",
+      "distrito": 4
+    },
+    {
+      "nombre": "21 de Septiembre",
+      "tipo": "Barrio",
+      "distrito": 6
+    },
+    {
+      "nombre": "23 de Marzo",
+      "tipo": "Barrio",
+      "distrito": 2
+    },
+    {
+      "nombre": "24 de Septiembre",
+      "tipo": "Barrio",
+      "distrito": 5
+    },
+    {
+      "nombre": "25 de Diciembre",
+      "tipo": "Barrio",
+      "distrito": 3
+    },
+    {
+      "nombre": "26 de Enero",
+      "tipo": "Barrio",
+      "distrito": 6
+    },
+    {
+      "nombre": "27 de Mayo",
+      "tipo": "Barrio",
+      "distrito": 4
+    },
+    {
+      "nombre": "30 de Agosto",
+      "tipo": "Barrio",
+      "distrito": 3
+    },
+    {
+      "nombre": "6 de Septiembre",
+      "tipo": "Barrio",
+      "distrito": 6
+    },
+    {
+      "nombre": "Arroyo Chico",
+      "tipo": "Barrio",
+      "distrito": 2
+    },
+    {
+      "nombre": "Bello Horizonte Norte",
+      "tipo": "Barrio",
+      "distrito": 7
+    },
+    {
+      "nombre": "Casco Viejo",
+      "tipo": "Barrio",
+      "distrito": 1
+    },
+    {
+      "nombre": "Conavi",
+      "tipo": "Barrio",
+      "distrito": 2
+    },
+    {
+      "nombre": "Cotoca",
+      "tipo": "Barrio",
+      "distrito": 6
+    },
+    {
+      "nombre": "El Progreso",
+      "tipo": "Barrio",
+      "distrito": 6
+    },
+    {
+      "nombre": "Fátima Central",
+      "tipo": "Barrio",
+      "distrito": 2
+    },
+    {
+      "nombre": "Florida",
+      "tipo": "Barrio",
+      "distrito": 7
+    },
+    {
+      "nombre": "Germán Busch",
+      "tipo": "Barrio",
+      "distrito": 3
+    },
+    {
+      "nombre": "Las Brisas",
+      "tipo": "Barrio",
+      "distrito": 7
+    },
+    {
+      "nombre": "Libertad",
+      "tipo": "Barrio",
+      "distrito": 8
+    },
+    {
+      "nombre": "Los Penocos",
+      "tipo": "Barrio",
+      "distrito": 2
+    },
+    {
+      "nombre": "Los Tocos",
+      "tipo": "Barrio",
+      "distrito": 7
+    },
+    {
+      "nombre": "Machetero",
+      "tipo": "Barrio",
+      "distrito": 4
+    },
+    {
+      "nombre": "María Jesús",
+      "tipo": "Barrio",
+      "distrito": 8
+    },
+    {
+      "nombre": "Moxos",
+      "tipo": "Barrio",
+      "distrito": 3
+    },
+    {
+      "nombre": "Pailón",
+      "tipo": "Barrio",
+      "distrito": 3
+    },
+    {
+      "nombre": "Pedro Marbán",
+      "tipo": "Barrio",
+      "distrito": 4
+    },
+    {
+      "nombre": "Profesionales",
+      "tipo": "Barrio",
+      "distrito": 7
+    },
+    {
+      "nombre": "San José",
+      "tipo": "Barrio",
+      "distrito": 5
+    },
+    {
+      "nombre": "San Juan",
+      "tipo": "Barrio",
+      "distrito": 3
+    },
+    {
+      "nombre": "San Luis",
+      "tipo": "Barrio",
+      "distrito": 4
+    },
+    {
+      "nombre": "San Pedro II",
+      "tipo": "Barrio",
+      "distrito": 8
+    },
+    {
+      "nombre": "Sandunga",
+      "tipo": "Barrio",
+      "distrito": 7
+    },
+    {
+      "nombre": "Santa Anita",
+      "tipo": "Barrio",
+      "distrito": 4
+    },
+    {
+      "nombre": "Santa Cruz Sur",
+      "tipo": "Barrio",
+      "distrito": 4
+    },
+    {
+      "nombre": "Tahuichi",
+      "tipo": "Barrio",
+      "distrito": 7
+    },
+    {
+      "nombre": "Tocopilla",
+      "tipo": "Barrio",
+      "distrito": 4
+    },
+    {
+      "nombre": "Triunfo",
+      "tipo": "Barrio",
+      "distrito": 4
+    },
+    {
+      "nombre": "Urb. El Palmar",
+      "tipo": "Urbanización",
+      "distrito": 8
+    },
+    {
+      "nombre": "Urb. Marín",
+      "tipo": "Urbanización",
+      "distrito": 4
+    },
+    {
+      "nombre": "Venecia",
+      "tipo": "Barrio",
+      "distrito": 3
+    },
+    {
+      "nombre": "Villa Conchita",
+      "tipo": "Barrio",
+      "distrito": 6
+    },
+    {
+      "nombre": "Villa Lolita",
+      "tipo": "Barrio",
+      "distrito": 7
+    },
+    {
+      "nombre": "Villa Ximena",
+      "tipo": "Barrio",
+      "distrito": 4
+    }
+  ]
+}

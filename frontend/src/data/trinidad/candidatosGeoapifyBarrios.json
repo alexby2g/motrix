@@ -1,0 +1,306 @@
+{
+  "generadoEn": "2026-10-20T23:14:45.488Z",
+  "total": 15,
+  "barrios": [
+    {
+      "nombre": "25 de Diciembre",
+      "distrito": 3,
+      "candidatos": [
+        {
+          "nombreBarrio": "25 de Diciembre",
+          "resultado": "Avenida 25 de Diciembre",
+          "direccion": "Avenida 25 de Diciembre, Trinidad, Bolivia",
+          "tipo": "street",
+          "lat": -14.8403118,
+          "lng": -64.8931616,
+          "distanciaKm": 1.45,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "30 de Agosto",
+      "distrito": 3,
+      "candidatos": [
+        {
+          "nombreBarrio": "30 de Agosto",
+          "resultado": "Residencial 30 de Agosto",
+          "direccion": "Residencial 30 de Agosto, Calle Ibare, Trinidad, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.8398907,
+          "lng": -64.9025039,
+          "distanciaKm": 1.01,
+          "puntos": 190
+        }
+      ]
+    },
+    {
+      "nombre": "30 de Julio",
+      "distrito": 8,
+      "candidatos": [
+        {
+          "nombreBarrio": "30 de Julio",
+          "resultado": "Centro de Salud 30 de Julio",
+          "direccion": "Centro de Salud 30 de Julio, Avenida Ganadera 30, Trinidad, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.8069658,
+          "lng": -64.907859,
+          "distanciaKm": 2.71,
+          "puntos": 190
+        }
+      ]
+    },
+    {
+      "nombre": "4 de Febrero",
+      "distrito": 3,
+      "candidatos": [
+        {
+          "nombreBarrio": "4 de Febrero",
+          "resultado": "Farmcia 4 de Febrero",
+          "direccion": "Farmcia 4 de Febrero, Calle Sécure, Trinidad, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.845035,
+          "lng": -64.900815,
+          "distanciaKm": 1.59,
+          "puntos": 190
+        }
+      ]
+    },
+    {
+      "nombre": "6 de Agosto",
+      "distrito": 4,
+      "candidatos": [
+        {
+          "nombreBarrio": "6 de Agosto",
+          "resultado": "Colegio Nacional 6 de Agosto",
+          "direccion": "Colegio Nacional 6 de Agosto, Avenida Prolongación, Trinidad, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.8152371,
+          "lng": -64.8991097,
+          "distanciaKm": 1.77,
+          "puntos": 190
+        },
+        {
+          "nombreBarrio": "6 de Agosto",
+          "resultado": "Avenida 6 de Agosto",
+          "direccion": "Avenida 6 de Agosto, Trinidad, Bolivia",
+          "tipo": "street",
+          "lat": -14.8350839,
+          "lng": -64.9097897,
+          "distanciaKm": 0.93,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "Belén",
+      "distrito": 2,
+      "candidatos": [
+        {
+          "nombreBarrio": "Belén",
+          "resultado": "Cancha Belén",
+          "direccion": "Cancha Belén, Avenida Beni, Trinidad, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.8395418,
+          "lng": -64.894052,
+          "distanciaKm": 1.32,
+          "puntos": 190
+        },
+        {
+          "nombreBarrio": "Belén",
+          "resultado": "Iglesia Metodista \"Estrella de Belen\"",
+          "direccion": "Iglesia Metodista \"Estrella de Belen\", Calle Luis Leigue Castedo, Trinidad, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.8390824,
+          "lng": -64.8961706,
+          "distanciaKm": 1.14,
+          "puntos": 190
+        }
+      ]
+    },
+    {
+      "nombre": "Conavi",
+      "distrito": 2,
+      "candidatos": [
+        {
+          "nombreBarrio": "Conavi",
+          "resultado": "Calle Conavi",
+          "direccion": "Calle Conavi, Trinidad, Bolivia",
+          "tipo": "street",
+          "lat": -14.8367795,
+          "lng": -64.8948437,
+          "distanciaKm": 1.05,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "Germán Busch",
+      "distrito": 3,
+      "candidatos": [
+        {
+          "nombreBarrio": "Germán Busch",
+          "resultado": "Avenida Germán Busch",
+          "direccion": "Avenida Germán Busch, Trinidad, Bolivia",
+          "tipo": "street",
+          "lat": -14.8356286,
+          "lng": -64.9028899,
+          "distanciaKm": 0.54,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "Libertad",
+      "distrito": 8,
+      "candidatos": [
+        {
+          "nombreBarrio": "Libertad",
+          "resultado": "Calle Libertad",
+          "direccion": "Calle Libertad, Trinidad, Bolivia",
+          "tipo": "street",
+          "lat": -14.8439628,
+          "lng": -64.9102813,
+          "distanciaKm": 1.69,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "Moxos",
+      "distrito": 3,
+      "candidatos": [
+        {
+          "nombreBarrio": "Moxos",
+          "resultado": "Transporte Pesado Moxos",
+          "direccion": "Transporte Pesado Moxos, Trinidad, Cercado, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.8288229,
+          "lng": -64.8889777,
+          "distanciaKm": 1.46,
+          "puntos": 190
+        }
+      ]
+    },
+    {
+      "nombre": "Pailón",
+      "distrito": 3,
+      "candidatos": [
+        {
+          "nombreBarrio": "Pailón",
+          "resultado": "Puente Pailón",
+          "direccion": "Puente Pailón, Trinidad, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.8412575,
+          "lng": -64.8946373,
+          "distanciaKm": 1.43,
+          "puntos": 190
+        }
+      ]
+    },
+    {
+      "nombre": "Paitití",
+      "distrito": 6,
+      "candidatos": [
+        {
+          "nombreBarrio": "Paitití",
+          "resultado": "Mercado Paititi",
+          "direccion": "Mercado Paititi, Calle Santa Ana, Trinidad, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.8246597,
+          "lng": -64.8875787,
+          "distanciaKm": 1.73,
+          "puntos": 190
+        },
+        {
+          "nombreBarrio": "Paitití",
+          "resultado": "ES Paititi",
+          "direccion": "ES Paititi, RN9: Trinidad-Casarabe-San Pablo, Trinidad, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.8261946,
+          "lng": -64.8740105,
+          "distanciaKm": 3.09,
+          "puntos": 190
+        },
+        {
+          "nombreBarrio": "Paitití",
+          "resultado": "Avenida Gran Paitití",
+          "direccion": "Avenida Gran Paitití, Trinidad, Bolivia",
+          "tipo": "street",
+          "lat": -14.8364105,
+          "lng": -64.9149879,
+          "distanciaKm": 1.49,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "Pantanal",
+      "distrito": 3,
+      "candidatos": [
+        {
+          "nombreBarrio": "Pantanal",
+          "resultado": "Parque Ecológico Pantanal",
+          "direccion": "Parque Ecológico Pantanal, Trinidad, Cercado, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.8280038,
+          "lng": -64.9143364,
+          "distanciaKm": 1.32,
+          "puntos": 190
+        }
+      ]
+    },
+    {
+      "nombre": "Pedro Marbán",
+      "distrito": 4,
+      "candidatos": [
+        {
+          "nombreBarrio": "Pedro Marbán",
+          "resultado": "Avenida Pedro Marbán",
+          "direccion": "Avenida Pedro Marbán, Trinidad, Bolivia",
+          "tipo": "street",
+          "lat": -14.8391158,
+          "lng": -64.9104221,
+          "distanciaKm": 1.26,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "San Juan",
+      "distrito": 3,
+      "candidatos": [
+        {
+          "nombreBarrio": "San Juan",
+          "resultado": "Puerto Arroyo San Juan",
+          "direccion": "Puerto Arroyo San Juan, Trinidad, Cercado, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.835718,
+          "lng": -64.9011864,
+          "distanciaKm": 0.56,
+          "puntos": 190
+        },
+        {
+          "nombreBarrio": "San Juan",
+          "resultado": "Arroyo San Juan",
+          "direccion": "Arroyo San Juan, Trinidad, Cercado, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.8379509,
+          "lng": -64.9031048,
+          "distanciaKm": 0.8,
+          "puntos": 190
+        },
+        {
+          "nombreBarrio": "San Juan",
+          "resultado": "Arroyo San Juan",
+          "direccion": "Arroyo San Juan, Santísima Trinidad, Cercado, Bolivia",
+          "tipo": "amenity",
+          "lat": -14.855509,
+          "lng": -64.9467596,
+          "distanciaKm": 5.5,
+          "puntos": 190
+        }
+      ]
+    }
+  ]
+}

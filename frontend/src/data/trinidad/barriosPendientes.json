@@ -1,0 +1,586 @@
+{
+  "generadoEn": "2026-10-20T16:56:40.364Z",
+  "total": 42,
+  "barrios": [
+    {
+      "nombre": "Casco Viejo",
+      "tipo": "Barrio",
+      "distrito": 1,
+      "motivo": "Coincidencias insuficientes",
+      "candidatos": [
+        {
+          "nombre": "Viejo Terminal de Buses Trinidad",
+          "tipo": "Transporte",
+          "lat": -14.8347756,
+          "lng": -64.8939218,
+          "puntos": 23
+        }
+      ]
+    },
+    {
+      "nombre": "Fátima Central",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "motivo": "Coincidencias insuficientes",
+      "candidatos": [
+        {
+          "nombre": "UE Colegio Fatima",
+          "tipo": "Unidad Educativa",
+          "lat": -14.8311,
+          "lng": -64.8980397,
+          "puntos": 23
+        },
+        {
+          "nombre": "Centro de Salud Central",
+          "tipo": "Salud",
+          "lat": -14.8324611,
+          "lng": -64.9046878,
+          "puntos": 23
+        },
+        {
+          "nombre": "Centro de Salud Central",
+          "tipo": "Salud",
+          "lat": -14.8321233,
+          "lng": -64.9049522,
+          "puntos": 23
+        },
+        {
+          "nombre": "Farmacia Central",
+          "tipo": "Salud",
+          "lat": -14.8340617,
+          "lng": -64.9045792,
+          "puntos": 23
+        },
+        {
+          "nombre": "Mercado Central",
+          "tipo": "Mercado",
+          "lat": -14.8374538,
+          "lng": -64.9040718,
+          "puntos": 23
+        }
+      ]
+    },
+    {
+      "nombre": "Arroyo Chico",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Los Penocos",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "motivo": "Coincidencia de baja confianza",
+      "candidatos": [
+        {
+          "nombre": "Calle Penocos",
+          "tipo": "Calle",
+          "lat": -14.8306635,
+          "lng": -64.9113411,
+          "puntos": 55
+        }
+      ]
+    },
+    {
+      "nombre": "23 de Marzo",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "San Juan",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "motivo": "Coincidencia de baja confianza",
+      "candidatos": [
+        {
+          "nombre": "Urbanización San Antonio",
+          "tipo": "Barrio",
+          "lat": -14.7849098,
+          "lng": -64.9047028,
+          "puntos": 58
+        }
+      ]
+    },
+    {
+      "nombre": "Venecia",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Santa Cruz Sur",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "Coincidencia de baja confianza",
+      "candidatos": [
+        {
+          "nombre": "Urbanización Santa Inez",
+          "tipo": "Barrio",
+          "lat": -14.7771202,
+          "lng": -64.8675771,
+          "puntos": 58
+        }
+      ]
+    },
+    {
+      "nombre": "1ro. de Mayo",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "Coincidencias insuficientes",
+      "candidatos": [
+        {
+          "nombre": "Plazuela 25 de Mayo",
+          "tipo": "Parque",
+          "lat": -14.8448574,
+          "lng": -64.8949779,
+          "puntos": 23
+        },
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.8428022,
+          "lng": -64.91351,
+          "puntos": 15
+        },
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.8321397,
+          "lng": -64.9125266,
+          "puntos": 15
+        },
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.839248,
+          "lng": -64.9132305,
+          "puntos": 15
+        },
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.8424542,
+          "lng": -64.9133026,
+          "puntos": 15
+        }
+      ]
+    },
+    {
+      "nombre": "Triunfo",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Villa Ximena",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "Coincidencia de baja confianza",
+      "candidatos": [
+        {
+          "nombre": "Tienda de Ximena F.",
+          "tipo": "Comercio",
+          "lat": -14.8484224,
+          "lng": -64.9001422,
+          "puntos": 55
+        }
+      ]
+    },
+    {
+      "nombre": "Santa Anita",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "Coincidencia de baja confianza",
+      "candidatos": [
+        {
+          "nombre": "Urbanización Santa Inez",
+          "tipo": "Barrio",
+          "lat": -14.7771202,
+          "lng": -64.8675771,
+          "puntos": 58
+        }
+      ]
+    },
+    {
+      "nombre": "Urb. Marín",
+      "tipo": "Urbanización",
+      "distrito": 4,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Villa Marín",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Pedro I. Muiba",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "Coincidencia de baja confianza",
+      "candidatos": [
+        {
+          "nombre": "U.E. Pedro Ignacio Muiba Fe y Alegría",
+          "tipo": "Unidad Educativa",
+          "lat": -14.8447375,
+          "lng": -64.9138401,
+          "puntos": 63
+        },
+        {
+          "nombre": "Monumento a Pedro Ignacio Muiba",
+          "tipo": "Referencia",
+          "lat": -14.8467391,
+          "lng": -64.9049027,
+          "puntos": 63
+        },
+        {
+          "nombre": "Avenida Pedro Ignacio Muiba",
+          "tipo": "Calle",
+          "lat": -14.8444992,
+          "lng": -64.904646,
+          "puntos": 55
+        },
+        {
+          "nombre": "Avenida Pedro Ignacio Muiba",
+          "tipo": "Calle",
+          "lat": -14.8434672,
+          "lng": -64.9046002,
+          "puntos": 55
+        },
+        {
+          "nombre": "Avenida Pedro Ignacio Muiba",
+          "tipo": "Calle",
+          "lat": -14.8387508,
+          "lng": -64.9040092,
+          "puntos": 55
+        }
+      ]
+    },
+    {
+      "nombre": "Tocopilla",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "San Luis",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "Coincidencia de baja confianza",
+      "candidatos": [
+        {
+          "nombre": "Urbanización San Antonio",
+          "tipo": "Barrio",
+          "lat": -14.7849098,
+          "lng": -64.9047028,
+          "puntos": 58
+        }
+      ]
+    },
+    {
+      "nombre": "El Recreo",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "24 de Septiembre",
+      "tipo": "Barrio",
+      "distrito": 5,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "San José",
+      "tipo": "Barrio",
+      "distrito": 5,
+      "motivo": "Coincidencia de baja confianza",
+      "candidatos": [
+        {
+          "nombre": "Urbanización San Antonio",
+          "tipo": "Barrio",
+          "lat": -14.7849098,
+          "lng": -64.9047028,
+          "puntos": 58
+        }
+      ]
+    },
+    {
+      "nombre": "6 de Septiembre",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "21 de Septiembre",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Villa Conchita",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "26 de Enero",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Cotoca",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "El Progreso",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Bello Horizonte",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Bello Horizonte Norte",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "Coincidencias insuficientes",
+      "candidatos": [
+        {
+          "nombre": "Avenida Circunvalacion Norte",
+          "tipo": "Calle",
+          "lat": -14.7944372,
+          "lng": -64.8693665,
+          "puntos": 15
+        }
+      ]
+    },
+    {
+      "nombre": "Los Tocos",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "12 de Abril",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "Coincidencias insuficientes",
+      "candidatos": [
+        {
+          "nombre": "Mercado 13 de Abril",
+          "tipo": "Mercado",
+          "lat": -14.8342938,
+          "lng": -64.88761,
+          "puntos": 23
+        },
+        {
+          "nombre": "Calle 12",
+          "tipo": "Calle",
+          "lat": -14.8200771,
+          "lng": -64.8773242,
+          "puntos": 15
+        },
+        {
+          "nombre": "Calle 12",
+          "tipo": "Calle",
+          "lat": -14.8198278,
+          "lng": -64.8720397,
+          "puntos": 15
+        },
+        {
+          "nombre": "Calle 12 Final",
+          "tipo": "Calle",
+          "lat": -14.8297348,
+          "lng": -64.8829813,
+          "puntos": 15
+        },
+        {
+          "nombre": "Calle 12 Final",
+          "tipo": "Calle",
+          "lat": -14.8297771,
+          "lng": -64.8799834,
+          "puntos": 15
+        }
+      ]
+    },
+    {
+      "nombre": "Las Brisas",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Florida",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Nuevo Amanecer",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "Coincidencias insuficientes",
+      "candidatos": [
+        {
+          "nombre": "Nuevo Terminal de Buses General Edmundo Vaca Medrano",
+          "tipo": "Transporte",
+          "lat": -14.8242387,
+          "lng": -64.8678631,
+          "puntos": 23
+        },
+        {
+          "nombre": "Nuevo Terminal de buses Trinidad",
+          "tipo": "Transporte",
+          "lat": -14.8245415,
+          "lng": -64.867636,
+          "puntos": 23
+        }
+      ]
+    },
+    {
+      "nombre": "Villa Vecinal",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Tahuichi",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Villa Lolita",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Profesionales",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Sandunga",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "Villa Magdalena",
+      "tipo": "Barrio",
+      "distrito": 8,
+      "motivo": "Coincidencia de baja confianza",
+      "candidatos": [
+        {
+          "nombre": "Calle Magdalena",
+          "tipo": "Calle",
+          "lat": -14.8232594,
+          "lng": -64.8803779,
+          "puntos": 55
+        },
+        {
+          "nombre": "Calle Magdalena",
+          "tipo": "Calle",
+          "lat": -14.8229848,
+          "lng": -64.8795487,
+          "puntos": 55
+        },
+        {
+          "nombre": "Calle Magdalena",
+          "tipo": "Calle",
+          "lat": -14.8250298,
+          "lng": -64.8803172,
+          "puntos": 55
+        },
+        {
+          "nombre": "Calle Magdalena",
+          "tipo": "Calle",
+          "lat": -14.823747,
+          "lng": -64.8803693,
+          "puntos": 55
+        },
+        {
+          "nombre": "Calle Magdalena",
+          "tipo": "Calle",
+          "lat": -14.8229149,
+          "lng": -64.878659,
+          "puntos": 55
+        }
+      ]
+    },
+    {
+      "nombre": "Urb. El Palmar",
+      "tipo": "Urbanización",
+      "distrito": 8,
+      "motivo": "Sin referencias geográficas con nombre relacionado"
+    },
+    {
+      "nombre": "María Jesús",
+      "tipo": "Barrio",
+      "distrito": 8,
+      "motivo": "Coincidencias insuficientes",
+      "candidatos": [
+        {
+          "nombre": "U.E. Santa María Fe y Alegria",
+          "tipo": "Unidad Educativa",
+          "lat": -14.8195893,
+          "lng": -64.8838342,
+          "puntos": 23
+        },
+        {
+          "nombre": "Sagrado corazon de jesus",
+          "tipo": "Iglesia",
+          "lat": -14.8335269,
+          "lng": -64.8941512,
+          "puntos": 23
+        },
+        {
+          "nombre": "Calle María Luisa Viera",
+          "tipo": "Calle",
+          "lat": -14.8270555,
+          "lng": -64.9002622,
+          "puntos": 15
+        },
+        {
+          "nombre": "Calle María Luisa Viera",
+          "tipo": "Calle",
+          "lat": -14.8264985,
+          "lng": -64.9048023,
+          "puntos": 15
+        },
+        {
+          "nombre": "Calle María Luisa Viera",
+          "tipo": "Calle",
+          "lat": -14.826336,
+          "lng": -64.9060166,
+          "puntos": 15
+        }
+      ]
+    },
+    {
+      "nombre": "San Pedro II",
+      "tipo": "Barrio",
+      "distrito": 8,
+      "motivo": "Coincidencia de baja confianza",
+      "candidatos": [
+        {
+          "nombre": "Urbanización San Antonio",
+          "tipo": "Barrio",
+          "lat": -14.7849098,
+          "lng": -64.9047028,
+          "puntos": 58
+        }
+      ]
+    }
+  ]
+}

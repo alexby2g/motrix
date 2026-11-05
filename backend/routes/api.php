@@ -1259,3 +1259,40 @@ require __DIR__ . '/conductor_account_release.php';
 
 /* MOTRIX V5.7 - términos y privacidad */
 require __DIR__ . '/motrix_legal.php';
+
+// MOTRIX: acceso privado al audio de un viaje activo.
+Route::middleware(['auth:sanctum', 'throttle:10,1'])
+    ->post(
+        '/llamadas/{id}/token',
+        [\App\Http\Controllers\LlamadaPrivadaController::class, 'token']
+    )
+    ->whereNumber('id');
+// Aviso de prueba de llamada privada MOTRIX.
+Route::middleware(['auth:sanctum', 'throttle:5,1'])
+    ->post(
+        '/llamadas/{id}/avisar',
+        [\App\Http\Controllers\AvisoLlamadaController::class, 'avisar']
+    )
+    ->whereNumber('id');
+// MOTRIX: llamadas privadas mediante API REST, sin Reverb.
+Route::middleware(['auth:sanctum', 'throttle:30,1'])
+    ->group(function () {
+        Route::post('/llamadas/{id}/iniciar',
+            [\App\Http\Controllers\GestionLlamadaController::class, 'iniciar'])
+            ->whereNumber('id');
+
+        Route::get('/llamadas/{id}/estado',
+            [\App\Http\Controllers\GestionLlamadaController::class, 'estado'])
+            ->whereNumber('id');
+    });
+// MOTRIX: responder y finalizar llamadas privadas.
+Route::middleware(['auth:sanctum', 'throttle:20,1'])
+    ->group(function () {
+        Route::post('/llamadas/{id}/responder',
+            [\App\Http\Controllers\GestionLlamadaController::class, 'responder'])
+            ->whereNumber('id');
+
+        Route::post('/llamadas/{id}/finalizar',
+            [\App\Http\Controllers\GestionLlamadaController::class, 'finalizar'])
+            ->whereNumber('id');
+    });

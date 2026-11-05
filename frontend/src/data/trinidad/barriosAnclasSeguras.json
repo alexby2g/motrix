@@ -1,0 +1,78 @@
+{
+  "generadoEn": "2026-10-20T22:27:58.712Z",
+  "total": 6,
+  "barrios": [
+    {
+      "nombre": "30 de Julio",
+      "tipo": "Barrio",
+      "distrito": 8,
+      "lat": -14.8069671,
+      "lng": -64.9078573,
+      "referencia": "Centro de Salud 30 de Julio",
+      "tipoReferencia": "Salud",
+      "puntos": 360,
+      "fuente": "ancla-osm-segura",
+      "prioridad": 900
+    },
+    {
+      "nombre": "4 de Febrero",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "lat": -14.8450352,
+      "lng": -64.9008149,
+      "referencia": "Farmcia 4 de Febrero",
+      "tipoReferencia": "Salud",
+      "puntos": 360,
+      "fuente": "ancla-osm-segura",
+      "prioridad": 900
+    },
+    {
+      "nombre": "6 de Agosto",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "lat": -14.8152922,
+      "lng": -64.8990858,
+      "referencia": "Colegio Nacional 6 de Agosto",
+      "tipoReferencia": "Unidad Educativa",
+      "puntos": 365,
+      "fuente": "ancla-osm-segura",
+      "prioridad": 900
+    },
+    {
+      "nombre": "Belén",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "lat": -14.8395418,
+      "lng": -64.894052,
+      "referencia": "Cancha Belén",
+      "tipoReferencia": "Deporte",
+      "puntos": 345,
+      "fuente": "ancla-osm-segura",
+      "prioridad": 900
+    },
+    {
+      "nombre": "Paitití",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "lat": -14.8246597,
+      "lng": -64.8875787,
+      "referencia": "Mercado Paititi",
+      "tipoReferencia": "Mercado",
+      "puntos": 370,
+      "fuente": "ancla-osm-segura",
+      "prioridad": 900
+    },
+    {
+      "nombre": "Pantanal",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "lat": -14.8279503,
+      "lng": -64.9137693,
+      "referencia": "Parque Ecológico Pantanal",
+      "tipoReferencia": "Parque",
+      "puntos": 355,
+      "fuente": "ancla-osm-segura",
+      "prioridad": 900
+    }
+  ]
+}

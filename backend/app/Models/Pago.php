@@ -27,6 +27,29 @@ class Pago extends Model
         'monto_qr' => 'decimal:2',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (Pago $pago) {
+            if ($pago->estado === 'Completado') {
+                if (
+                    !$pago->completado_en
+                    && (
+                        !$pago->exists
+                        || (
+                            $pago->isDirty('estado')
+                            && $pago->getOriginal('estado') !== 'Completado'
+                        )
+                    )
+                ) {
+                    $pago->completado_en = now(
+                        'America/La_Paz'
+                    )->format('Y-m-d H:i:s');
+                }
+            } elseif ($pago->isDirty('estado')) {
+                $pago->completado_en = null;
+            }
+        });
+    }
     /**
      * Un pago pertenece a un servicio.
      */

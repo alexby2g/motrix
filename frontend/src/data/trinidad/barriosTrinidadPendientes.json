@@ -1,0 +1,348 @@
+{
+  "generadoEn": "2026-10-20T17:05:52.176Z",
+  "total": 57,
+  "barrios": [
+    {
+      "nombre": "12 de Abril",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "1ro. de Mayo",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "21 de Septiembre",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "23 de Marzo",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "24 de Septiembre",
+      "tipo": "Barrio",
+      "distrito": 5,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "25 de Diciembre",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "26 de Enero",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "27 de Mayo",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "30 de Agosto",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "30 de Julio",
+      "tipo": "Barrio",
+      "distrito": 8,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "4 de Febrero",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "6 de Agosto",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "6 de Septiembre",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Arroyo Chico",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Belén",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Bello Horizonte",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Bello Horizonte Norte",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Casco Viejo",
+      "tipo": "Barrio",
+      "distrito": 1,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Conavi",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Cotoca",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "El Progreso",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Fátima Central",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Florida",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Germán Busch",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Las Brisas",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Libertad",
+      "tipo": "Barrio",
+      "distrito": 8,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Los Penocos",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Los Tocos",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Machetero",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Mangalito",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "María Jesús",
+      "tipo": "Barrio",
+      "distrito": 8,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Moxos",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Nuevo Amanecer",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Pailón",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Paitití",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Pantanal",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Pedro Marbán",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Profesionales",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "San José",
+      "tipo": "Barrio",
+      "distrito": 5,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "San Juan",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "San Luis",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "San Pedro II",
+      "tipo": "Barrio",
+      "distrito": 8,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Sandunga",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Santa Anita",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Santa Cruz Sur",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Tahuichi",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Tocopilla",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Triunfo",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Urb. El Palmar",
+      "tipo": "Urbanización",
+      "distrito": 8,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Urb. Marín",
+      "tipo": "Urbanización",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Venecia",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Villa Conchita",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Villa Lolita",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Villa Magdalena",
+      "tipo": "Barrio",
+      "distrito": 8,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Villa Marín",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Villa Vecinal",
+      "tipo": "Barrio",
+      "distrito": 7,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    },
+    {
+      "nombre": "Villa Ximena",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "motivo": "No existe coincidencia exacta en la capa geográfica de Hogaria"
+    }
+  ]
+}

@@ -1,0 +1,980 @@
+{
+  "generadoEn": "2026-10-20T16:56:40.350Z",
+  "total": 26,
+  "barrios": [
+    {
+      "nombre": "Belén",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "lat": -14.8395418,
+      "lng": -64.894052,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Cancha Belén",
+        "tipo": "Deporte",
+        "lat": -14.8395418,
+        "lng": -64.894052,
+        "puntos": 178
+      },
+      "referencias": [
+        {
+          "nombre": "Cancha Belén",
+          "tipo": "Deporte",
+          "lat": -14.8395418,
+          "lng": -64.894052,
+          "puntos": 178
+        }
+      ]
+    },
+    {
+      "nombre": "13 de Abril",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "lat": -14.8342938,
+      "lng": -64.88761,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Mercado 13 de Abril",
+        "tipo": "Mercado",
+        "lat": -14.8342938,
+        "lng": -64.88761,
+        "puntos": 178
+      },
+      "referencias": [
+        {
+          "nombre": "Mercado 13 de Abril",
+          "tipo": "Mercado",
+          "lat": -14.8342938,
+          "lng": -64.88761,
+          "puntos": 178
+        }
+      ]
+    },
+    {
+      "nombre": "Conavi",
+      "tipo": "Barrio",
+      "distrito": 2,
+      "lat": -14.8367832,
+      "lng": -64.8948439,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Calle Conavi",
+        "tipo": "Calle",
+        "lat": -14.8367832,
+        "lng": -64.8948439,
+        "puntos": 170
+      },
+      "referencias": [
+        {
+          "nombre": "Calle Conavi",
+          "tipo": "Calle",
+          "lat": -14.8367832,
+          "lng": -64.8948439,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "Pompeya",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "lat": -14.8408892,
+      "lng": -64.9021222,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Mercado Pompeya",
+        "tipo": "Mercado",
+        "lat": -14.8395417,
+        "lng": -64.9002718,
+        "puntos": 178
+      },
+      "referencias": [
+        {
+          "nombre": "Mercado Pompeya",
+          "tipo": "Mercado",
+          "lat": -14.8395417,
+          "lng": -64.9002718,
+          "puntos": 178
+        },
+        {
+          "nombre": "Plazuela de Pompeya",
+          "tipo": "Parque",
+          "lat": -14.8404605,
+          "lng": -64.9013235,
+          "puntos": 178
+        },
+        {
+          "nombre": "Parroquia de Pompeya",
+          "tipo": "Iglesia",
+          "lat": -14.8411791,
+          "lng": -64.9010373,
+          "puntos": 178
+        },
+        {
+          "nombre": "Estación de Servicio Pompeya Trinidad",
+          "tipo": "Referencia",
+          "lat": -14.8467367,
+          "lng": -64.9052351,
+          "puntos": 178
+        },
+        {
+          "nombre": "Puente de Pompeya",
+          "tipo": "Calle",
+          "lat": -14.8384841,
+          "lng": -64.9039787,
+          "puntos": 170
+        },
+        {
+          "nombre": "Agencia Pompeya",
+          "tipo": "Banco",
+          "lat": -14.8389332,
+          "lng": -64.9008866,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "Moxos",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "lat": -14.8678797,
+      "lng": -64.9571039,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Parada a San Ignacio de Moxos",
+        "tipo": "Transporte",
+        "lat": -14.842983,
+        "lng": -64.9046607,
+        "puntos": 178
+      },
+      "referencias": [
+        {
+          "nombre": "Parada a San Ignacio de Moxos",
+          "tipo": "Transporte",
+          "lat": -14.842983,
+          "lng": -64.9046607,
+          "puntos": 178
+        },
+        {
+          "nombre": "RN3: Trinidad-San Ignacio de Moxos",
+          "tipo": "Referencia",
+          "lat": -14.8686828,
+          "lng": -64.9706642,
+          "puntos": 178
+        },
+        {
+          "nombre": "RN3: Trinidad-San Ignacio de Moxos",
+          "tipo": "Referencia",
+          "lat": -14.8690534,
+          "lng": -64.9597992,
+          "puntos": 178
+        },
+        {
+          "nombre": "RN3: Trinidad-San Ignacio de Moxos",
+          "tipo": "Referencia",
+          "lat": -14.8497201,
+          "lng": -64.9063102,
+          "puntos": 178
+        },
+        {
+          "nombre": "RN3: Trinidad-San Ignacio de Moxos",
+          "tipo": "Referencia",
+          "lat": -14.8743769,
+          "lng": -64.9851561,
+          "puntos": 178
+        },
+        {
+          "nombre": "RN3: Trinidad-San Ignacio de Moxos",
+          "tipo": "Referencia",
+          "lat": -14.8580702,
+          "lng": -64.9187537,
+          "puntos": 178
+        },
+        {
+          "nombre": "RN3: Trinidad-San Ignacio de Moxos",
+          "tipo": "Referencia",
+          "lat": -14.8659028,
+          "lng": -64.9408483,
+          "puntos": 178
+        },
+        {
+          "nombre": "RN3: Trinidad-San Ignacio de Moxos",
+          "tipo": "Referencia",
+          "lat": -14.8772605,
+          "lng": -65.0176667,
+          "puntos": 178
+        },
+        {
+          "nombre": "RN3: Trinidad-San Ignacio de Moxos",
+          "tipo": "Referencia",
+          "lat": -14.8782606,
+          "lng": -64.9994029,
+          "puntos": 178
+        },
+        {
+          "nombre": "RN3: Trinidad-San Ignacio de Moxos",
+          "tipo": "Referencia",
+          "lat": -14.8784874,
+          "lng": -65.0013779,
+          "puntos": 178
+        }
+      ]
+    },
+    {
+      "nombre": "4 de Febrero",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "lat": -14.8450352,
+      "lng": -64.9008149,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Farmcia 4 de Febrero",
+        "tipo": "Salud",
+        "lat": -14.8450352,
+        "lng": -64.9008149,
+        "puntos": 268
+      },
+      "referencias": [
+        {
+          "nombre": "Farmcia 4 de Febrero",
+          "tipo": "Salud",
+          "lat": -14.8450352,
+          "lng": -64.9008149,
+          "puntos": 268
+        }
+      ]
+    },
+    {
+      "nombre": "Villa Corina",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "lat": -14.8465218,
+      "lng": -64.8961872,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Feria Villa Corina",
+        "tipo": "Comercio",
+        "lat": -14.8465218,
+        "lng": -64.8961872,
+        "puntos": 170
+      },
+      "referencias": [
+        {
+          "nombre": "Feria Villa Corina",
+          "tipo": "Comercio",
+          "lat": -14.8465218,
+          "lng": -64.8961872,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "25 de Diciembre",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "lat": -14.8402193,
+      "lng": -64.8939588,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Avenida 25 de Diciembre",
+        "tipo": "Calle",
+        "lat": -14.8402474,
+        "lng": -64.8931583,
+        "puntos": 170
+      },
+      "referencias": [
+        {
+          "nombre": "Avenida 25 de Diciembre",
+          "tipo": "Calle",
+          "lat": -14.8402474,
+          "lng": -64.8931583,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida 25 de Diciembre",
+          "tipo": "Calle",
+          "lat": -14.8401194,
+          "lng": -64.8955593,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida 25 de Diciembre",
+          "tipo": "Calle",
+          "lat": -14.8402911,
+          "lng": -64.8931587,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "Pailón",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "lat": -14.8412575,
+      "lng": -64.8946373,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Puente Pailón",
+        "tipo": "Calle",
+        "lat": -14.8412575,
+        "lng": -64.8946373,
+        "puntos": 170
+      },
+      "referencias": [
+        {
+          "nombre": "Puente Pailón",
+          "tipo": "Calle",
+          "lat": -14.8412575,
+          "lng": -64.8946373,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "Germán Busch",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "lat": -14.8356967,
+      "lng": -64.9025037,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Avenida Germán Busch",
+        "tipo": "Calle",
+        "lat": -14.835867,
+        "lng": -64.9006012,
+        "puntos": 170
+      },
+      "referencias": [
+        {
+          "nombre": "Avenida Germán Busch",
+          "tipo": "Calle",
+          "lat": -14.835867,
+          "lng": -64.9006012,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida Germán Busch",
+          "tipo": "Calle",
+          "lat": -14.8356485,
+          "lng": -64.9028905,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida Germán Busch",
+          "tipo": "Calle",
+          "lat": -14.8355445,
+          "lng": -64.9041889,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida Germán Busch",
+          "tipo": "Calle",
+          "lat": -14.8356756,
+          "lng": -64.9028905,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida Germán Busch",
+          "tipo": "Calle",
+          "lat": -14.835748,
+          "lng": -64.9019475,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "30 de Agosto",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "lat": -14.8398907,
+      "lng": -64.9025039,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Residencial 30 de Agosto",
+        "tipo": "Hospedaje",
+        "lat": -14.8398907,
+        "lng": -64.9025039,
+        "puntos": 170
+      },
+      "referencias": [
+        {
+          "nombre": "Residencial 30 de Agosto",
+          "tipo": "Hospedaje",
+          "lat": -14.8398907,
+          "lng": -64.9025039,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "Pantanal",
+      "tipo": "Barrio",
+      "distrito": 3,
+      "lat": -14.8344285,
+      "lng": -64.9081176,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Parque Ecológico Pantanal",
+        "tipo": "Parque",
+        "lat": -14.8279503,
+        "lng": -64.9137693,
+        "puntos": 178
+      },
+      "referencias": [
+        {
+          "nombre": "Parque Ecológico Pantanal",
+          "tipo": "Parque",
+          "lat": -14.8279503,
+          "lng": -64.9137693,
+          "puntos": 178
+        },
+        {
+          "nombre": "Pescadería Pantanal",
+          "tipo": "Comida",
+          "lat": -14.8409067,
+          "lng": -64.9024659,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "San Vicente",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "lat": -14.8323288,
+      "lng": -64.9091078,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Mercado Seccional San Vicente",
+        "tipo": "Mercado",
+        "lat": -14.8323288,
+        "lng": -64.9091078,
+        "puntos": 178
+      },
+      "referencias": [
+        {
+          "nombre": "Mercado Seccional San Vicente",
+          "tipo": "Mercado",
+          "lat": -14.8323288,
+          "lng": -64.9091078,
+          "puntos": 178
+        }
+      ]
+    },
+    {
+      "nombre": "San Antonio",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "lat": -14.7849098,
+      "lng": -64.9047028,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Urbanización San Antonio",
+        "tipo": "Barrio",
+        "lat": -14.7849098,
+        "lng": -64.9047028,
+        "puntos": 303
+      },
+      "referencias": [
+        {
+          "nombre": "Urbanización San Antonio",
+          "tipo": "Barrio",
+          "lat": -14.7849098,
+          "lng": -64.9047028,
+          "puntos": 303
+        }
+      ]
+    },
+    {
+      "nombre": "Pedro Marbán",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "lat": -14.8393586,
+      "lng": -64.9106219,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Avenida Pedro Marbán",
+        "tipo": "Calle",
+        "lat": -14.8405362,
+        "lng": -64.9115115,
+        "puntos": 170
+      },
+      "referencias": [
+        {
+          "nombre": "Avenida Pedro Marbán",
+          "tipo": "Calle",
+          "lat": -14.8405362,
+          "lng": -64.9115115,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida Pedro Marbán",
+          "tipo": "Calle",
+          "lat": -14.8391034,
+          "lng": -64.9104377,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida Pedro Marbán",
+          "tipo": "Calle",
+          "lat": -14.8400102,
+          "lng": -64.9111382,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida Pedro Marbán",
+          "tipo": "Calle",
+          "lat": -14.8377846,
+          "lng": -64.9094003,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "Machetero",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "lat": -14.8365934,
+      "lng": -64.9139864,
+      "confianza": "media",
+      "mejorReferencia": {
+        "nombre": "Avenida Los Macheteros",
+        "tipo": "Calle",
+        "lat": -14.8365934,
+        "lng": -64.9139864,
+        "puntos": 115
+      },
+      "referencias": [
+        {
+          "nombre": "Avenida Los Macheteros",
+          "tipo": "Calle",
+          "lat": -14.8365934,
+          "lng": -64.9139864,
+          "puntos": 115
+        }
+      ]
+    },
+    {
+      "nombre": "27 de Mayo",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "lat": -14.8382987,
+      "lng": -64.9131215,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Avenida 27 de Mayo",
+        "tipo": "Calle",
+        "lat": -14.8428022,
+        "lng": -64.91351,
+        "puntos": 170
+      },
+      "referencias": [
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.8428022,
+          "lng": -64.91351,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.8321397,
+          "lng": -64.9125266,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.839248,
+          "lng": -64.9132305,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.8424542,
+          "lng": -64.9133026,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.8329505,
+          "lng": -64.9127976,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.844952,
+          "lng": -64.9136544,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.836457,
+          "lng": -64.9130436,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.8364595,
+          "lng": -64.9128786,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.840777,
+          "lng": -64.9133372,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida 27 de Mayo",
+          "tipo": "Calle",
+          "lat": -14.8347473,
+          "lng": -64.9129334,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "Mangalito",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "lat": -14.8618977,
+      "lng": -64.9823603,
+      "confianza": "media",
+      "mejorReferencia": {
+        "nombre": "Camino Puerto Almacén-Mangalito del Río",
+        "tipo": "Calle",
+        "lat": -14.8686585,
+        "lng": -64.9750375,
+        "puntos": 115
+      },
+      "referencias": [
+        {
+          "nombre": "Camino Puerto Almacén-Mangalito del Río",
+          "tipo": "Calle",
+          "lat": -14.8686585,
+          "lng": -64.9750375,
+          "puntos": 115
+        },
+        {
+          "nombre": "Camino Puerto Almacén-Mangalito del Río",
+          "tipo": "Calle",
+          "lat": -14.8551369,
+          "lng": -64.9896831,
+          "puntos": 115
+        }
+      ]
+    },
+    {
+      "nombre": "6 de Agosto",
+      "tipo": "Barrio",
+      "distrito": 4,
+      "lat": -14.8152922,
+      "lng": -64.8990858,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Colegio Nacional 6 de Agosto",
+        "tipo": "Unidad Educativa",
+        "lat": -14.8152922,
+        "lng": -64.8990858,
+        "puntos": 358
+      },
+      "referencias": [
+        {
+          "nombre": "Colegio Nacional 6 de Agosto",
+          "tipo": "Unidad Educativa",
+          "lat": -14.8152922,
+          "lng": -64.8990858,
+          "puntos": 358
+        }
+      ]
+    },
+    {
+      "nombre": "Paitití",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "lat": -14.8262782,
+      "lng": -64.8839834,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Mercado Paititi",
+        "tipo": "Mercado",
+        "lat": -14.8246597,
+        "lng": -64.8875787,
+        "puntos": 178
+      },
+      "referencias": [
+        {
+          "nombre": "Mercado Paititi",
+          "tipo": "Mercado",
+          "lat": -14.8246597,
+          "lng": -64.8875787,
+          "puntos": 178
+        },
+        {
+          "nombre": "ES Paititi",
+          "tipo": "Referencia",
+          "lat": -14.8261946,
+          "lng": -64.8740105,
+          "puntos": 178
+        },
+        {
+          "nombre": "1er entrada barrio Paititi",
+          "tipo": "Calle",
+          "lat": -14.8276187,
+          "lng": -64.8884605,
+          "puntos": 170
+        },
+        {
+          "nombre": "2da entrada barrio paititi",
+          "tipo": "Calle",
+          "lat": -14.8268724,
+          "lng": -64.8863619,
+          "puntos": 170
+        },
+        {
+          "nombre": "3er entrada barrio Paititi",
+          "tipo": "Calle",
+          "lat": -14.8263094,
+          "lng": -64.8848302,
+          "puntos": 170
+        },
+        {
+          "nombre": "4ta entrada barrio Paititi",
+          "tipo": "Calle",
+          "lat": -14.8260144,
+          "lng": -64.8826588,
+          "puntos": 170
+        },
+        {
+          "nombre": "Avenida Gran Paitití",
+          "tipo": "Calle",
+          "lat": -14.8364112,
+          "lng": -64.9149867,
+          "puntos": 170
+        }
+      ]
+    },
+    {
+      "nombre": "Nueva Trinidad I",
+      "tipo": "Barrio",
+      "distrito": 6,
+      "lat": -14.8202649,
+      "lng": -64.8739201,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Nueva Trinidad",
+        "tipo": "Barrio",
+        "lat": -14.8202649,
+        "lng": -64.8739201,
+        "puntos": 213
+      },
+      "referencias": [
+        {
+          "nombre": "Nueva Trinidad",
+          "tipo": "Barrio",
+          "lat": -14.8202649,
+          "lng": -64.8739201,
+          "puntos": 213
+        }
+      ]
+    },
+    {
+      "nombre": "El Carmen",
+      "tipo": "Barrio",
+      "distrito": 8,
+      "lat": -14.8346402,
+      "lng": -64.9024582,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Farmacia El Carmen",
+        "tipo": "Salud",
+        "lat": -14.8346402,
+        "lng": -64.9024582,
+        "puntos": 268
+      },
+      "referencias": [
+        {
+          "nombre": "Farmacia El Carmen",
+          "tipo": "Salud",
+          "lat": -14.8346402,
+          "lng": -64.9024582,
+          "puntos": 268
+        }
+      ]
+    },
+    {
+      "nombre": "Chaparral",
+      "tipo": "Barrio",
+      "distrito": 8,
+      "lat": -14.823748,
+      "lng": -64.906915,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Plazuela El Chaparral",
+        "tipo": "Parque",
+        "lat": -14.8225559,
+        "lng": -64.9081533,
+        "puntos": 178
+      },
+      "referencias": [
+        {
+          "nombre": "Plazuela El Chaparral",
+          "tipo": "Parque",
+          "lat": -14.8225559,
+          "lng": -64.9081533,
+          "puntos": 178
+        },
+        {
+          "nombre": "ES El Chaparral",
+          "tipo": "Referencia",
+          "lat": -14.8249401,
+          "lng": -64.9056767,
+          "puntos": 178
+        }
+      ]
+    },
+    {
+      "nombre": "30 de Julio",
+      "tipo": "Barrio",
+      "distrito": 8,
+      "lat": -14.8069671,
+      "lng": -64.9078573,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Centro de Salud 30 de Julio",
+        "tipo": "Salud",
+        "lat": -14.8069671,
+        "lng": -64.9078573,
+        "puntos": 268
+      },
+      "referencias": [
+        {
+          "nombre": "Centro de Salud 30 de Julio",
+          "tipo": "Salud",
+          "lat": -14.8069671,
+          "lng": -64.9078573,
+          "puntos": 268
+        }
+      ]
+    },
+    {
+      "nombre": "Urb. Maná",
+      "tipo": "Urbanización",
+      "distrito": 8,
+      "lat": -14.7781622,
+      "lng": -64.9053115,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Urbanización \"Mana\"",
+        "tipo": "Barrio",
+        "lat": -14.7781622,
+        "lng": -64.9053115,
+        "puntos": 478
+      },
+      "referencias": [
+        {
+          "nombre": "Urbanización \"Mana\"",
+          "tipo": "Barrio",
+          "lat": -14.7781622,
+          "lng": -64.9053115,
+          "puntos": 478
+        }
+      ]
+    },
+    {
+      "nombre": "Libertad",
+      "tipo": "Barrio",
+      "distrito": 8,
+      "lat": -14.8322237,
+      "lng": -64.9012468,
+      "confianza": "alta",
+      "mejorReferencia": {
+        "nombre": "Calle Libertad",
+        "tipo": "Calle",
+        "lat": -14.843965,
+        "lng": -64.9102505,
+        "puntos": 170
+      },
+      "referencias": [
+        {
+          "nombre": "Calle Libertad",
+          "tipo": "Calle",
+          "lat": -14.843965,
+          "lng": -64.9102505,
+          "puntos": 170
+        },
+        {
+          "nombre": "Monumento al Libertador Simón Bolívar",
+          "tipo": "Referencia",
+          "lat": -14.8293815,
+          "lng": -64.8914694,
+          "puntos": 123
+        },
+        {
+          "nombre": "Rotonda Libertador Simón Bolívar",
+          "tipo": "Referencia",
+          "lat": -14.8293706,
+          "lng": -64.8914635,
+          "puntos": 123
+        },
+        {
+          "nombre": "Avenida Libertador Simón Bolívar",
+          "tipo": "Calle",
+          "lat": -14.8306506,
+          "lng": -64.8955979,
+          "puntos": 115
+        },
+        {
+          "nombre": "Avenida Libertador Simón Bolívar",
+          "tipo": "Calle",
+          "lat": -14.8307795,
+          "lng": -64.8974741,
+          "puntos": 115
+        },
+        {
+          "nombre": "Avenida Libertador Simón Bolívar",
+          "tipo": "Calle",
+          "lat": -14.8319769,
+          "lng": -64.9052289,
+          "puntos": 115
+        },
+        {
+          "nombre": "Avenida Libertador Simón Bolívar",
+          "tipo": "Calle",
+          "lat": -14.8320056,
+          "lng": -64.9046786,
+          "puntos": 115
+        },
+        {
+          "nombre": "Avenida Libertador Simón Bolívar",
+          "tipo": "Calle",
+          "lat": -14.8313479,
+          "lng": -64.9068794,
+          "puntos": 115
+        },
+        {
+          "nombre": "Avenida Libertador Simón Bolívar",
+          "tipo": "Calle",
+          "lat": -14.8307224,
+          "lng": -64.9078818,
+          "puntos": 115
+        },
+        {
+          "nombre": "Avenida Libertador Simón Bolívar",
+          "tipo": "Calle",
+          "lat": -14.8320366,
+          "lng": -64.9015438,
+          "puntos": 115
+        }
+      ]
+    }
+  ]
+}

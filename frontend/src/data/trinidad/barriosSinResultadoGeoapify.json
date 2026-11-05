@@ -1,0 +1,150 @@
+{
+  "generadoEn": "2026-10-20T23:14:45.563Z",
+  "total": 36,
+  "barrios": [
+    {
+      "nombre": "12 de Abril",
+      "distrito": 7
+    },
+    {
+      "nombre": "1ro. de Mayo",
+      "distrito": 4
+    },
+    {
+      "nombre": "21 de Septiembre",
+      "distrito": 6
+    },
+    {
+      "nombre": "23 de Marzo",
+      "distrito": 2
+    },
+    {
+      "nombre": "24 de Septiembre",
+      "distrito": 5
+    },
+    {
+      "nombre": "26 de Enero",
+      "distrito": 6
+    },
+    {
+      "nombre": "27 de Mayo",
+      "distrito": 4
+    },
+    {
+      "nombre": "6 de Septiembre",
+      "distrito": 6
+    },
+    {
+      "nombre": "Arroyo Chico",
+      "distrito": 2
+    },
+    {
+      "nombre": "Bello Horizonte Norte",
+      "distrito": 7
+    },
+    {
+      "nombre": "Casco Viejo",
+      "distrito": 1
+    },
+    {
+      "nombre": "Cotoca",
+      "distrito": 6
+    },
+    {
+      "nombre": "El Progreso",
+      "distrito": 6
+    },
+    {
+      "nombre": "Fátima Central",
+      "distrito": 2
+    },
+    {
+      "nombre": "Florida",
+      "distrito": 7
+    },
+    {
+      "nombre": "Las Brisas",
+      "distrito": 7
+    },
+    {
+      "nombre": "Los Penocos",
+      "distrito": 2
+    },
+    {
+      "nombre": "Los Tocos",
+      "distrito": 7
+    },
+    {
+      "nombre": "Machetero",
+      "distrito": 4
+    },
+    {
+      "nombre": "María Jesús",
+      "distrito": 8
+    },
+    {
+      "nombre": "Profesionales",
+      "distrito": 7
+    },
+    {
+      "nombre": "San José",
+      "distrito": 5
+    },
+    {
+      "nombre": "San Luis",
+      "distrito": 4
+    },
+    {
+      "nombre": "San Pedro II",
+      "distrito": 8
+    },
+    {
+      "nombre": "Sandunga",
+      "distrito": 7
+    },
+    {
+      "nombre": "Santa Anita",
+      "distrito": 4
+    },
+    {
+      "nombre": "Santa Cruz Sur",
+      "distrito": 4
+    },
+    {
+      "nombre": "Tahuichi",
+      "distrito": 7
+    },
+    {
+      "nombre": "Tocopilla",
+      "distrito": 4
+    },
+    {
+      "nombre": "Triunfo",
+      "distrito": 4
+    },
+    {
+      "nombre": "Urb. El Palmar",
+      "distrito": 8
+    },
+    {
+      "nombre": "Urb. Marín",
+      "distrito": 4
+    },
+    {
+      "nombre": "Venecia",
+      "distrito": 3
+    },
+    {
+      "nombre": "Villa Conchita",
+      "distrito": 6
+    },
+    {
+      "nombre": "Villa Lolita",
+      "distrito": 7
+    },
+    {
+      "nombre": "Villa Ximena",
+      "distrito": 4
+    }
+  ]
+}

@@ -37,6 +37,17 @@ export function inicializarPushMotrix(router) {
       })
     }
 
+    if (typeof push.createChannel === 'function') {
+      await push.createChannel({
+        id: 'motrix_llamadas_v1',
+        name: 'Llamadas privadas MOTRIX',
+        description: 'Avisos de llamadas entre conductor y pasajero',
+        importance: 5,
+        visibility: 1,
+        vibration: true,
+        sound: 'motrix_llamada.wav'
+      })
+    }
     if (!oyentesInstalados) {
       await push.addListener('registration', async ({ value }) => {
         if (!value || !localStorage.getItem('motrix_token')) return

@@ -24,6 +24,11 @@ jobs:
     timeout-minutes: 45
 
     steps:
+      - name: Configurar version MOTRIX
+        shell: bash
+        run: |
+          echo "MOTRIX_VERSION_CODE=$((100000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          echo "MOTRIX_VERSION_NAME=1.1.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
       - name: Descargar repositorio
         uses: actions/checkout@v4
 

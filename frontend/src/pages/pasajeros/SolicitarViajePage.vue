@@ -123,7 +123,13 @@
                         </q-chip>
                       </div>
 
-                      <div class="route-item">
+                      <LlamadaPrivadaPrueba
+  v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
+  :viaje-id="viajeActivo.id"
+  :estado="viajeActivo.estado"
+  class="q-pa-md"
+/>
+<div class="route-item">
                         <q-icon
                           name="radio_button_checked"
                           color="positive"
@@ -1417,6 +1423,7 @@
 </template>
 
 <script setup>
+import LlamadaPrivadaPrueba from 'src/components/LlamadaPrivadaPrueba.vue'
 import { fechaDDMMYYYY, fechaISOHoyBolivia } from 'src/utils/motrixDate.js'
 import catalogoTrinidad from 'src/data/trinidad/catalogoFinalTrinidad.json'
 
@@ -2610,7 +2617,100 @@ function formatearDireccionNominatim(datos) {
   return ''
 }
 
+function referenciaCercanaOrigen(lat, lng) {
+  const lugares = Array.isArray(catalogoTrinidad?.lugares)
+    ? catalogoTrinidad.lugares
+    : []
+
+  let mejor = null
+  let mejorPuntaje = Infinity
+
+  for (const lugar of lugares) {
+    if (lugar.lat == null || lugar.lng == null) continue
+
+    const la = Number(lugar.lat)
+    const lo = Number(lugar.lng)
+
+    if (!Number.isFinite(la) || !Number.isFinite(lo)) continue
+
+    const dy = (lat - la) * 111320
+    const dx = (lng - lo) * 111320
+      * Math.cos(lat * Math.PI / 180)
+
+    const metros = Math.hypot(dx, dy)
+    const tipo = String(lugar.tipo || '')
+
+    let limite = 0
+    let penalizacion = 0
+
+    if (tipo === 'Calle') {
+      limite = 60
+    } else if (tipo === 'Barrio' || tipo === 'Urbanización') {
+      limite = 300
+      penalizacion = 100
+    } else if (tipo === 'Referencia') {
+      limite = 100
+      penalizacion = 60
+    } else {
+      continue
+    }
+
+    if (metros > limite) continue
+
+    const puntaje = metros + penalizacion
+
+    if (puntaje < mejorPuntaje) {
+      mejorPuntaje = puntaje
+      mejor = { lugar, metros, tipo }
+    }
+  }
+
+  if (!mejor) return ''
+
+  return `Cerca de ${mejor.lugar.nombre} (aprox. ${Math.round(mejor.metros)} m)`
+}
+
 async function obtenerDireccion(lat, lng) {
+  const lugares = Array.isArray(catalogoTrinidad?.lugares)
+    ? catalogoTrinidad.lugares
+    : []
+
+  const distanciaMetros = (lugar) => {
+    const la = Number(lugar.lat)
+    const lo = Number(lugar.lng)
+
+    if (
+      lugar.lat == null || lugar.lng == null
+      || !Number.isFinite(la) || !Number.isFinite(lo)
+    ) return Infinity
+
+    const dy = (lat - la) * 111320
+    const dx = (lng - lo) * 111320
+      * Math.cos(lat * Math.PI / 180)
+
+    return Math.hypot(dx, dy)
+  }
+
+  const masCercano = (tipos, maxMetros) => {
+    let mejor = null
+    let distancia = maxMetros
+
+    for (const lugar of lugares) {
+      if (!tipos.includes(lugar.tipo)) continue
+      const metros = distanciaMetros(lugar)
+
+      if (metros < distancia) {
+        distancia = metros
+        mejor = lugar
+      }
+    }
+
+    return mejor ? { nombre: mejor.nombre, distancia } : null
+  }
+
+  let calle = ''
+  let zona = ''
+
   try {
     const respuesta = await axios.get(
       'https://nominatim.openstreetmap.org/reverse',
@@ -2623,31 +2723,49 @@ async function obtenerDireccion(lat, lng) {
           zoom: 18,
           'accept-language': 'es'
         },
-        timeout: 3000
+        timeout: 5000
       }
     )
 
-    const direccion = formatearDireccionNominatim(
-      respuesta.data
-    )
+    const a = respuesta.data?.address || {}
 
-    if (direccion) {
-      const valor = direccion.toLocaleLowerCase('es')
+    calle = String(
+      a.road || a.pedestrian || a.residential
+      || a.footway || a.path || ''
+    ).trim()
 
-      if (
-        valor.includes('santísima trinidad')
-        || valor.includes('cercado')
-      ) {
-        return 'Trinidad'
-      }
-
-      return direccion
-    }
+    zona = String(
+      a.neighbourhood || a.suburb || a.quarter || ''
+    ).trim()
   } catch (error) {
-    console.error('Error obteniendo dirección:', error)
+    console.warn('No se pudo identificar la calle:', error)
   }
 
-  return `Lat. ${lat.toFixed(5)}, Lng. ${lng.toFixed(5)}`
+  const calleLocal = masCercano(['Calle'], 30)
+  const barrioLocal = masCercano(['Barrio', 'Urbanización'], 150)
+
+  if (!calle && calleLocal) {
+    calle = `Cerca de ${calleLocal.nombre}`
+  }
+
+  if (!zona && barrioLocal) {
+    zona = `Cerca de barrio ${barrioLocal.nombre}`
+  }
+
+  if (calle && zona) {
+    return `${calle}, ${zona}, Trinidad`
+  }
+
+  if (calle) return `${calle}, Trinidad`
+  if (zona) return `${zona}, Trinidad`
+
+  const referencia = referenciaCercanaOrigen(lat, lng)
+
+  if (referencia) {
+    return `${referencia}, Trinidad`
+  }
+
+  return `Punto de recogida (${lat.toFixed(5)}, ${lng.toFixed(5)})`
 }
 
 function eliminarMarcador(marcador) {
@@ -3647,6 +3765,8 @@ async function usarUbicacionActual() {
       )
     }
 
+
+
     await colocarOrigen(
       lat,
       lng
@@ -4414,6 +4534,23 @@ function inicializarWebsocketPasajero() {
 
     echoInstance
       .private(`pasajero.${PASAJERO_ID}.solicitudes`)
+      .listen('.LlamadaEntrante', (data) => {
+        const idRecibido = Number(data?.viaje_id)
+        const idActual = Number(viajeActivo.value?.id)
+
+        if (!idRecibido || idRecibido !== idActual) return
+
+        if (!['Aceptado', 'Llegó', 'En Curso'].includes(
+          viajeActivo.value?.estado
+        )) return
+
+        $q.dialog({
+          title: 'Llamada entrante MOTRIX',
+          message: 'Tu mototaxista quiere comunicarse contigo. Esta es una prueba de notificacion.',
+          ok: { label: 'Entendido', color: 'primary' },
+          persistent: false
+        })
+      })
       .listen('.SolicitudCreada', (data) => {
         procesarEventoSolicitud(
           data?.solicitud,

@@ -433,7 +433,13 @@
           </q-card>
         </q-card-section>
 
-        <q-card-actions
+        <LlamadaPrivadaPrueba
+  v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
+  :viaje-id="viajeActivo.id"
+  :estado="viajeActivo.estado"
+  class="q-pa-md"
+/>
+<q-card-actions
           v-if="viajeActivo.estado === 'Aceptado'"
           class="q-pa-md bg-grey-1"
         >
@@ -1661,6 +1667,7 @@
 </template>
 
 <script setup>
+import LlamadaPrivadaPrueba from 'src/components/LlamadaPrivadaPrueba.vue'
 import { fechaDDMMYYYY, fechaHoraDDMMYYYY, fechaHoraUtcBolivia } from 'src/utils/motrixDate.js'
 
 import {
@@ -3283,7 +3290,15 @@ const cambiarDisponibilidad = async (nuevoEstado) => {
       })
     }
 
-    await refrescarOperacion()
+      try {
+        await refrescarOperacion()
+      } catch (errorRefresco) {
+        console.error('Error refrescando panel tras disponibilidad:', errorRefresco)
+        $q.notify({
+          type: 'warning',
+          message: 'Disponibilidad cambiada, pero no se pudo actualizar el panel.'
+        })
+      }
   } catch (error) {
     console.error('Error cambiando disponibilidad:', error)
     disponible.value = estadoAnterior
@@ -3725,32 +3740,47 @@ const abrirNavegacion = (viaje, punto) => {
   const esOrigen = punto === 'origen'
 
   const latitud = esOrigen
-    ? viaje.latitud_origen
-    : viaje.latitud_destino
+    ? viaje?.latitud_origen
+    : viaje?.latitud_destino
 
   const longitud = esOrigen
-    ? viaje.longitud_origen
-    : viaje.longitud_destino
+    ? viaje?.longitud_origen
+    : viaje?.longitud_destino
 
-  const direccion = esOrigen ? viaje.origen : viaje.destino
+  const lat = Number(latitud)
+  const lng = Number(longitud)
 
-  let destino
-
-  if (
+  const coordenadasValidas =
     latitud !== null
     && latitud !== undefined
     && longitud !== null
     && longitud !== undefined
-  ) {
-    destino = `${latitud},${longitud}`
-  } else {
-    destino = direccion || 'Trinidad, Beni, Bolivia'
+    && String(latitud).trim() !== ''
+    && String(longitud).trim() !== ''
+    && Number.isFinite(lat)
+    && Number.isFinite(lng)
+    && lat >= -90
+    && lat <= 90
+    && lng >= -180
+    && lng <= 180
+    && !(lat === 0 && lng === 0)
+
+  if (!coordenadasValidas) {
+    $q.notify({
+      type: 'warning',
+      timeout: 7000,
+      message: 'No hay coordenadas validas para navegar.',
+      caption: 'Confirma el punto de recogida con el pasajero antes de continuar.'
+    })
+    return
   }
 
-  const url = (
+  const destino = `${lat},${lng}`
+
+  const url =
     'https://www.google.com/maps/dir/?api=1'
     + `&destination=${encodeURIComponent(destino)}`
-  )
+    + '&travelmode=driving'
 
   window.open(url, '_blank', 'noopener,noreferrer')
 }
