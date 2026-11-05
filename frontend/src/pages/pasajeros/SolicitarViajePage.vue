@@ -1544,6 +1544,7 @@ const destinoCoords = ref(null)
 let mapa = null
 let inicializandoMapa = false
 let marcadorOrigen = null
+let secuenciaDireccionOrigen = 0
 let marcadorDestino = null
 let lineaRuta = null
 
@@ -2730,6 +2731,7 @@ function eliminarMarcador(marcador) {
 }
 
 async function colocarOrigen(lat, lng) {
+  const secuencia = ++secuenciaDireccionOrigen
   origenCoords.value = [lat, lng]
   form.origen = 'Obteniendo dirección...'
 
@@ -2748,7 +2750,10 @@ async function colocarOrigen(lat, lng) {
     await colocarOrigen(posicion.lat, posicion.lng)
   })
 
-  form.origen = await obtenerDireccion(lat, lng)
+  const direccion = await obtenerDireccion(lat, lng)
+  // La respuesta del GPS anterior no debe sobrescribir el ultimo marcador.
+  if (secuencia !== secuenciaDireccionOrigen) return
+  form.origen = direccion
 
   marcadorOrigen
     .bindPopup(form.origen)
