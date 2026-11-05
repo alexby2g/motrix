@@ -1427,6 +1427,7 @@
 import LlamadaPrivadaPrueba from 'src/components/LlamadaPrivadaPrueba.vue'
 import { fechaDDMMYYYY, fechaISOHoyBolivia } from 'src/utils/motrixDate.js'
 import catalogoTrinidad from 'src/data/trinidad/catalogoFinalTrinidad.json'
+import { direccionOrigenTrinidad } from 'src/utils/origenDireccion.js'
 
 import {
   computed,
@@ -1543,6 +1544,7 @@ const destinoCoords = ref(null)
 let mapa = null
 let inicializandoMapa = false
 let marcadorOrigen = null
+let secuenciaDireccionOrigen = 0
 let marcadorDestino = null
 let lineaRuta = null
 
@@ -2690,42 +2692,7 @@ async function obtenerDireccion(lat, lng) {
     ? catalogoTrinidad.lugares
     : []
 
-  const distanciaMetros = (lugar) => {
-    const la = Number(lugar.lat)
-    const lo = Number(lugar.lng)
-
-    if (
-      lugar.lat == null || lugar.lng == null
-      || !Number.isFinite(la) || !Number.isFinite(lo)
-    ) return Infinity
-
-    const dy = (lat - la) * 111320
-    const dx = (lng - lo) * 111320
-      * Math.cos(lat * Math.PI / 180)
-
-    return Math.hypot(dx, dy)
-  }
-
-  const masCercano = (tipos, maxMetros) => {
-    let mejor = null
-    let distancia = maxMetros
-
-    for (const lugar of lugares) {
-      if (!tipos.includes(lugar.tipo)) continue
-      const metros = distanciaMetros(lugar)
-
-      if (metros < distancia) {
-        distancia = metros
-        mejor = lugar
-      }
-    }
-
-    return mejor ? { nombre: mejor.nombre, distancia } : null
-  }
-
-  let calle = ''
-  let zona = ''
-
+  // La ubicacion GPS nunca cambia por la direccion textual.
   try {
     const respuesta = await axios.get(
       'https://nominatim.openstreetmap.org/reverse',
@@ -2742,57 +2709,19 @@ async function obtenerDireccion(lat, lng) {
       }
     )
 
-    const nombreLugar = String(
-      respuesta.data?.name
-      || respuesta.data?.address?.amenity
-      || respuesta.data?.address?.building
-      || ''
-    ).trim()
-
-    if (nombreLugar) {
-      return `${nombreLugar}, Trinidad`
-    }
-
-    const a = respuesta.data?.address || {}
-
-    calle = String(
-      a.road || a.pedestrian || a.footway
-      || a.path || ''
-    ).trim()
-
-    zona = String(
-      a.neighbourhood || a.suburb || a.quarter
-      || a.residential || ''
-    ).trim()
+    const direccion = direccionOrigenTrinidad(respuesta.data, lugares, lat, lng)
+    if (direccion) return direccion
   } catch (error) {
-    console.warn('No se pudo identificar la calle:', error)
+    console.warn('No se pudo identificar la direccion del origen:', error)
   }
 
-  const calleLocal = masCercano(['Calle'], 30)
-  const barrioLocal = masCercano(['Barrio', 'Urbanización'], 150)
-
-  if (!calle && calleLocal) {
-    calle = `Cerca de ${calleLocal.nombre}`
-  }
-
-  if (!zona && barrioLocal) {
-    zona = `Cerca de barrio ${barrioLocal.nombre}`
-  }
-
-  if (calle && zona) {
-    return `${calle}, ${zona}, Trinidad`
-  }
-
-  if (calle) return `${calle}, Trinidad`
-  if (zona) return `${zona}, Trinidad`
+  const local = direccionOrigenTrinidad(null, lugares, lat, lng)
+  if (local) return local
 
   const referencia = referenciaCercanaOrigen(lat, lng)
+  if (referencia) return `${referencia}, Trinidad`
 
-  if (referencia) {
-    return `${referencia}, Trinidad`
-  }
-
-  return `Ubicación seleccionada, Trinidad`
+  return 'Ubicacion seleccionada, Trinidad'
 }
 
 function eliminarMarcador(marcador) {
@@ -2802,6 +2731,7 @@ function eliminarMarcador(marcador) {
 }
 
 async function colocarOrigen(lat, lng) {
+  const secuencia = ++secuenciaDireccionOrigen
   origenCoords.value = [lat, lng]
   form.origen = 'Obteniendo dirección...'
 
@@ -2820,7 +2750,10 @@ async function colocarOrigen(lat, lng) {
     await colocarOrigen(posicion.lat, posicion.lng)
   })
 
-  form.origen = await obtenerDireccion(lat, lng)
+  const direccion = await obtenerDireccion(lat, lng)
+  // La respuesta del GPS anterior no debe sobrescribir el ultimo marcador.
+  if (secuencia !== secuenciaDireccionOrigen) return
+  form.origen = direccion
 
   marcadorOrigen
     .bindPopup(form.origen)
@@ -2910,13 +2843,15 @@ function alEditarBusquedaDestino(valor) {
     return
   }
 
-  // Autocompletado con debounce: evita una petición por cada tecla.
+  // Sugerencias inmediatas desde el catalogo local, sin solicitudes
+  // al servidor publico de Nominatim por cada tecla.
   temporizadorBusquedaDestino = window.setTimeout(() => {
     buscarDestino({
       consulta: texto,
-      silencioso: true
+      silencioso: true,
+      soloLocal: true
     }).catch(() => {})
-  }, 650)
+  }, 200)
 }
 
 function normalizarTextoBusqueda(texto) {
@@ -3093,6 +3028,16 @@ async function buscarDestino(opciones = {}) {
 
   const resultadosLocales = buscarLugaresLocalesTrinidad(consulta)
 
+  // Autocompletado 100% local. La lupa o Enter solicitan una
+  // busqueda puntual en OSM cuando el lugar no esta en el catalogo.
+  if (opciones?.soloLocal === true) {
+    ++secuenciaBusquedaDestino
+    resultadosDestino.value = resultadosLocales
+    busquedaDestinoRealizada.value = true
+    buscandoDestino.value = false
+    return
+  }
+
   const secuencia = ++secuenciaBusquedaDestino
   buscandoDestino.value = true
   resultadosDestino.value = []
@@ -3119,38 +3064,8 @@ async function buscarDestino(opciones = {}) {
       ? respuesta.data
       : []
 
-    if (resultados.length === 0) {
-      const consultasAlternativas = [
-        `${consulta}, Beni, Bolivia`,
-        consulta
-      ]
-
-      for (const qAlternativa of consultasAlternativas) {
-        const alternativa = await axios.get(
-          NOMINATIM_SEARCH_URL,
-          {
-            params: {
-              q: qAlternativa,
-              format: 'jsonv2',
-              addressdetails: 1,
-              namedetails: 1,
-              limit: 8,
-              countrycodes: 'bo',
-              'accept-language': 'es',
-              viewbox: '-65.02,-14.74,-64.80,-14.95'
-            }
-          }
-        ).catch(() => ({ data: [] }))
-
-        if (
-          Array.isArray(alternativa.data)
-          && alternativa.data.length > 0
-        ) {
-          resultados = alternativa.data
-          break
-        }
-      }
-    }
+    // Una sola consulta puntual por busqueda explicita. La API publica
+    // no admite autocompletado ni rafagas de peticiones.
 
     if (secuencia !== secuenciaBusquedaDestino) {
       return

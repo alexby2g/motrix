@@ -34,6 +34,10 @@ export async function iniciarLlamadaPrivada(viajeId, onEstado = () => {}) {
     for (const audio of track.detach()) retirarAudio(audio)
   })
 
+  room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
+    if (!room.canPlaybackAudio) onEstado('audio_bloqueado')
+  })
+
   room.on(RoomEvent.Disconnected, () => {
     for (const audio of [...audios]) retirarAudio(audio)
     onEstado('desconectada')
@@ -45,13 +49,13 @@ export async function iniciarLlamadaPrivada(viajeId, onEstado = () => {}) {
     onEstado('conectando')
     await room.connect(data.url, data.token)
 
-    etapa = 'reproduccion de audio'
-    await room.startAudio()
-
     etapa = 'activacion del microfono'
     await room.localParticipant.setMicrophoneEnabled(true)
-
     onEstado('conectada')
+
+    // Android puede exigir un toque para reproducir audio remoto.
+    // No desconectar una llamada estable solo por bloqueo de autoplay.
+    room.startAudio().catch(() => onEstado('audio_bloqueado'))
   } catch (error) {
     const mensaje = error?.message || 'Error desconocido'
     await room.disconnect().catch(() => {})
@@ -60,6 +64,7 @@ export async function iniciarLlamadaPrivada(viajeId, onEstado = () => {}) {
 
   return {
     room,
+    activarAudio: () => room.startAudio(),
     silenciar: async (silencio) => {
       await room.localParticipant.setMicrophoneEnabled(!silencio)
     },
