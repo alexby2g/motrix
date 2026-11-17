@@ -99,6 +99,8 @@ jobs:
         env:
           VITE_API_URL: https://backend.motrixbolivia.com/api
           VITE_REVERB_HOST: backend.motrixbolivia.com
+          # Se inyecta solo durante la compilación. Nunca subir claves a GitHub.
+          VITE_GOOGLE_MAPS_JS_KEY: ${{ secrets.MOTRIX_GOOGLE_MAPS_JS_KEY }}
         run: npx quasar build -m capacitor -T android --skip-pkg
 
       - name: Separar la APK de la version oficial
