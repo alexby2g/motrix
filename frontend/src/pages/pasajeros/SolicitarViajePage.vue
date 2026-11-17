@@ -3577,6 +3577,7 @@ async function inicializarMapa() {
       if (!destinoCoords.value) {
         await colocarDestino(lat, lng, destinoLocalSeleccionado.value?.nombre || null)
         destinoLocalSeleccionado.value = null
+        return
       }
 
       $q.notify({
