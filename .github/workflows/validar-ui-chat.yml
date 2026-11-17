@@ -25,7 +25,7 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Lint de las pantallas modificadas
         working-directory: frontend
-        run: npx eslint -c ./eslint.config.js src/components/ViajeChat.vue src/pages/pasajeros/SolicitarViajePage.vue src/pages/servicios/ConductorPage.vue
+        run: npx eslint -c ./eslint.config.js src/components/ViajeChat.vue src/pages/pasajeros/SolicitarViajePage.vue src/pages/servicios/ConductorPage.vue src/layouts/MainLayout.vue
       - name: Compilar frontend
         working-directory: frontend
         run: npm run build
