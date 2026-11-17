@@ -51,11 +51,11 @@ jobs:
 
       - name: Instalar Quasar
         working-directory: frontend
-        run: npm ci --no-audit --no-fund
+        run: npm install --no-audit --no-fund
 
       - name: Instalar Capacitor
         working-directory: frontend/src-capacitor
-        run: npm ci --no-audit --no-fund
+        run: npm install --no-audit --no-fund
 
       - name: Preparar Firebase para paquete de pruebas sin modificar produccion
         shell: bash
@@ -94,13 +94,22 @@ jobs:
           print('Configuracion Android de prueba preparada; no se ha modificado Firebase remoto')
           PY
 
+      - name: Verificar que Google Maps Android esta configurado
+        shell: bash
+        env:
+          MOTRIX_GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.MOTRIX_GOOGLE_MAPS_ANDROID_KEY }}
+        run: |
+          if [ -z "$MOTRIX_GOOGLE_MAPS_ANDROID_KEY" ]; then
+            echo "Falta el secreto MOTRIX_GOOGLE_MAPS_ANDROID_KEY en GitHub Actions."
+            exit 1
+          fi
+          echo "Clave restringida de Google Maps Android disponible (sin mostrarla)."
+
       - name: Compilar interfaz movil y sincronizar Capacitor
         working-directory: frontend
         env:
           VITE_API_URL: https://backend.motrixbolivia.com/api
           VITE_REVERB_HOST: backend.motrixbolivia.com
-          # Se inyecta solo durante la compilación. Nunca subir claves a GitHub.
-          VITE_GOOGLE_MAPS_JS_KEY: ${{ secrets.MOTRIX_GOOGLE_MAPS_JS_KEY }}
         run: npx quasar build -m capacitor -T android --skip-pkg
 
       - name: Separar la APK de la version oficial
@@ -160,8 +169,9 @@ jobs:
         working-directory: frontend/src-capacitor/android
         shell: bash
         env:
-          MOTRIX_VERSION_CODE: '100059'
-          MOTRIX_VERSION_NAME: '1.1.59'
+          MOTRIX_VERSION_CODE: '100060'
+          MOTRIX_VERSION_NAME: '1.1.60'
+          MOTRIX_GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.MOTRIX_GOOGLE_MAPS_ANDROID_KEY }}
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --stacktrace
