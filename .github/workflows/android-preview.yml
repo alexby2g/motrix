@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   android-preview:
-    name: Compilar MOTRIX Pruebas APK
+    name: Compilar MOTRIX APK
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
@@ -125,7 +125,7 @@ jobs:
               raise SystemExit('No se encontro el bloque buildTypes esperado')
           texto = texto.replace(
               marcador,
-              marcador + '\n        release {\n            applicationIdSuffix ".preview"\n            versionNameSuffix "-pruebas"\n        }',
+              marcador + '\n        release {\n            applicationIdSuffix ".preview"\n        }',
               1,
           )
           gradle.write_text(texto, encoding='utf-8')
@@ -136,12 +136,12 @@ jobs:
               raise SystemExit('No se encontro el nombre de app esperado')
           texto = texto.replace(
               '<string name="app_name">MOTRIX</string>',
-              '<string name="app_name">MOTRIX Pruebas</string>',
+              '<string name="app_name">MOTRIX</string>',
               1,
           )
           texto = texto.replace(
               '<string name="title_activity_main">MOTRIX</string>',
-              '<string name="title_activity_main">MOTRIX Pruebas</string>',
+              '<string name="title_activity_main">MOTRIX</string>',
               1,
           )
           strings.write_text(texto, encoding='utf-8')
@@ -169,8 +169,8 @@ jobs:
         working-directory: frontend/src-capacitor/android
         shell: bash
         env:
-          MOTRIX_VERSION_CODE: '100060'
-          MOTRIX_VERSION_NAME: '1.1.60'
+          MOTRIX_VERSION_CODE: '100061'
+          MOTRIX_VERSION_NAME: '1.1.61'
           MOTRIX_GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.MOTRIX_GOOGLE_MAPS_ANDROID_KEY }}
         run: |
           chmod +x gradlew
@@ -193,7 +193,7 @@ jobs:
             --ks-key-alias motrix \
             --ks-pass env:MOTRIX_KEYSTORE_PASSWORD \
             --key-pass env:MOTRIX_KEY_PASSWORD \
-            --out dist-preview/MOTRIX-Pruebas.apk \
+            --out dist-preview/MOTRIX.apk \
             dist-preview/MOTRIX-Pruebas-aligned.apk
           rm dist-preview/MOTRIX-Pruebas-aligned.apk
 
@@ -201,20 +201,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APK=dist-preview/MOTRIX-Pruebas.apk
+          APK=dist-preview/MOTRIX.apk
           TOOLS="$ANDROID_HOME/build-tools/36.0.0"
           "$TOOLS/aapt" dump badging "$APK" | grep "^package:" | tee /tmp/motrix-preview-package.txt
           grep -q "name='bo.edu.josecastillo.motrix.preview'" /tmp/motrix-preview-package.txt
           "$TOOLS/apksigner" verify --verbose --print-certs "$APK"
           "$TOOLS/zipalign" -c -v 4 "$APK"
-          sha256sum "$APK" > dist-preview/MOTRIX-Pruebas.apk.sha256
+          sha256sum "$APK" > dist-preview/MOTRIX.apk.sha256
 
       - name: Publicar APK de pruebas para descargar
         uses: actions/upload-artifact@v4
         with:
-          name: MOTRIX-Pruebas-Android
+          name: MOTRIX-Android-GoogleMaps
           path: |
-            dist-preview/MOTRIX-Pruebas.apk
-            dist-preview/MOTRIX-Pruebas.apk.sha256
+            dist-preview/MOTRIX.apk
+            dist-preview/MOTRIX.apk.sha256
           if-no-files-found: error
           retention-days: 30
