@@ -110,7 +110,7 @@ jobs:
         env:
           VITE_API_URL: https://backend.motrixbolivia.com/api
           VITE_REVERB_HOST: backend.motrixbolivia.com
-          VITE_MOTRIX_MAP_PROVIDER: leaflet
+          VITE_MOTRIX_MAP_PROVIDER: native
         run: npx quasar build -m capacitor -T android --skip-pkg
 
       - name: Separar la APK de la version oficial
@@ -170,8 +170,8 @@ jobs:
         working-directory: frontend/src-capacitor/android
         shell: bash
         env:
-          MOTRIX_VERSION_CODE: '100062'
-          MOTRIX_VERSION_NAME: '1.1.62'
+          MOTRIX_VERSION_CODE: '100063'
+          MOTRIX_VERSION_NAME: '1.1.63'
           MOTRIX_GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.MOTRIX_GOOGLE_MAPS_ANDROID_KEY }}
         run: |
           chmod +x gradlew
@@ -213,7 +213,7 @@ jobs:
       - name: Publicar APK de pruebas para descargar
         uses: actions/upload-artifact@v4
         with:
-          name: MOTRIX-Android-Mapa-1.1.62
+          name: MOTRIX-Android-GoogleMaps-1.1.63
           path: |
             dist-preview/MOTRIX.apk
             dist-preview/MOTRIX.apk.sha256
