@@ -1151,7 +1151,7 @@
                       </div>
                       <div class="motrix-mapa-cinta">
                         <span class="motrix-mapa-punto" />
-                        Moto · Trinidad
+                        MOTRIX · Trinidad
                         <span class="motrix-mapa-proveedor">{{ mapaProveedor }}</span>
                       </div>
                       <q-btn
@@ -2900,6 +2900,11 @@ function alEditarBusquedaDestino(valor) {
 
   const texto = String(valor || '').trim()
   const destinoActual = String(form.destino || '').trim()
+  if (destinoActual && texto === destinoActual) {
+    resultadosDestino.value = []
+    busquedaDestinoRealizada.value = false
+    return
+  }
   if (destinoActual && texto !== destinoActual) {
     limpiarDestinoSeleccionado(false)
   }
