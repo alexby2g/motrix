@@ -8,6 +8,27 @@ const googleKey = String(import.meta.env.VITE_GOOGLE_MAPS_JS_KEY || '').trim()
 let googleReady = false
 let nativeReady = false
 let loadingPromise = null
+const CLAVE_MAPA_ALTERNATIVO = 'motrix-mapa-alternativo'
+
+export function mapaAlternativoActivo() {
+  try {
+    return window.localStorage.getItem(CLAVE_MAPA_ALTERNATIVO) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function alternarMapaAlternativo() {
+  try {
+    if (mapaAlternativoActivo()) {
+      window.localStorage.removeItem(CLAVE_MAPA_ALTERNATIVO)
+    } else {
+      window.localStorage.setItem(CLAVE_MAPA_ALTERNATIVO, '1')
+    }
+  } catch {
+    // En entornos sin almacenamiento se mantiene el proveedor actual.
+  }
+}
 
 export function proveedorMapa() {
   return nativeReady ? 'Google Maps (Android)' : googleReady ? 'Google Maps' : 'OpenStreetMap'
@@ -17,7 +38,7 @@ export async function prepararGoogleMaps() {
   // En la APK de pruebas usamos el mapa web estable mientras se valida
   // la autorizacion de Google Maps para el paquete .preview y su firma.
   // No afecta la version oficial ni desactiva el soporte nativo en produccion.
-  if (import.meta.env.VITE_MOTRIX_MAP_PROVIDER === 'leaflet') {
+  if (import.meta.env.VITE_MOTRIX_MAP_PROVIDER === 'leaflet' || mapaAlternativoActivo()) {
     nativeReady = false
     googleReady = false
     return false
