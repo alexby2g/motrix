@@ -1469,7 +1469,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
-import L, { prepararGoogleMaps, proveedorMapa } from 'src/utils/mapaMotrix.js'
+import L, { prepararGoogleMaps, proveedorMapa, crearMapaMotrix } from 'src/utils/mapaMotrix.js'
 import 'leaflet/dist/leaflet.css'
 
 import { api } from '../../boot/axios.js'
@@ -2251,7 +2251,7 @@ async function inicializarMapaSeguimiento() {
     if (!contenedor.isConnected || !puedeMostrarSeguimiento.value) return
     mapaProveedor.value = proveedorMapa()
 
-    mapaSeguimiento = L.map(
+    mapaSeguimiento = await crearMapaMotrix(
       contenedor,
       { zoomControl: true }
     ).setView(
@@ -2274,6 +2274,12 @@ async function inicializarMapaSeguimiento() {
 
 function animarMarcadorConductorHasta(marcador, coordenadas) {
   if (!marcador || !coordenadas) return
+
+  if (marcador.isNative) {
+    // No recrear un marcador Android 60 veces por segundo durante la animacion.
+    marcador.setLatLng(coordenadas)
+    return
+  }
 
   const actual = marcador.getLatLng()
   const origen = [actual.lat, actual.lng]
@@ -3507,7 +3513,7 @@ async function inicializarMapa() {
     if (!contenedor.isConnected || viajeActivo.value) return
     mapaProveedor.value = proveedorMapa()
 
-    mapa = L.map(contenedor).setView(
+    mapa = (await crearMapaMotrix(contenedor)).setView(
       [LAT_TRINIDAD, LNG_TRINIDAD],
       14
     )
