@@ -2,17 +2,23 @@
 // y permite Google Maps JavaScript cuando hay una clave restringida configurada.
 // No se guarda ninguna clave en el repositorio.
 import Leaflet from 'leaflet'
+import { prepararMapaNativo, crearMapaNativo, marcadorNativo, lineaNativa, limitesNativos } from './mapaNativoCapacitor.js'
 
 const googleKey = String(import.meta.env.VITE_GOOGLE_MAPS_JS_KEY || '').trim()
 let googleReady = false
+let nativeReady = false
 let loadingPromise = null
 
 export function proveedorMapa() {
-  return googleReady ? 'Google Maps' : 'OpenStreetMap'
+  return nativeReady ? 'Google Maps (Android)' : googleReady ? 'Google Maps' : 'OpenStreetMap'
 }
 
-export function prepararGoogleMaps() {
-  if (googleReady) return Promise.resolve(true)
+export async function prepararGoogleMaps() {
+  if (typeof window !== 'undefined' && window.__MOTRIX_NATIVE_APP__) {
+    nativeReady = await prepararMapaNativo()
+    return nativeReady
+  }
+  if (googleReady) return true
   if (!googleKey || typeof window === 'undefined') return Promise.resolve(false)
   if (loadingPromise) return loadingPromise
 
@@ -37,6 +43,11 @@ export function prepararGoogleMaps() {
     window.setTimeout(() => finalizar(false), 12000)
   })
   return loadingPromise
+}
+
+export async function crearMapaMotrix(contenedor, opciones = {}) {
+  if (nativeReady) return crearMapaNativo(contenedor, opciones)
+  return L.map(contenedor, opciones)
 }
 
 function punto(coords) {
@@ -220,34 +231,44 @@ const L = {
       : Leaflet.map(contenedor, opciones)
   },
   tileLayer(url, opciones) {
-    return googleReady
+    return nativeReady || googleReady
       ? { addTo: () => null }
       : Leaflet.tileLayer(url, opciones)
   },
   marker(coords, opciones) {
-    return googleReady
-      ? new MarcadorGoogle(coords, opciones)
+    return nativeReady
+      ? marcadorNativo(coords, opciones)
+      : googleReady
+        ? new MarcadorGoogle(coords, opciones)
       : Leaflet.marker(coords, opciones)
   },
   divIcon(opciones) {
-    return googleReady
+    return nativeReady || googleReady
       ? { options: opciones }
       : Leaflet.divIcon(opciones)
   },
   geoJSON(geometria, opciones = {}) {
-    if (!googleReady) return Leaflet.geoJSON(geometria, opciones)
+    if (!googleReady && !nativeReady) return Leaflet.geoJSON(geometria, opciones)
     const coords = geometria?.coordinates || []
     const puntos = geometria?.type === 'LineString'
       ? coords.map(c => [c[1], c[0]])
       : []
-    return new LineaGoogle(puntos, opciones.style || {})
+    return nativeReady
+      ? lineaNativa(puntos, opciones.style || {})
+      : new LineaGoogle(puntos, opciones.style || {})
   },
   polyline(coords, opciones) {
-    return googleReady
-      ? new LineaGoogle(coords, opciones)
+    return nativeReady
+      ? lineaNativa(coords, opciones)
+      : googleReady
+        ? new LineaGoogle(coords, opciones)
       : Leaflet.polyline(coords, opciones)
   },
+  latLng(coords) {
+    return Leaflet.latLng(coords)
+  },
   latLngBounds(coords) {
+    if (nativeReady) return limitesNativos(coords)
     if (!googleReady) return Leaflet.latLngBounds(coords)
     const bounds = new window.google.maps.LatLngBounds()
     coords.forEach(c => bounds.extend(punto(c)))
