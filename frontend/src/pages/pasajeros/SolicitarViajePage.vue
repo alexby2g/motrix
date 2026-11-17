@@ -5449,7 +5449,7 @@ onBeforeUnmount(() => {
 .motrix-seguimiento-estado { max-width: 100%; }
 @media (max-width: 599px) {
   .motrix-solicitud-page { padding: 0 !important; background: #f3f7f4 !important; }
-  .motrix-solicitud-card { border: 0; border-radius: 0 !important; box-shadow: none !important; }
+  .motrix-solicitud-card { border: 0; border-radius: 0 !important; box-shadow: none !important; overflow: visible !important; }
   .motrix-solicitud-header {
     position: relative; z-index: 3; padding: 10px 12px;
     background: #fff !important; color: #163d2a !important;
