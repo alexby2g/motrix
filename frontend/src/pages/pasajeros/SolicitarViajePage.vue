@@ -5434,4 +5434,85 @@ onBeforeUnmount(() => {
   padding: 10px;
 }
 
+
+/* Rediseño MOTRIX: mapa primero en móviles, sin alterar la lógica de viajes. */
+.motrix-solicitud-card { border: 1px solid #e2ebe5; box-shadow: 0 10px 28px rgba(12,64,38,.07); }
+.motrix-solicitud-header { background: #116738 !important; }
+.motrix-request-fields :deep(.q-field__control) { border-radius: 14px; }
+.motrix-request-fields .tarifa-card, .motrix-seguimiento-card { border-radius: 18px; }
+.motrix-seguimiento-titulo, .motrix-seguimiento-subtitulo {
+  line-height: 1.4;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+.motrix-seguimiento-cabecera > .col { min-width: 0; }
+.motrix-seguimiento-estado { max-width: 100%; }
+@media (max-width: 599px) {
+  .motrix-solicitud-page { padding: 0 !important; background: #f3f7f4 !important; }
+  .motrix-solicitud-card { border: 0; border-radius: 0 !important; box-shadow: none !important; }
+  .motrix-solicitud-header {
+    position: relative; z-index: 3; padding: 10px 12px;
+    background: #fff !important; color: #163d2a !important;
+    border-bottom: 1px solid #e5eee8;
+  }
+  .motrix-solicitud-header :deep(.q-btn) { color: #126338 !important; }
+  .motrix-solicitud-header :deep(.q-avatar) {
+    width: 42px !important; height: 42px !important;
+    background: #e7f6eb !important; color: #126338 !important;
+  }
+  .motrix-solicitud-header .text-h5 { font-size: 18px; line-height: 1.25; }
+  .motrix-solicitud-header .text-caption { color: #657c6c !important; }
+  .motrix-request-form-section { padding: 0 !important; }
+  .motrix-request-intro { display: none; }
+  .motrix-request-grid { display: flex; flex-direction: column-reverse; margin: 0 !important; }
+  .motrix-request-grid > .col-12 { width: 100%; max-width: 100%; flex: 0 0 auto; }
+  .motrix-request-map { padding: 0 !important; }
+  .motrix-request-map .map-wrapper {
+    height: clamp(290px, 51dvh, 510px); border: 0; border-radius: 0;
+  }
+  .motrix-request-map .row.items-center.justify-center {
+    padding: 7px 12px 23px; margin: 0 !important;
+    background: #f5f8f6; gap: 12px;
+  }
+  .motrix-request-fields {
+    position: relative; z-index: 2; padding: 25px 16px 16px !important;
+    margin-top: -19px; background: #fff; border-radius: 25px 25px 0 0;
+    box-shadow: 0 -7px 20px rgba(18,54,34,.09);
+  }
+  .motrix-request-fields::before {
+    position: absolute; top: 9px; left: calc(50% - 19px);
+    width: 38px; height: 4px; border-radius: 5px;
+    background: #d9e1dc; content: '';
+  }
+  .motrix-request-fields .q-gutter-y-md > * { margin-top: 13px; }
+  .motrix-request-actions {
+    position: sticky; bottom: 0; z-index: 5; display: flex;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom)) !important;
+    background: #fff !important; box-shadow: 0 -6px 22px rgba(14,50,31,.08);
+  }
+  .motrix-request-actions :deep(.q-btn) { min-height: 50px; border-radius: 14px; }
+  .motrix-request-actions :deep(.q-btn:last-child) { flex: 1 1 auto; }
+  .motrix-active-content { display: flex; flex-direction: column; padding: 12px !important; gap: 12px; }
+  .motrix-active-grid { order: 2; margin-top: 0 !important; }
+  .motrix-seguimiento-card {
+    order: 1; margin-top: 0 !important; border-left: 0; border-top: 4px solid #16854a;
+  }
+  .motrix-seguimiento-cabecera { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px !important; }
+  .motrix-seguimiento-cabecera > .col { flex: 1 1 100%; width: 100%; min-width: 0; }
+  .motrix-seguimiento-cabecera > .col-auto { flex: 0 0 auto; width: auto; max-width: 100%; }
+  .motrix-seguimiento-titulo { font-size: 18px; line-height: 1.3; white-space: normal; }
+  .motrix-seguimiento-subtitulo { font-size: 13px; white-space: normal; }
+  .motrix-seguimiento-estado { height: auto; min-height: 30px; margin: 0; white-space: normal; }
+  .motrix-seguimiento-estado :deep(.q-chip__content) { white-space: normal; line-height: 1.35; }
+  .conductor-resumen-card { padding: 14px; }
+  .conductor-resumen-card .ellipsis {
+    white-space: normal !important; overflow: visible;
+    overflow-wrap: break-word; line-height: 1.35;
+  }
+  .conductor-avatar-destacado { width: 64px !important; height: 64px !important; }
+  .conductor-avatar-destacado :deep(.q-icon) { font-size: 32px !important; }
+  .tracking-info-box { align-items: flex-start; min-width: 0; }
+  .tracking-info-box > div { min-width: 0; overflow-wrap: break-word; }
+  .seguimiento-map-wrapper { height: clamp(300px, 44dvh, 440px); }
+}
 </style>
