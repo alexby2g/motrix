@@ -358,3 +358,120 @@ body.motrix-google-native-map .motrix-conductor-navegacion > .q-card__section,
 body.motrix-google-native-map .motrix-conductor-navegacion > .row {
   background: white !important;
 }
+
+
+/* MOTRIX: panel de ruta propio, sin carrusel de destinos de la referencia. */
+body.motrix-map-request-screen .motrix-request-fields {
+  max-height: min(44dvh, 400px) !important;
+  padding: 19px 15px 12px !important;
+  border-top: 3px solid #1d8953 !important;
+  border-radius: 21px 21px 9px 9px !important;
+}
+
+body.motrix-map-request-screen .motrix-request-fields::before {
+  display: none !important;
+}
+
+body.motrix-map-request-screen .motrix-hoja-servicio {
+  min-height: 48px;
+  padding: 0 1px 9px;
+  border-bottom: 1px solid #e8eee9;
+}
+
+body.motrix-map-request-screen .motrix-ruta-titulo {
+  font-size: 17px;
+  line-height: 1.2;
+  color: #183d2b;
+}
+
+body.motrix-map-request-screen .motrix-servicio-distintivo {
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+body.motrix-map-request-screen .motrix-origen-grupo {
+  gap: 8px;
+}
+
+body.motrix-map-request-screen .motrix-origen-input {
+  min-width: 0;
+}
+
+body.motrix-map-request-screen .motrix-origen-grupo > .q-btn {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #d9e9de;
+}
+
+body.motrix-map-request-screen .motrix-origen-input .q-field__control,
+body.motrix-map-request-screen .motrix-destino-input .q-field__control {
+  min-height: 48px;
+  border-radius: 12px !important;
+}
+
+body.motrix-map-request-screen .motrix-destino-input .q-field__control {
+  background: #f8fbf9 !important;
+}
+
+body.motrix-map-request-screen .destino-resultados {
+  position: relative;
+  z-index: 900;
+  max-height: min(180px, 27dvh);
+  overflow-y: auto;
+  margin-top: 5px !important;
+  border: 1px solid #dce7df;
+  border-radius: 13px;
+  background: white;
+  box-shadow: 0 8px 18px #1a3b2a1c;
+}
+
+body.motrix-map-request-screen .destino-resultado {
+  min-height: 49px;
+  padding: 5px 8px;
+}
+
+body.motrix-map-request-screen .destino-resultado .q-item__section--avatar {
+  min-width: 38px;
+  padding-right: 7px;
+}
+
+body.motrix-map-request-screen .destino-resultado .q-avatar {
+  font-size: 27px;
+  width: 33px;
+  height: 33px;
+}
+
+body.motrix-map-request-screen .motrix-elegir-destino {
+  min-height: 37px !important;
+  background: #f7faf8 !important;
+  border: 1px dashed #b8d9c3;
+  color: #276a46 !important;
+  font-size: 12px;
+}
+
+body.motrix-map-request-screen .motrix-tarifa-resumen {
+  padding: 8px 10px;
+  border: 1px solid #e0ede3;
+  border-radius: 10px;
+  background: #f5faf6;
+  font-size: 12px;
+}
+
+body.motrix-map-request-screen .motrix-detalles-viaje {
+  border-color: #e7ede9;
+}
+
+body.motrix-map-request-screen .motrix-request-actions {
+  height: 68px !important;
+  border-radius: 0 0 18px 18px !important;
+}
+
+body.motrix-map-request-screen .motrix-mapa-cinta {
+  color: #205f3d;
+  letter-spacing: .1px;
+}
+
+body.motrix-map-request-screen .motrix-mapa-cinta .motrix-mapa-proveedor {
+  display: none !important;
+}
