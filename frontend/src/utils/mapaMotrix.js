@@ -46,7 +46,15 @@ export async function prepararGoogleMaps() {
 }
 
 export async function crearMapaMotrix(contenedor, opciones = {}) {
-  if (nativeReady) return crearMapaNativo(contenedor, opciones)
+  if (nativeReady) {
+    try {
+      return await crearMapaNativo(contenedor, opciones)
+    } catch (error) {
+      // Si falla la inicializacion nativa, evitar una pantalla vacia.
+      console.error('Google Maps Android no pudo inicializarse:', error)
+      nativeReady = false
+    }
+  }
   return L.map(contenedor, opciones)
 }
 
