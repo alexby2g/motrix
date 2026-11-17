@@ -329,3 +329,32 @@ body.motrix-google-native-map capacitor-google-map {
   height: 100% !important;
   background: transparent !important;
 }
+
+
+/* Seguimiento del pasajero: el mapa esta dentro de una tarjeta.
+   Las superficies del mapa deben ser transparentes hasta llegar al WebView. */
+body.motrix-google-native-map .motrix-seguimiento-card,
+body.motrix-google-native-map .motrix-seguimiento-card > .q-card__section:not(.motrix-seguimiento-cabecera),
+body.motrix-google-native-map .motrix-active-content {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+body.motrix-google-native-map .motrix-seguimiento-cabecera {
+  background: white !important;
+}
+
+/* Navegacion del conductor: conservar la cabecera y datos legibles,
+   dejando transparente la zona que aloja el mapa nativo. */
+body.motrix-google-native-map .motrix-conductor-viaje,
+body.motrix-google-native-map .motrix-conductor-mapa,
+body.motrix-google-native-map .motrix-conductor-navegacion {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+body.motrix-google-native-map .motrix-conductor-viaje > .q-card__section:not(.motrix-conductor-mapa):not(.motrix-conductor-viaje-header),
+body.motrix-google-native-map .motrix-conductor-navegacion > .q-card__section,
+body.motrix-google-native-map .motrix-conductor-navegacion > .row {
+  background: white !important;
+}
