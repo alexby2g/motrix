@@ -1693,7 +1693,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
-import L from 'leaflet'
+import L, { prepararGoogleMaps, crearMapaMotrix } from 'src/utils/mapaMotrix.js'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../../boot/axios.js'
 import { BROADCAST_AUTH_URL, echoOptions } from '../../config/runtime.js'
@@ -2550,10 +2550,12 @@ const inicializarMapaNavegacion = async (forzarRuta = true) => {
   if (!contenedor) return
 
   if (!mapaNavegacion) {
-    mapaNavegacion = L.map(contenedor, {
+    await prepararGoogleMaps()
+    if (!contenedor.isConnected || !tieneViajeActivo.value) return
+    mapaNavegacion = (await crearMapaMotrix(contenedor, {
       zoomControl: true,
       attributionControl: true
-    }).setView([-14.8308, -64.9024], 14)
+    })).setView([-14.8308, -64.9024], 14)
 
     L.tileLayer(
       'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
