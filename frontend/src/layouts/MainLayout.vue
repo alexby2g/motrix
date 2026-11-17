@@ -2863,4 +2863,37 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .motrix-page-container{background:linear-gradient(180deg,#f5f8f5 0%,#f7f9f7 100%)!important}.motrix-toolbar{min-height:76px!important}.motrix-header{box-shadow:0 7px 24px rgba(24,60,43,.07)!important}.motrix-drawer{box-shadow:8px 0 28px rgba(12,48,29,.10)}.drawer-brand{padding-top:28px!important}.drawer-user{border-radius:16px!important;background:rgba(255,255,255,.07)!important}.menu-item{border-radius:12px!important;margin-bottom:3px}.account-trigger{background:#f5f8f5}.header-location{padding:9px 13px;border:1px solid #e0e9e2;border-radius:13px;background:#fbfdfb}
+
+/* Corrige la barra superior sobredimensionada y la navegación en Android. */
+@media (max-width: 599px) {
+  .motrix-toolbar {
+    min-height: 56px !important;
+    padding: 0 10px !important;
+  }
+  .brand-logo-img {
+    width: 36px;
+    height: 36px;
+    margin-right: 9px !important;
+  }
+  .brand-title { font-size: 19px; }
+  .account-trigger { min-width: 38px; min-height: 38px; }
+  .passenger-bottom-nav, .driver-bottom-nav {
+    min-height: 58px;
+    padding-top: 4px;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom));
+  }
+  .passenger-nav-item, .driver-nav-item {
+    min-height: 46px;
+    font-size: 10px;
+  }
+  .passenger-nav-item :deep(.q-icon),
+  .driver-nav-item :deep(.q-icon) { font-size: 21px; }
+  .passenger-qr-slot { min-height: 52px; }
+  .passenger-qr-button {
+    width: 44px;
+    height: 44px;
+    margin-top: -12px;
+    border-width: 3px;
+  }
+}
 </style>
