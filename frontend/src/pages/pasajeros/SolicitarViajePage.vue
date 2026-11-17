@@ -1,10 +1,10 @@
 <template>
-  <q-page class="q-pa-sm q-pa-md-md bg-grey-2">
+  <q-page class="q-pa-sm q-pa-md-md bg-grey-2 motrix-solicitud-page">
     <div class="row justify-center">
       <div class="col-12 col-xl-10">
-        <q-card class="solicitud-card shadow-2">
+        <q-card class="solicitud-card shadow-2 motrix-solicitud-card">
           <!-- ENCABEZADO -->
-          <q-card-section class="bg-positive text-white">
+          <q-card-section class="bg-positive text-white motrix-solicitud-header">
             <div class="row items-center no-wrap">
               <q-btn
                 flat
@@ -65,7 +65,7 @@
 
           <!-- VIAJE ACTIVO -->
           <template v-else-if="viajeActivo">
-            <q-card-section class="q-pa-md q-pa-lg-md">
+            <q-card-section class="q-pa-md q-pa-lg-md motrix-active-content">
               <q-banner
                 rounded
                 :class="bannerEstadoClase"
@@ -94,7 +94,7 @@
                 </div>
               </q-banner>
 
-              <div class="row q-col-gutter-md q-mt-sm">
+              <div class="row q-col-gutter-md q-mt-sm motrix-active-grid">
                 <!-- DATOS DEL VIAJE -->
                 <div class="col-12 col-md-7">
                   <q-card
@@ -428,10 +428,17 @@
                       </q-banner>
 
                       <LlamadaPrivadaPrueba
-                      v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
-                      :viaje-id="viajeActivo.id"
-                      :estado="viajeActivo.estado"
-                      class="q-pa-md"
+                        v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
+                        :viaje-id="viajeActivo.id"
+                        :estado="viajeActivo.estado"
+                        class="q-pa-md"
+                      />
+                      <ViajeChat
+                        v-if="puedeMostrarSeguimiento"
+                        :viaje-id="viajeActivo.id"
+                        :estado="viajeActivo.estado"
+                        rol="pasajero"
+                        class="q-mt-sm"
                       />
 
                       <q-btn
@@ -485,9 +492,9 @@
                 v-if="puedeMostrarSeguimiento"
                 flat
                 bordered
-                class="seguimiento-card q-mt-md"
+                class="seguimiento-card q-mt-md motrix-seguimiento-card"
               >
-                <q-card-section class="row items-center q-col-gutter-sm">
+                <q-card-section class="row items-center q-col-gutter-sm motrix-seguimiento-cabecera">
                   <div class="col">
                     <div class="row items-center no-wrap">
                       <q-avatar
@@ -499,12 +506,12 @@
                       />
 
                       <div class="min-width-zero">
-                        <div class="text-h6 text-weight-bold text-grey-9">
-                          {{ estadoNormalizado === 'aceptado' ? `${nombreConductor || 'Tu mototaxista'} está en camino` : 'Seguimiento de tu viaje' }}
+                        <div class="text-h6 text-weight-bold text-grey-9 motrix-seguimiento-titulo">
+                          {{ estadoNormalizado === 'aceptado' ? 'Conductor acercándose' : 'Seguimiento de tu viaje' }}
                         </div>
 
-                        <div class="text-caption text-grey-6">
-                          {{ tituloSeguimiento }}
+                        <div class="text-caption text-grey-6 motrix-seguimiento-subtitulo">
+                          {{ nombreConductor ? nombreConductor + ' · ' + tituloSeguimiento : tituloSeguimiento }}
                         </div>
                       </div>
                     </div>
@@ -515,7 +522,7 @@
                       :color="estadoColor"
                       text-color="white"
                       icon="two_wheeler"
-                      class="text-weight-bold"
+                      class="text-weight-bold motrix-seguimiento-estado"
                     >
                       {{ estadoSeguimientoTexto }}
                     </q-chip>
@@ -866,11 +873,11 @@
 
           <!-- FORMULARIO NUEVA SOLICITUD -->
           <template v-else>
-            <q-form @submit.prevent="enviarSolicitud">
-              <q-card-section class="q-pa-md q-pa-lg-md">
+            <q-form class="motrix-request-form" @submit.prevent="enviarSolicitud">
+              <q-card-section class="q-pa-md q-pa-lg-md motrix-request-form-section">
                 <q-banner
                   rounded
-                  class="bg-blue-1 text-primary q-mb-md"
+                  class="bg-blue-1 text-primary q-mb-md motrix-request-intro"
                 >
                   <template #avatar>
                     <q-icon
@@ -886,9 +893,9 @@
                   destino directamente en el mapa.
                 </q-banner>
 
-                <div class="row q-col-gutter-lg">
+                <div class="row q-col-gutter-lg motrix-request-grid">
                   <!-- FORMULARIO -->
-                  <div class="col-12 col-md-5">
+                  <div class="col-12 col-md-5 motrix-request-fields">
                     <div class="q-gutter-y-md">
                       <q-input
                         v-model="form.origen"
@@ -1085,7 +1092,7 @@
                   </div>
 
                   <!-- MAPA -->
-                  <div class="col-12 col-md-7">
+                  <div class="col-12 col-md-7 motrix-request-map">
                     <div class="map-wrapper">
                       <div
                         id="mapa-viaje-pasajero"
@@ -1129,7 +1136,7 @@
 
               <q-card-actions
                 align="right"
-                class="q-pa-md bg-grey-1"
+                class="q-pa-md bg-grey-1 motrix-request-actions"
               >
                 <q-btn
                   flat
@@ -1425,6 +1432,7 @@
 
 <script setup>
 import LlamadaPrivadaPrueba from 'src/components/LlamadaPrivadaPrueba.vue'
+import ViajeChat from 'src/components/ViajeChat.vue'
 import { fechaDDMMYYYY, fechaISOHoyBolivia } from 'src/utils/motrixDate.js'
 import catalogoTrinidad from 'src/data/trinidad/catalogoFinalTrinidad.json'
 import { direccionOrigenTrinidad } from 'src/utils/origenDireccion.js'
