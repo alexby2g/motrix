@@ -904,7 +904,7 @@
                           <div class="text-subtitle1 text-weight-bold">Moto</div>
                           <div class="text-caption text-grey-6">Servicio en Trinidad</div>
                         </div>
-                        <q-chip dense color="green-1" text-color="green-9" icon="handshake">Tarifa acordada</q-chip>
+                        <q-chip dense color="green-1" text-color="green-9" icon="handshake">Precio a convenir</q-chip>
                       </div>
                       <q-input
                         v-model="form.origen"
