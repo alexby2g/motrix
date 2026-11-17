@@ -2,7 +2,8 @@
   <q-page class="q-pa-sm q-pa-md-md bg-grey-2 motrix-solicitud-page">
     <div class="row justify-center">
       <div class="col-12 col-xl-10">
-        <q-card class="solicitud-card shadow-2 motrix-solicitud-card">
+        <q-card class="solicitud-card shadow-2 motrix-solicitud-card"
+          :class="{ 'motrix-modo-solicitud': !cargandoInicial && !viajeActivo && !viajeFinalizado }">
           <!-- ENCABEZADO -->
           <q-card-section class="bg-positive text-white motrix-solicitud-header">
             <div class="row items-center no-wrap">
@@ -5558,7 +5559,7 @@ onBeforeUnmount(() => {
     border-radius: 0 !important;
     box-shadow: none !important;
   }
-  .motrix-solicitud-header {
+  .motrix-modo-solicitud .motrix-solicitud-header {
     position: absolute !important;
     top: 0;
     right: 0;
@@ -5569,14 +5570,14 @@ onBeforeUnmount(() => {
     background: transparent !important;
     pointer-events: none;
   }
-  .motrix-solicitud-header .row {
+  .motrix-modo-solicitud .motrix-solicitud-header .row {
     justify-content: space-between;
   }
-  .motrix-solicitud-header .row > .col,
-  .motrix-solicitud-header :deep(.q-avatar) {
+  .motrix-modo-solicitud .motrix-solicitud-header .row > .col,
+  .motrix-modo-solicitud .motrix-solicitud-header :deep(.q-avatar) {
     display: none !important;
   }
-  .motrix-solicitud-header :deep(.q-btn) {
+  .motrix-modo-solicitud .motrix-solicitud-header :deep(.q-btn) {
     width: 46px;
     height: 46px;
     margin: 0 !important;
