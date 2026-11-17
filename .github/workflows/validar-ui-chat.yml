@@ -35,10 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-      - name: Comprobar rutas y controlador
+      - name: Comprobar rutas y controlador con PHP del runner
         run: |
+          php -v
           php -l backend/routes/api.php
           php -l backend/app/Http/Controllers/MensajeViajeController.php
