@@ -902,7 +902,6 @@
                         <q-avatar icon="two_wheeler" color="green-1" text-color="positive" size="42px" class="q-mr-sm" />
                         <div class="col min-width-zero">
                           <div class="text-subtitle1 text-weight-bold motrix-ruta-titulo">¿A dónde vamos?</div>
-                          <div class="text-caption text-grey-6">MOTRIX · Viaje en moto</div>
                         </div>
                         <q-badge rounded color="green-1" text-color="green-9" class="motrix-servicio-distintivo">Trinidad</q-badge>
                       </div>
@@ -915,6 +914,7 @@
                           hide-bottom-space
                           lazy-rules="ondemand"
                           label="Tu punto de partida"
+                          @click="usarUbicacionActual"
                           class="col motrix-origen-input"
                           :rules="[
                             valor => Boolean(valor) ||
@@ -1044,86 +1044,25 @@
 
                       <div class="motrix-tarifa-resumen row items-center no-wrap">
                         <q-icon name="payments" size="20px" color="positive" />
-                        <span class="col">El conductor propondrá la tarifa</span>
+                        <span class="col">Tarifa propuesta por el mototaxista</span>
                         <strong>{{ distanciaKm > 0 ? `${distanciaKm} km` : '' }}</strong>
                       </div>
-
-                      <q-expansion-item
-                        icon="tune"
-                        label="Fecha, notas y detalles del viaje"
-                        caption="Opcional · ajusta tu solicitud"
-                        class="motrix-detalles-viaje"
-                        expand-separator
-                        dense-toggle
-                      >
-                        <div class="q-pa-sm q-gutter-y-sm">
-                      <q-input
-                        v-model="form.fecha"
-                        outlined
-                        type="date"
-                        label="Fecha"
-                        stack-label
-                        readonly
-                      />
 
                       <q-input
                         v-model="form.observacion_pasajero"
                         outlined
+                        dense
                         type="textarea"
                         autogrow
                         maxlength="200"
-                        counter
-                        label="Nota para el mototaxista (opcional)"
-                        hint="Ej.: Somos 2 personas, llevo una caja grande o equipaje pesado."
-                        class="q-mt-md"
+                        label="Comentario para el mototaxista (opcional)"
+                        placeholder="Ej.: Llevo equipaje o somos dos personas"
+                        class="motrix-comentario-viaje"
                       >
                         <template #prepend>
-                          <q-icon name="speaker_notes" />
+                          <q-icon name="speaker_notes" color="grey-6" />
                         </template>
                       </q-input>
-
-                      <q-card
-                        flat
-                        bordered
-                        class="tarifa-card"
-                      >
-                        <q-card-section>
-                          <div class="row items-center">
-                            <q-avatar
-                              color="green-1"
-                              text-color="positive"
-                              icon="request_quote"
-                              size="50px"
-                              class="q-mr-md"
-                            />
-
-                            <div class="col">
-                              <div class="text-subtitle1 text-weight-bold text-grey-9">
-                                El mototaxista propondrá la tarifa
-                              </div>
-                              <div class="text-caption text-grey-6">
-                                Solicita primero. El conductor revisará el recorrido y te enviará su precio para que tú decidas si aceptarlo.
-                              </div>
-                            </div>
-
-                            <div class="text-right q-ml-md">
-                              <div class="text-caption text-grey-6">
-                                Distancia
-                              </div>
-
-                              <div class="text-subtitle1 text-weight-bold">
-                                {{ distanciaKm > 0
-                                  ? `${distanciaKm} km`
-                                  : '—'
-                                }}
-                              </div>
-                            </div>
-                          </div>
-                        </q-card-section>
-                      </q-card>
-
-                        </div>
-                      </q-expansion-item>
 
                     </div>
                   </div>
@@ -1137,6 +1076,20 @@
                       />
 
                       <div class="map-actions">
+                        <q-btn
+                          round
+                          flat
+                          icon="layers"
+                          color="primary"
+                          size="sm"
+                          class="motrix-cambiar-mapa"
+                          :aria-label="mapaAlternativo ? 'Probar Google Maps' : 'Usar mapa alternativo'"
+                          @click="cambiarProveedorMapa"
+                        >
+                          <q-tooltip>
+                            {{ mapaAlternativo ? 'Probar Google Maps' : 'Si el mapa aparece en blanco, usa el mapa alternativo' }}
+                          </q-tooltip>
+                        </q-btn>
                         <q-btn
                           round
                           color="negative"
@@ -1505,7 +1458,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
-import L, { prepararGoogleMaps, proveedorMapa, crearMapaMotrix } from 'src/utils/mapaMotrix.js'
+import L, { prepararGoogleMaps, proveedorMapa, crearMapaMotrix, mapaAlternativoActivo, alternarMapaAlternativo } from 'src/utils/mapaMotrix.js'
 import 'leaflet/dist/leaflet.css'
 
 import { api } from '../../boot/axios.js'
@@ -1549,6 +1502,7 @@ const comentarioCalificacion = ref('')
 const enviandoCalificacion = ref(false)
 const distanciaKm = ref(0)
 const mapaProveedor = ref('OpenStreetMap')
+const mapaAlternativo = ref(mapaAlternativoActivo())
 const seleccionandoDestinoMapa = ref(false)
 
 const dialogNotificacion = ref(false)
@@ -3516,6 +3470,11 @@ async function colocarDestino(lat, lng, direccionConocida = null) {
   }
 }
 
+function cambiarProveedorMapa() {
+  alternarMapaAlternativo()
+  window.location.reload()
+}
+
 function activarSeleccionDestinoMapa() {
   seleccionandoDestinoMapa.value = !seleccionandoDestinoMapa.value
   if (seleccionandoDestinoMapa.value) {
@@ -3547,12 +3506,11 @@ async function inicializarMapa() {
 
     await prepararGoogleMaps()
     if (!contenedor.isConnected || viajeActivo.value) return
-    mapaProveedor.value = proveedorMapa()
-
     mapa = (await crearMapaMotrix(contenedor)).setView(
       [LAT_TRINIDAD, LNG_TRINIDAD],
       14
     )
+    mapaProveedor.value = proveedorMapa()
 
     L.tileLayer(
       'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -3701,6 +3659,7 @@ function limpiarMapa() {
 }
 
 async function usarUbicacionActual() {
+  if (obteniendoUbicacion.value) return
   obteniendoUbicacion.value = true
 
   try {
