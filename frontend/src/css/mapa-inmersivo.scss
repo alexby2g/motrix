@@ -475,3 +475,44 @@ body.motrix-map-request-screen .motrix-mapa-cinta {
 body.motrix-map-request-screen .motrix-mapa-cinta .motrix-mapa-proveedor {
   display: none !important;
 }
+
+
+/* Interfaz simplificada MOTRIX: comentario directo y GPS en un toque. */
+body.motrix-map-request-screen .motrix-hoja-servicio {
+  padding-bottom: 7px;
+  min-height: 41px;
+}
+
+body.motrix-map-request-screen .motrix-origen-input,
+body.motrix-map-request-screen .motrix-origen-input .q-field__control {
+  cursor: pointer;
+}
+
+body.motrix-map-request-screen .motrix-comentario-viaje .q-field__control {
+  min-height: 44px;
+  border-radius: 12px !important;
+  background: #fff !important;
+}
+
+body.motrix-map-request-screen .motrix-comentario-viaje textarea {
+  min-height: 24px !important;
+  max-height: 75px;
+  resize: none;
+}
+
+body.motrix-map-request-screen .motrix-request-map .map-actions {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+body.motrix-map-request-screen .motrix-cambiar-mapa {
+  background: #fff !important;
+  color: #246846 !important;
+  box-shadow: 0 4px 18px #1b3c2b29 !important;
+}
+
+body.motrix-map-request-screen .motrix-request-fields {
+  max-height: min(42dvh, 380px) !important;
+}
