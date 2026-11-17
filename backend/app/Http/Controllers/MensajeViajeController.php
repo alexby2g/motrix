@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\DB;
 class MensajeViajeController extends Controller
 {
     private const ESTADOS_CHAT_ABIERTO = [
-        'Buscando conductor',
         'Aceptado',
         'Llegó',
         'En Curso',
