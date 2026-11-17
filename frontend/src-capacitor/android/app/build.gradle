@@ -8,6 +8,7 @@ android {
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "bo.edu.josecastillo.motrix"
+        manifestPlaceholders = [motrixGoogleMapsApiKey: (System.getenv('MOTRIX_GOOGLE_MAPS_ANDROID_KEY') ?: '')]
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode motrixVersionCode
