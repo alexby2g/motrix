@@ -14,6 +14,14 @@ export function proveedorMapa() {
 }
 
 export async function prepararGoogleMaps() {
+  // En la APK de pruebas usamos el mapa web estable mientras se valida
+  // la autorizacion de Google Maps para el paquete .preview y su firma.
+  // No afecta la version oficial ni desactiva el soporte nativo en produccion.
+  if (import.meta.env.VITE_MOTRIX_MAP_PROVIDER === 'leaflet') {
+    nativeReady = false
+    googleReady = false
+    return false
+  }
   if (typeof window !== 'undefined' && window.__MOTRIX_NATIVE_APP__) {
     nativeReady = await prepararMapaNativo()
     return nativeReady
