@@ -899,46 +899,54 @@
                   <div class="col-12 col-md-5 motrix-request-fields">
                     <div class="q-gutter-y-md">
                       <div class="motrix-hoja-servicio row items-center no-wrap">
-                        <q-avatar color="light-blue-1" text-color="primary" icon="two_wheeler" size="46px" class="q-mr-sm" />
+                        <q-avatar icon="two_wheeler" color="green-1" text-color="positive" size="42px" class="q-mr-sm" />
                         <div class="col min-width-zero">
-                          <div class="text-subtitle1 text-weight-bold">Moto</div>
-                          <div class="text-caption text-grey-6">Servicio en Trinidad</div>
+                          <div class="text-subtitle1 text-weight-bold motrix-ruta-titulo">¿A dónde vamos?</div>
+                          <div class="text-caption text-grey-6">MOTRIX · Viaje en moto</div>
                         </div>
-                        <q-chip dense color="green-1" text-color="green-9" icon="handshake">Precio a convenir</q-chip>
+                        <q-badge rounded color="green-1" text-color="green-9" class="motrix-servicio-distintivo">Trinidad</q-badge>
                       </div>
-                      <q-input
-                        v-model="form.origen"
-                        outlined
-                        label="Punto de origen"
-                        readonly
-                        :rules="[
-                          valor => Boolean(valor) ||
-                            'Marca el punto de origen en el mapa'
-                        ]"
-                      >
-                        <template #prepend>
-                          <q-icon
-                            name="radio_button_checked"
-                            color="positive"
-                          />
-                        </template>
-                      </q-input>
-
-                      <q-btn
-                        outline
-                        color="positive"
-                        icon="my_location"
-                        label="Mi ubicación actual"
-                        class="full-width"
-                        :loading="obteniendoUbicacion"
-                        @click="usarUbicacionActual"
-                      />
-
+                      <div class="motrix-origen-grupo row items-center no-wrap">
+                        <q-input
+                          v-model="form.origen"
+                          outlined
+                          dense
+                          readonly
+                          hide-bottom-space
+                          lazy-rules="ondemand"
+                          label="Tu punto de partida"
+                          class="col motrix-origen-input"
+                          :rules="[
+                            valor => Boolean(valor) ||
+                              'Marca el punto de origen en el mapa'
+                          ]"
+                        >
+                          <template #prepend>
+                            <q-icon name="radio_button_checked" color="positive" />
+                          </template>
+                        </q-input>
+                        <q-btn
+                          round
+                          unelevated
+                          color="green-1"
+                          text-color="positive"
+                          icon="my_location"
+                          :loading="obteniendoUbicacion"
+                          aria-label="Usar mi ubicación actual"
+                          @click="usarUbicacionActual"
+                        >
+                          <q-tooltip>Usar mi ubicación actual</q-tooltip>
+                        </q-btn>
+                      </div>
 
                       <q-input
                         v-model="busquedaDestino"
                         outlined
+                        dense
                         clearable
+                        hide-bottom-space
+                        lazy-rules="ondemand"
+                        class="motrix-destino-input"
                         label="Punto de destino"
                         placeholder="Escribe una calle, barrio o lugar…"
                         :loading="buscandoDestino"
@@ -973,41 +981,6 @@
                         </template>
                       </q-input>
 
-
-                      <q-btn
-                        outline
-                        no-caps
-                        icon="touch_app"
-                        :label="seleccionandoDestinoMapa ? 'Toca el mapa para elegir tu destino' : 'Elegir destino en el mapa'"
-                        class="motrix-elegir-destino full-width"
-                        color="primary"
-                        @click="activarSeleccionDestinoMapa"
-                      />
-
-                      <div class="motrix-frecuentes">
-                        <div class="text-caption text-weight-bold text-grey-7 q-mb-sm">DESTINOS FRECUENTES</div>
-                        <div class="motrix-frecuentes-lista">
-                          <q-btn
-                            v-for="nombre in destinosFrecuentes"
-                            :key="nombre"
-                            rounded
-                            outline
-                            no-caps
-                            color="grey-8"
-                            icon="place"
-                            :label="nombre"
-                            @click="buscarDestinoFrecuente(nombre)"
-                          />
-                        </div>
-                      </div>
-
-                      <div
-                        v-if="busquedaDestino && busquedaDestino.trim().length >= 3 && !form.destino"
-                        class="text-caption text-grey-6 q-mt-xs q-ml-sm"
-                      >
-                        <q-icon name="auto_awesome" size="15px" class="q-mr-xs" />
-                        Las sugerencias aparecen mientras escribes.
-                      </div>
 
                       <q-card
                         v-if="resultadosDestino.length"
@@ -1058,6 +1031,16 @@
                         No encontramos ese destino cerca de Trinidad. Prueba
                         con otra referencia o márcalo manualmente en el mapa.
                       </q-banner>
+
+                      <q-btn
+                        outline
+                        no-caps
+                        icon="place"
+                        :label="seleccionandoDestinoMapa ? 'Toca el mapa para marcar el destino' : 'Marcar destino en el mapa'"
+                        class="motrix-elegir-destino full-width"
+                        color="primary"
+                        @click="activarSeleccionDestinoMapa"
+                      />
 
                       <div class="motrix-tarifa-resumen row items-center no-wrap">
                         <q-icon name="payments" size="20px" color="positive" />
@@ -1567,7 +1550,6 @@ const enviandoCalificacion = ref(false)
 const distanciaKm = ref(0)
 const mapaProveedor = ref('OpenStreetMap')
 const seleccionandoDestinoMapa = ref(false)
-const destinosFrecuentes = ['Plaza Principal', 'Mercado Central', 'Fexpobeni', 'Aeropuerto']
 
 const dialogNotificacion = ref(false)
 const websocketConectado = ref(false)
@@ -2910,10 +2892,7 @@ function limpiarDestinoSeleccionado(limpiarBusqueda = true) {
 }
 
 function alEditarBusquedaDestino(valor) {
-  resultadosDestino.value = []
-  busquedaDestinoRealizada.value = false
   secuenciaBusquedaDestino += 1
-
   if (temporizadorBusquedaDestino) {
     window.clearTimeout(temporizadorBusquedaDestino)
     temporizadorBusquedaDestino = null
@@ -2921,28 +2900,17 @@ function alEditarBusquedaDestino(valor) {
 
   const texto = String(valor || '').trim()
   const destinoActual = String(form.destino || '').trim()
-
-  if (
-    destinoActual
-    && texto !== destinoActual
-  ) {
+  if (destinoActual && texto !== destinoActual) {
     limpiarDestinoSeleccionado(false)
   }
 
-  if (texto.length < 3) {
-    buscandoDestino.value = false
-    return
-  }
-
-  // Sugerencias inmediatas desde el catalogo local, sin solicitudes
-  // al servidor publico de Nominatim por cada tecla.
-  temporizadorBusquedaDestino = window.setTimeout(() => {
-    buscarDestino({
-      consulta: texto,
-      silencioso: true,
-      soloLocal: true
-    }).catch(() => {})
-  }, 200)
+  // La lista local aparece al escribir, sin depender de internet.
+  // Ejemplo: "villa" ofrece Villa Magdalena, Villa Marin, etc.
+  resultadosDestino.value = texto.length >= 2
+    ? buscarLugaresLocalesTrinidad(texto)
+    : []
+  busquedaDestinoRealizada.value = false
+  buscandoDestino.value = false
 }
 
 function normalizarTextoBusqueda(texto) {
@@ -3131,7 +3099,8 @@ async function buscarDestino(opciones = {}) {
 
   const secuencia = ++secuenciaBusquedaDestino
   buscandoDestino.value = true
-  resultadosDestino.value = []
+  // No ocultar las coincidencias locales mientras consulta Nominatim.
+  resultadosDestino.value = resultadosLocales
   busquedaDestinoRealizada.value = false
 
   try {
@@ -3547,11 +3516,6 @@ function activarSeleccionDestinoMapa() {
   if (seleccionandoDestinoMapa.value) {
     $q.notify({ type: 'info', message: 'Toca el punto de destino directamente en el mapa.', timeout: 2800 })
   }
-}
-
-async function buscarDestinoFrecuente(nombre) {
-  busquedaDestino.value = nombre
-  await buscarDestino({ consulta: nombre })
 }
 
 async function inicializarMapa() {
