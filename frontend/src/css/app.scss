@@ -421,3 +421,45 @@ body:not(.body--dark) .q-menu {
 :root{--motrix-v4-green:#1f8b3b;--motrix-v4-deep:#0e4d2a;--motrix-v4-soft:#eef8f0;--motrix-v4-line:#dfe9e1;--motrix-v4-shadow:0 16px 42px rgba(20,70,38,.08)}
 .q-page{background:linear-gradient(180deg,#f6f9f6 0%,#f8faf8 100%)}
 .q-card{border-radius:18px!important}.q-card.shadow-1,.q-card.shadow-2,.q-card.shadow-3{box-shadow:var(--motrix-v4-shadow)!important}.q-btn:not(.q-btn--round){border-radius:12px}.q-field--outlined .q-field__control{border-radius:12px}.q-chip{border-radius:9px}.motrix-photo-thumb,.motrix-logo-thumb{transition:transform .18s ease,box-shadow .18s ease}.motrix-photo-thumb:hover,.motrix-logo-thumb:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(23,89,44,.14)}
+
+
+/* Google Maps nativo en Android se dibuja debajo del WebView.
+   Mantener transparentes solo los ancestros del mapa; paneles y botones
+   conservan sus superficies blancas para seguir siendo legibles. */
+.motrix-google-map-element {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent !important;
+}
+
+html:has(body.motrix-google-native-map),
+body.motrix-google-native-map,
+body.motrix-google-native-map #q-app,
+body.motrix-google-native-map .q-layout,
+body.motrix-google-native-map .q-page-container,
+body.motrix-google-native-map .q-page,
+body.motrix-google-native-map .motrix-solicitud-page,
+body.motrix-google-native-map .motrix-solicitud-card,
+body.motrix-google-native-map .motrix-request-form,
+body.motrix-google-native-map .motrix-request-form-section,
+body.motrix-google-native-map .motrix-request-grid,
+body.motrix-google-native-map .motrix-request-map,
+body.motrix-google-native-map .map-wrapper,
+body.motrix-google-native-map .motrix-active-content,
+body.motrix-google-native-map .motrix-conductor-viaje,
+body.motrix-google-native-map .motrix-conductor-mapa,
+body.motrix-google-native-map .motrix-conductor-navegacion,
+body.motrix-google-native-map .mapa-navegacion-wrapper,
+body.motrix-google-native-map .mapa-navegacion {
+  background: transparent !important;
+}
+
+body.motrix-google-native-map .motrix-request-fields,
+body.motrix-google-native-map .motrix-request-actions,
+body.motrix-google-native-map .conductor-resumen-card,
+body.motrix-google-native-map .motrix-seguimiento-cabecera {
+  background: #ffffff !important;
+}
