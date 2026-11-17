@@ -898,6 +898,14 @@
                   <!-- FORMULARIO -->
                   <div class="col-12 col-md-5 motrix-request-fields">
                     <div class="q-gutter-y-md">
+                      <div class="motrix-hoja-servicio row items-center no-wrap">
+                        <q-avatar color="light-blue-1" text-color="primary" icon="two_wheeler" size="46px" class="q-mr-sm" />
+                        <div class="col min-width-zero">
+                          <div class="text-subtitle1 text-weight-bold">Moto</div>
+                          <div class="text-caption text-grey-6">Servicio en Trinidad</div>
+                        </div>
+                        <q-chip dense color="green-1" text-color="green-9" icon="handshake">Tarifa acordada</q-chip>
+                      </div>
                       <q-input
                         v-model="form.origen"
                         outlined
@@ -920,7 +928,7 @@
                         outline
                         color="positive"
                         icon="my_location"
-                        label="Usar mi ubicación como origen"
+                        label="Mi ubicación actual"
                         class="full-width"
                         :loading="obteniendoUbicacion"
                         @click="usarUbicacionActual"
@@ -965,6 +973,33 @@
                         </template>
                       </q-input>
 
+
+                      <q-btn
+                        outline
+                        no-caps
+                        icon="touch_app"
+                        :label="seleccionandoDestinoMapa ? 'Toca el mapa para elegir tu destino' : 'Elegir destino en el mapa'"
+                        class="motrix-elegir-destino full-width"
+                        color="primary"
+                        @click="activarSeleccionDestinoMapa"
+                      />
+
+                      <div class="motrix-frecuentes">
+                        <div class="text-caption text-weight-bold text-grey-7 q-mb-sm">DESTINOS FRECUENTES</div>
+                        <div class="motrix-frecuentes-lista">
+                          <q-btn
+                            v-for="nombre in destinosFrecuentes"
+                            :key="nombre"
+                            rounded
+                            outline
+                            no-caps
+                            color="grey-8"
+                            icon="place"
+                            :label="nombre"
+                            @click="buscarDestinoFrecuente(nombre)"
+                          />
+                        </div>
+                      </div>
 
                       <div
                         v-if="busquedaDestino && busquedaDestino.trim().length >= 3 && !form.destino"
@@ -1024,6 +1059,21 @@
                         con otra referencia o márcalo manualmente en el mapa.
                       </q-banner>
 
+                      <div class="motrix-tarifa-resumen row items-center no-wrap">
+                        <q-icon name="payments" size="20px" color="positive" />
+                        <span class="col">El conductor propondrá la tarifa</span>
+                        <strong>{{ distanciaKm > 0 ? `${distanciaKm} km` : '' }}</strong>
+                      </div>
+
+                      <q-expansion-item
+                        icon="tune"
+                        label="Fecha, notas y detalles del viaje"
+                        caption="Opcional · ajusta tu solicitud"
+                        class="motrix-detalles-viaje"
+                        expand-separator
+                        dense-toggle
+                      >
+                        <div class="q-pa-sm q-gutter-y-sm">
                       <q-input
                         v-model="form.fecha"
                         outlined
@@ -1088,6 +1138,9 @@
                           </div>
                         </q-card-section>
                       </q-card>
+
+                        </div>
+                      </q-expansion-item>
 
                     </div>
                   </div>
@@ -1513,6 +1566,8 @@ const comentarioCalificacion = ref('')
 const enviandoCalificacion = ref(false)
 const distanciaKm = ref(0)
 const mapaProveedor = ref('OpenStreetMap')
+const seleccionandoDestinoMapa = ref(false)
+const destinosFrecuentes = ['Plaza Principal', 'Mercado Central', 'Fexpobeni', 'Aeropuerto']
 
 const dialogNotificacion = ref(false)
 const websocketConectado = ref(false)
@@ -3487,6 +3542,18 @@ async function colocarDestino(lat, lng, direccionConocida = null) {
   }
 }
 
+function activarSeleccionDestinoMapa() {
+  seleccionandoDestinoMapa.value = !seleccionandoDestinoMapa.value
+  if (seleccionandoDestinoMapa.value) {
+    $q.notify({ type: 'info', message: 'Toca el punto de destino directamente en el mapa.', timeout: 2800 })
+  }
+}
+
+async function buscarDestinoFrecuente(nombre) {
+  busquedaDestino.value = nombre
+  await buscarDestino({ consulta: nombre })
+}
+
 async function inicializarMapa() {
   if (
     mapa
@@ -3525,6 +3592,13 @@ async function inicializarMapa() {
 
     mapa.on('click', async (evento) => {
       const { lat, lng } = evento.latlng
+
+      if (seleccionandoDestinoMapa.value) {
+        seleccionandoDestinoMapa.value = false
+        await colocarDestino(lat, lng, destinoLocalSeleccionado.value?.nombre || null)
+        destinoLocalSeleccionado.value = null
+        return
+      }
 
       if (!origenCoords.value) {
         await colocarOrigen(lat, lng)
@@ -3626,6 +3700,7 @@ async function obtenerRuta() {
 }
 
 function limpiarMapa() {
+  seleccionandoDestinoMapa.value = false
   eliminarMarcador(marcadorOrigen)
   eliminarMarcador(marcadorDestino)
 
@@ -5066,6 +5141,17 @@ watch(
   }
 )
 
+watch(
+  [cargandoInicial, viajeActivo, viajeFinalizado],
+  () => {
+    if (typeof document === 'undefined') return
+    const enSolicitud = !cargandoInicial.value && !viajeActivo.value && !viajeFinalizado.value
+    const esMovil = window.__MOTRIX_NATIVE_APP__ || window.innerWidth <= 900
+    document.body.classList.toggle('motrix-map-request-screen', Boolean(enSolicitud && esMovil))
+  },
+  { immediate: true }
+)
+
 onMounted(async () => {
   if (!validarSesion()) {
     return
@@ -5117,6 +5203,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  document.body.classList.remove('motrix-map-request-screen')
   desconectarWebsocketPasajero()
   dialogNotificacion.value = false
 
