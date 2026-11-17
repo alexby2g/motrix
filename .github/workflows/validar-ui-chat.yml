@@ -22,10 +22,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Instalar dependencias
         working-directory: frontend
-        run: npm ci --no-audit --no-fund
+        run: npm install --no-audit --no-fund
       - name: Lint de las pantallas modificadas
         working-directory: frontend
-        run: npx eslint -c ./eslint.config.js src/components/ViajeChat.vue src/pages/pasajeros/SolicitarViajePage.vue src/pages/servicios/ConductorPage.vue src/layouts/MainLayout.vue
+        run: npx eslint -c ./eslint.config.js src/components/ViajeChat.vue src/pages/pasajeros/SolicitarViajePage.vue src/pages/servicios/ConductorPage.vue src/layouts/MainLayout.vue src/utils/mapaMotrix.js src/utils/mapaNativoCapacitor.js
       - name: Compilar frontend
         working-directory: frontend
         run: npm run build
