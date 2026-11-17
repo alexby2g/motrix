@@ -1,8 +1,8 @@
 <template>
   <q-page
     :class="$q.screen.lt.sm
-      ? 'q-pa-sm bg-grey-2'
-      : 'q-pa-md bg-grey-2'"
+      ? 'q-pa-sm bg-grey-2 motrix-conductor-page'
+      : 'q-pa-md bg-grey-2 motrix-conductor-page'"
   >
     <!-- ENCABEZADO -->
     <q-card class="bg-primary text-white border-radius-lg shadow-2 q-mb-md">
@@ -38,7 +38,7 @@
     </q-card>
 
     <!-- ESTADO DEL CONDUCTOR -->
-    <q-card class="border-radius-lg shadow-1 q-mb-md">
+    <q-card class="border-radius-lg shadow-1 q-mb-md motrix-conductor-estado">
       <q-card-section>
         <div class="row items-center q-col-gutter-md">
           <div class="col-12 col-sm">
@@ -145,8 +145,8 @@
         </q-chip>
       </div>
 
-      <q-card class="viaje-activo-card border-radius-lg shadow-3">
-        <q-card-section class="bg-dark text-white">
+      <q-card class="viaje-activo-card border-radius-lg shadow-3 motrix-conductor-viaje">
+        <q-card-section class="bg-dark text-white motrix-conductor-viaje-header">
           <div class="row items-center no-wrap">
             <q-avatar
               color="positive"
@@ -208,7 +208,7 @@
           />
         </q-card-section>
 
-        <q-card-section class="q-gutter-y-md">
+        <q-card-section class="q-gutter-y-md motrix-conductor-ruta">
           <div class="route-row">
             <div class="route-point route-point-origin" />
             <div class="min-width-zero">
@@ -277,11 +277,11 @@
         </q-card-section>
 
         <!-- MAPA DE NAVEGACIÓN DEL CONDUCTOR -->
-        <q-card-section class="q-pt-none">
+        <q-card-section class="q-pt-none motrix-conductor-mapa">
           <q-card
             flat
             bordered
-            class="navegacion-card"
+            class="navegacion-card motrix-conductor-navegacion"
           >
             <q-card-section class="row items-center q-col-gutter-sm q-pb-sm">
               <div class="col">
@@ -434,11 +434,18 @@
         </q-card-section>
 
         <LlamadaPrivadaPrueba
-  v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
-  :viaje-id="viajeActivo.id"
-  :estado="viajeActivo.estado"
-  class="q-pa-md"
-/>
+          v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
+          :viaje-id="viajeActivo.id"
+          :estado="viajeActivo.estado"
+          class="q-pa-md motrix-conductor-comunicacion"
+        />
+        <ViajeChat
+          v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
+          :viaje-id="viajeActivo.id"
+          :estado="viajeActivo.estado"
+          rol="conductor"
+          class="q-px-md q-pb-md motrix-conductor-comunicacion"
+        />
 <q-card-actions
           v-if="viajeActivo.estado === 'Aceptado'"
           class="q-pa-md bg-grey-1"
@@ -1668,6 +1675,7 @@
 
 <script setup>
 import LlamadaPrivadaPrueba from 'src/components/LlamadaPrivadaPrueba.vue'
+import ViajeChat from 'src/components/ViajeChat.vue'
 import { fechaDDMMYYYY, fechaHoraDDMMYYYY, fechaHoraUtcBolivia } from 'src/utils/motrixDate.js'
 
 import {
@@ -4358,4 +4366,51 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .panel-motrix-logo{width:52px;height:52px;border-radius:16px;overflow:hidden;box-shadow:0 12px 26px rgba(0,0,0,.14)}.panel-motrix-logo img{width:100%;height:100%;display:block;object-fit:cover}.viaje-activo-card{overflow:hidden}.status-info-box{border-radius:14px!important;background:#f8fbf8!important;border:1px solid #e1ece3!important}.q-page>.q-card:first-of-type{background:linear-gradient(135deg,#0e5a30,#238a42)!important;border-radius:20px!important}
+
+/* Cabina del conductor: prioridad al mapa y botones legibles en Android. */
+.motrix-conductor-viaje { border: 1px solid #dfeae2; border-left: 0; border-radius: 20px; }
+.motrix-conductor-viaje-header { background: #123e2b !important; }
+.motrix-conductor-navegacion { border-radius: 20px; }
+.motrix-conductor-estado { border-radius: 18px; }
+.motrix-conductor-viaje .route-row > div:last-child { min-width: 0; overflow-wrap: break-word; }
+@media (max-width: 599px) {
+  .motrix-conductor-page { background: #f4f7f5 !important; }
+  .motrix-conductor-viaje {
+    display: flex; flex-direction: column;
+    overflow: hidden; border-radius: 20px;
+  }
+  .motrix-conductor-viaje-header {
+    padding: 14px !important;
+    background: #123e2b !important;
+  }
+  .motrix-conductor-viaje-header .row > .col {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+  .motrix-conductor-viaje-header .text-h6 {
+    font-size: 16px;
+    line-height: 1.3;
+  }
+  .motrix-conductor-viaje-header .text-h5 { font-size: 19px; }
+  .motrix-conductor-viaje .motrix-conductor-mapa { order: 1; padding: 10px !important; }
+  .motrix-conductor-viaje .motrix-conductor-ruta { order: 2; padding: 14px !important; }
+  .motrix-conductor-viaje .motrix-conductor-comunicacion { order: 3; }
+  .motrix-conductor-viaje > .q-card__actions { order: 4; }
+  .motrix-conductor-navegacion { overflow: hidden; border-radius: 18px; }
+  .motrix-conductor-navegacion .mapa-navegacion-wrapper {
+    height: clamp(290px, 45dvh, 450px);
+  }
+  .motrix-conductor-navegacion .navigation-stat {
+    min-width: 0;
+    align-items: flex-start;
+  }
+  .motrix-conductor-navegacion .navigation-stat > div {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+  .motrix-conductor-viaje > .q-card__actions :deep(.q-btn) {
+    min-height: 46px;
+    border-radius: 12px;
+  }
+}
 </style>
