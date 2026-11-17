@@ -511,7 +511,7 @@
                         </div>
 
                         <div class="text-caption text-grey-6 motrix-seguimiento-subtitulo">
-                          {{ nombreConductor ? nombreConductor + ' · ' + tituloSeguimiento : tituloSeguimiento }}
+                          {{ tituloSeguimiento }}
                         </div>
                       </div>
                     </div>
@@ -1112,6 +1112,22 @@
                           </q-tooltip>
                         </q-btn>
                       </div>
+                      <div class="motrix-mapa-cinta">
+                        <span class="motrix-mapa-punto" />
+                        Moto · Trinidad
+                        <span class="motrix-mapa-proveedor">{{ mapaProveedor }}</span>
+                      </div>
+                      <q-btn
+                        round
+                        unelevated
+                        icon="my_location"
+                        color="white"
+                        text-color="positive"
+                        class="motrix-mapa-gps"
+                        :loading="obteniendoUbicacion"
+                        aria-label="Centrar en mi ubicación"
+                        @click="usarUbicacionActual"
+                      />
                     </div>
 
                     <div class="row items-center justify-center q-gutter-md q-mt-sm">
@@ -1452,7 +1468,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
-import L from 'leaflet'
+import L, { prepararGoogleMaps, proveedorMapa } from 'src/utils/mapaMotrix.js'
 import 'leaflet/dist/leaflet.css'
 
 import { api } from '../../boot/axios.js'
@@ -1495,6 +1511,7 @@ const calificacion = ref(0)
 const comentarioCalificacion = ref('')
 const enviandoCalificacion = ref(false)
 const distanciaKm = ref(0)
+const mapaProveedor = ref('OpenStreetMap')
 
 const dialogNotificacion = ref(false)
 const websocketConectado = ref(false)
@@ -2207,7 +2224,7 @@ function destruirMapaSeguimiento() {
   tiempoSeguimientoMin.value = null
 }
 
-function inicializarMapaSeguimiento() {
+async function inicializarMapaSeguimiento() {
   if (
     mapaSeguimiento
     || inicializandoMapaSeguimiento
@@ -2228,6 +2245,10 @@ function inicializarMapaSeguimiento() {
     if (contenedor._leaflet_id) {
       contenedor._leaflet_id = null
     }
+
+    await prepararGoogleMaps()
+    if (!contenedor.isConnected || !puedeMostrarSeguimiento.value) return
+    mapaProveedor.value = proveedorMapa()
 
     mapaSeguimiento = L.map(
       contenedor,
@@ -2483,7 +2504,7 @@ async function actualizarMapaSeguimiento() {
 
   try {
     await nextTick()
-    inicializarMapaSeguimiento()
+    await inicializarMapaSeguimiento()
 
     if (!mapaSeguimiento) {
       return
@@ -3459,7 +3480,7 @@ async function colocarDestino(lat, lng, direccionConocida = null) {
   }
 }
 
-function inicializarMapa() {
+async function inicializarMapa() {
   if (
     mapa
     || inicializandoMapa
@@ -3480,6 +3501,10 @@ function inicializarMapa() {
     if (contenedor._leaflet_id) {
       contenedor._leaflet_id = null
     }
+
+    await prepararGoogleMaps()
+    if (!contenedor.isConnected || viajeActivo.value) return
+    mapaProveedor.value = proveedorMapa()
 
     mapa = L.map(contenedor).setView(
       [LAT_TRINIDAD, LNG_TRINIDAD],
@@ -5514,5 +5539,281 @@ onBeforeUnmount(() => {
   .tracking-info-box { align-items: flex-start; min-width: 0; }
   .tracking-info-box > div { min-width: 0; overflow-wrap: break-word; }
   .seguimiento-map-wrapper { height: clamp(300px, 44dvh, 440px); }
+}
+
+/* MOTRIX 2026 · solicitud inmersiva, adaptada al flujo de tarifa negociada.
+   La capa de mapa conserva el selector de origen/destino y el seguimiento. */
+.motrix-mapa-cinta,
+.motrix-mapa-gps { display: none; }
+
+@media (max-width: 599px) {
+  .motrix-solicitud-page {
+    padding: 0 !important;
+    overflow-x: hidden;
+  }
+  .motrix-solicitud-card {
+    position: relative;
+    width: 100%;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  .motrix-solicitud-header {
+    position: absolute !important;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 850;
+    padding: 10px 14px !important;
+    border: 0 !important;
+    background: transparent !important;
+    pointer-events: none;
+  }
+  .motrix-solicitud-header .row {
+    justify-content: space-between;
+  }
+  .motrix-solicitud-header .row > .col,
+  .motrix-solicitud-header :deep(.q-avatar) {
+    display: none !important;
+  }
+  .motrix-solicitud-header :deep(.q-btn) {
+    width: 46px;
+    height: 46px;
+    margin: 0 !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    color: #135e3a !important;
+    box-shadow: 0 4px 16px rgba(17, 50, 33, .17);
+    pointer-events: auto;
+  }
+  .motrix-request-form {
+    position: relative;
+    height: calc(100dvh - 135px);
+    min-height: 520px;
+    overflow: hidden;
+    background: #e7f1eb;
+  }
+  .motrix-request-form-section {
+    height: 100%;
+    padding: 0 !important;
+  }
+  .motrix-request-grid {
+    position: relative;
+    display: block !important;
+    width: 100%;
+    height: 100%;
+    margin: 0 !important;
+  }
+  .motrix-request-grid > .col-12 {
+    flex: none !important;
+    max-width: none !important;
+  }
+  .motrix-request-map {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+  .motrix-request-map .map-wrapper {
+    width: 100%;
+    height: 100% !important;
+    border: 0;
+    border-radius: 0;
+  }
+  .motrix-request-map > .row.items-center.justify-center {
+    display: none !important;
+  }
+  .motrix-mapa-cinta {
+    position: absolute;
+    top: 19px;
+    left: 50%;
+    z-index: 800;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: calc(100% - 160px);
+    padding: 10px 12px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 4px 16px rgba(17, 50, 33, .14);
+    color: #263a2e;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .motrix-mapa-punto {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: #1bb785;
+  }
+  .motrix-mapa-proveedor {
+    display: none;
+  }
+  .motrix-mapa-gps {
+    position: absolute;
+    top: 74px;
+    right: 13px;
+    z-index: 800;
+    display: inline-flex;
+    box-shadow: 0 5px 18px rgba(17, 50, 33, .17);
+  }
+  .motrix-request-map .map-actions {
+    top: 18px;
+    right: 14px;
+    z-index: 800;
+  }
+  .motrix-request-map .map-actions :deep(.q-btn) {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #fff !important;
+    color: #135e3a !important;
+    box-shadow: 0 4px 16px rgba(17, 50, 33, .17);
+  }
+  .motrix-request-fields {
+    position: absolute !important;
+    right: 12px;
+    bottom: 73px;
+    left: 12px;
+    z-index: 600;
+    width: auto !important;
+    max-width: none !important;
+    max-height: min(54dvh, 470px);
+    margin: 0 !important;
+    padding: 27px 16px 16px !important;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid #e3eae5;
+    border-radius: 25px 25px 17px 17px !important;
+    background: #fff;
+    box-shadow: 0 9px 34px rgba(17, 50, 33, .18);
+  }
+  .motrix-request-fields::before {
+    position: absolute;
+    top: 10px;
+    left: calc(50% - 22px);
+    width: 44px;
+    height: 5px;
+    border-radius: 999px;
+    background: #d5ddd7;
+    content: '';
+  }
+  .motrix-request-fields .q-gutter-y-md > * {
+    margin-top: 10px;
+  }
+  .motrix-request-fields :deep(.q-field__control) {
+    min-height: 47px;
+    border-radius: 13px !important;
+  }
+  .motrix-request-fields .tarifa-card {
+    border-left: 0;
+    background: #f5f9f6;
+  }
+  .motrix-request-fields .tarifa-card :deep(.q-card__section) {
+    padding: 12px;
+  }
+  .motrix-request-fields .tarifa-card .text-subtitle1 {
+    font-size: 14px;
+    line-height: 1.3;
+  }
+  .motrix-request-actions {
+    position: absolute !important;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 700;
+    display: flex;
+    align-items: center;
+    height: 73px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom)) !important;
+    border-top: 1px solid #e5ece7;
+    background: #fff !important;
+    box-shadow: 0 -5px 18px rgba(17, 50, 33, .09);
+  }
+  .motrix-request-actions :deep(.q-btn:first-child) {
+    display: none;
+  }
+  .motrix-request-actions :deep(.q-btn:last-child) {
+    flex: 1 1 auto;
+    min-height: 50px;
+    border-radius: 14px !important;
+    background: #116738 !important;
+    font-weight: 750;
+  }
+  /* Estado activo: el nombre nunca ocupa una columna de una palabra. */
+  .motrix-active-content {
+    padding: 10px !important;
+    gap: 10px;
+  }
+  .motrix-active-content :deep(.q-card) {
+    max-width: 100%;
+  }
+  .conductor-resumen-card {
+    padding: 13px !important;
+  }
+  .conductor-resumen-card .row.items-center.no-wrap {
+    gap: 12px;
+  }
+  .conductor-resumen-card .row.items-center.no-wrap > .col {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+  }
+  .conductor-resumen-card .text-h6 {
+    display: -webkit-box;
+    overflow: hidden !important;
+    font-size: 16px !important;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .conductor-avatar-destacado {
+    width: 60px !important;
+    height: 60px !important;
+  }
+  .motrix-seguimiento-cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    padding: 12px !important;
+  }
+  .motrix-seguimiento-cabecera > .col {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .motrix-seguimiento-titulo {
+    font-size: 17px;
+    line-height: 1.25;
+  }
+  .motrix-seguimiento-subtitulo {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .motrix-seguimiento-estado {
+    max-width: 100%;
+    white-space: normal;
+  }
+  .motrix-seguimiento-estado :deep(.q-chip__content) {
+    white-space: normal;
+  }
+  .tracking-info-box {
+    min-width: 0;
+    padding: 9px;
+  }
+  .tracking-info-box > div {
+    min-width: 0;
+  }
+  .tracking-info-box .text-subtitle1 {
+    font-size: 15px;
+  }
+  .seguimiento-map-wrapper {
+    height: min(44dvh, 400px) !important;
+    border-radius: 17px;
+  }
 }
 </style>
