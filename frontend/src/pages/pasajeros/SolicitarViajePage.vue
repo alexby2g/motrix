@@ -5111,6 +5111,27 @@ watch(
   }
 )
 
+// En pantallas pequenas, mostrar al menos los primeros resultados
+// cuando el teclado o el panel compacto reduzcan el espacio disponible.
+watch(resultadosDestino, async (resultados) => {
+  if (!resultados.length || typeof document === 'undefined') return
+  await nextTick()
+  const panel = document.querySelector(
+    'body.motrix-map-request-screen .motrix-request-fields'
+  )
+  const lista = panel?.querySelector('.destino-resultados')
+  if (!panel || !lista) return
+
+  const limite = panel.getBoundingClientRect().bottom - 10
+  const primeraFila = Math.min(
+    lista.getBoundingClientRect().top + 100,
+    lista.getBoundingClientRect().bottom
+  )
+  if (primeraFila > limite) {
+    panel.scrollTop += primeraFila - limite
+  }
+})
+
 watch(
   [cargandoInicial, viajeActivo, viajeFinalizado],
   () => {
