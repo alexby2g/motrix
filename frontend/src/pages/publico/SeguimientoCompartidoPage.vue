@@ -317,7 +317,6 @@ async function cargar() {
     const token = String(route.params.token || '').trim()
     const respuesta = await api.get(`/viaje-compartido/${encodeURIComponent(token)}`, { params: { _t: Date.now() } })
     datos.value = respuesta.data
-    numeroCarga += 1
     error.value = ''
     if (!datos.value?.seguimiento_activo && lineaRuta && mapa) {
       mapa.removeLayer(lineaRuta)
@@ -353,6 +352,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (intervalo) window.clearInterval(intervalo)
+  numeroCarga += 1
   if (mapa) mapa.remove()
   mapa = null
   marcadores.clear()
