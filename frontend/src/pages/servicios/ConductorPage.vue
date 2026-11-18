@@ -1,11 +1,12 @@
 <template>
   <q-page
-    :class="$q.screen.lt.sm
-      ? 'q-pa-sm bg-grey-2 motrix-conductor-page'
-      : 'q-pa-md bg-grey-2 motrix-conductor-page'"
+    :class="[
+      $q.screen.lt.sm ? 'q-pa-sm bg-grey-2 motrix-conductor-page' : 'q-pa-md bg-grey-2 motrix-conductor-page',
+      { 'motrix-driver-trip-page': $q.screen.lt.sm && tieneViajeActivo }
+    ]"
   >
     <!-- ENCABEZADO -->
-    <q-card class="bg-primary text-white border-radius-lg shadow-2 q-mb-md">
+    <q-card v-if="!($q.screen.lt.sm && tieneViajeActivo)" class="bg-primary text-white border-radius-lg shadow-2 q-mb-md">
       <q-card-section class="row items-center q-col-gutter-md">
         <div class="col">
           <div class="row items-center no-wrap">
@@ -38,7 +39,7 @@
     </q-card>
 
     <!-- ESTADO DEL CONDUCTOR -->
-    <q-card class="border-radius-lg shadow-1 q-mb-md motrix-conductor-estado">
+    <q-card v-if="!($q.screen.lt.sm && tieneViajeActivo)" class="border-radius-lg shadow-1 q-mb-md motrix-conductor-estado">
       <q-card-section>
         <div class="row items-center q-col-gutter-md">
           <div class="col-12 col-sm">
@@ -120,8 +121,110 @@
       </q-card-section>
     </q-card>
 
-    <!-- VIAJE ACTIVO -->
-    <div v-if="tieneViajeActivo" class="q-mb-md">
+    <!-- VIAJE ACTIVO EN CELULAR: mapa visible desde el primer segundo.
+         Las acciones llaman a los mismos metodos del flujo original. -->
+    <section v-if="$q.screen.lt.sm && tieneViajeActivo" class="motrix-driver-live" aria-label="Viaje activo del mototaxista">
+      <div class="motrix-driver-map-stage">
+        <div id="mapa-navegacion-conductor" class="mapa-navegacion motrix-driver-map-canvas" />
+        <div class="motrix-driver-map-status">
+          <q-icon name="two_wheeler" size="19px" color="positive" />
+          <div class="min-width-zero">
+            <div class="text-weight-bold">Viaje #{{ viajeActivo.id }}</div>
+            <div class="text-caption">{{ viajeActivo.estado }}</div>
+          </div>
+          <q-btn flat dense round icon="refresh" aria-label="Actualizar viaje" :loading="loading" @click="cargarTodo(true)" />
+        </div>
+        <div class="motrix-driver-map-controls">
+          <q-btn round unelevated icon="my_location" color="white" text-color="green-9"
+            aria-label="Centrar mapa" @click="centrarMapaNavegacion" />
+          <q-btn round unelevated icon="layers" color="white" text-color="green-9"
+            :loading="cambiandoMapa" :aria-label="usarMapaAlternativo ? 'Usar Google Maps' : 'Usar mapa alternativo'"
+            @click="cambiarProveedorMapaConductor" />
+        </div>
+        <div v-if="!ubicacionConductorDisponible" class="motrix-driver-gps-alert">
+          <q-icon name="gps_off" size="19px" />
+          Esperando GPS. Activa la ubicación del teléfono.
+        </div>
+        <div class="motrix-driver-map-legend">
+          <span><i class="motrix-driver-dot motrix-driver-dot--blue" /> Tú</span>
+          <span><i class="motrix-driver-dot motrix-driver-dot--green" /> Pasajero</span>
+          <span><i class="motrix-driver-dot motrix-driver-dot--red" /> Destino</span>
+        </div>
+      </div>
+
+      <div class="motrix-driver-sheet">
+        <div class="motrix-driver-handle" />
+        <div class="motrix-driver-sheet-scroll">
+          <div class="motrix-driver-trip-title">
+            <div class="min-width-zero">
+              <div class="motrix-driver-eyebrow">{{ tituloNavegacion }}</div>
+              <div class="motrix-driver-passenger">{{ getPasajeroNombre(viajeActivo) }}</div>
+            </div>
+            <div class="motrix-driver-fare">{{ formatearMonto(viajeActivo.precio) }}</div>
+          </div>
+
+          <div class="motrix-driver-places">
+            <div class="motrix-driver-place"><q-icon name="radio_button_checked" color="positive" size="19px" />
+              <span class="ellipsis">{{ viajeActivo.origen || 'Punto de recogida sin registrar' }}</span></div>
+            <div class="motrix-driver-place"><q-icon name="location_on" color="negative" size="19px" />
+              <span class="ellipsis">{{ viajeActivo.destino || 'Destino sin registrar' }}</span></div>
+          </div>
+          <div class="motrix-driver-metrics">
+            <span><q-icon name="route" color="green-8" /> {{ distanciaNavegacionTexto }}</span>
+            <span><q-icon name="schedule" color="orange-8" /> {{ tiempoNavegacionTexto }}</span>
+            <span><q-icon name="payments" color="green-8" /> {{ viajeActivo.metodo_pago || 'Pago por confirmar' }}</span>
+          </div>
+          <div v-if="navegacionError" class="motrix-driver-route-warning">
+            {{ navegacionError }} Puedes usar «Ir al pasajero» para navegar por fuera de MOTRIX.
+          </div>
+
+          <div v-if="incidenciaActiva" class="motrix-driver-incident">
+            <q-icon name="warning" color="negative" /> Incidencia {{ incidenciaActiva.codigo || '' }}: {{ incidenciaActiva.estado }}
+          </div>
+          <div class="motrix-driver-contact-row">
+            <LlamadaPrivadaPrueba
+              v-if="['Aceptado','Llegó','En Curso'].includes(viajeActivo.estado)"
+              :viaje-id="viajeActivo.id" :estado="viajeActivo.estado" class="motrix-driver-contact" />
+            <ViajeChat
+              v-if="['Aceptado','Llegó','En Curso'].includes(viajeActivo.estado)"
+              :viaje-id="viajeActivo.id" :estado="viajeActivo.estado" rol="conductor"
+              class="motrix-driver-contact" />
+            <q-btn v-if="sosDisponible" flat dense no-caps icon="sos" color="negative"
+              label="SOS" @click="abrirDialogoSos" />
+          </div>
+        </div>
+
+        <div class="motrix-driver-primary-actions">
+          <template v-if="viajeActivo.estado === 'Aceptado'">
+            <q-btn outline no-caps color="negative" icon="close" label="Cancelar"
+              :loading="accionando === `cancelar-${viajeActivo.id}`"
+              @click="confirmarCancelacion(viajeActivo)" />
+            <q-btn outline no-caps color="green-9" icon="near_me" label="Navegar"
+              @click="abrirNavegacion(viajeActivo, 'origen')" />
+            <q-btn unelevated no-caps color="positive" icon="done_all" label="Llegué"
+              :loading="accionando === `llegue-${viajeActivo.id}`"
+              @click="marcarLlegada(viajeActivo)" />
+          </template>
+          <template v-else-if="viajeActivo.estado === 'Llegó'">
+            <q-btn outline no-caps color="negative" icon="close" label="Cancelar"
+              :loading="accionando === `cancelar-${viajeActivo.id}`"
+              @click="confirmarCancelacion(viajeActivo)" />
+            <q-btn unelevated no-caps color="positive" icon="play_arrow" label="Iniciar viaje"
+              :loading="accionando === `iniciar-${viajeActivo.id}`"
+              @click="iniciarViaje(viajeActivo)" />
+          </template>
+          <template v-else-if="viajeActivo.estado === 'En Curso'">
+            <q-btn outline no-caps color="green-9" icon="navigation" label="Ir al destino"
+              @click="abrirNavegacion(viajeActivo, 'destino')" />
+            <q-btn unelevated no-caps color="positive" icon="payments" label="Finalizar y cobrar"
+              @click="abrirModalCobro(viajeActivo)" />
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIAJE ACTIVO: diseño de escritorio conservado -->
+    <div v-if="$q.screen.gt.xs && tieneViajeActivo" class="q-mb-md">
       <div class="row items-center q-mb-sm">
         <q-icon
           name="navigation"
@@ -562,7 +665,7 @@
     </div>
 
     <!-- SOLICITUDES DISPONIBLES -->
-    <div v-else class="q-mb-lg">
+    <div v-if="!tieneViajeActivo" class="q-mb-lg">
       <div class="row items-center q-mb-sm">
         <q-icon
           name="notifications_active"
@@ -823,7 +926,7 @@
     </div>
 
     <!-- GANANCIAS Y REPUTACIÓN -->
-    <div class="row q-col-gutter-md q-mb-md">
+    <div v-if="!tieneViajeActivo" class="row q-col-gutter-md q-mb-md">
       <div class="col-12 col-md-7">
         <q-card class="bg-dark text-white border-radius-lg shadow-2 full-height">
           <q-card-section class="row items-center justify-between">
@@ -934,7 +1037,7 @@
     </div>
 
     <!-- HISTORIAL Y CALIFICACIONES RECIBIDAS -->
-    <q-expansion-item
+    <q-expansion-item v-if="!tieneViajeActivo"
       icon="history"
       label="Historial de viajes completados"
       header-class="bg-white text-grey-9 text-bold shadow-1 border-radius-lg"
@@ -1536,6 +1639,8 @@
                 antes de registrar un pago digital.
               </q-banner>
 
+              <q-btn v-if="qrPagoConductorUrl" flat no-caps color="indigo-8" icon="zoom_in"
+                label="Ver QR en grande" class="full-width q-mt-sm" @click="visorQrPago = true" />
               <div
                 v-if="qrPagoConductorUrl"
                 class="text-center q-mt-sm"
@@ -1622,6 +1727,8 @@
                   Registra tu QR de cobro en Mi perfil para utilizar pago mixto.
                 </q-banner>
 
+                <q-btn v-if="qrPagoConductorUrl" flat no-caps color="indigo-8" icon="zoom_in"
+                  label="Ver QR en grande" class="full-width q-mt-sm" @click="visorQrPago = true" />
                 <div
                   v-if="qrPagoConductorUrl"
                   class="q-mt-sm"
@@ -1680,8 +1787,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-  </q-page>
-    <q-dialog v-model="visorQrPago">
+      <q-dialog v-model="visorQrPago" :maximized="$q.screen.lt.sm">
       <q-card class="motrix-qr-ampliado">
         <q-card-section class="row items-center justify-between">
           <div class="text-subtitle1 text-weight-bold">QR para pagar el viaje</div>
@@ -1694,7 +1800,7 @@
         </q-card-section>
       </q-card>
     </q-dialog>
-
+  </q-page>
 </template>
 
 <script setup>
@@ -1717,7 +1823,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
-import L, { prepararGoogleMaps, crearMapaMotrix } from 'src/utils/mapaMotrix.js'
+import L, { prepararGoogleMaps, crearMapaMotrix, alternarMapaAlternativo, mapaAlternativoActivo } from 'src/utils/mapaMotrix.js'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../../boot/axios.js'
 import { BROADCAST_AUTH_URL, echoOptions } from '../../config/runtime.js'
@@ -1896,6 +2002,8 @@ const nombreMototaxista = computed(() => {
 
 
 const visorQrPago = ref(false)
+const cambiandoMapa = ref(false)
+const usarMapaAlternativo = ref(mapaAlternativoActivo())
 const qrPagoConductorUrl = computed(() => {
   return String(
     mototaxista.value?.qr_pago_ruta || ''
@@ -2602,6 +2710,21 @@ const inicializarMapaNavegacion = async (forzarRuta = true) => {
   }, 150)
 
   await actualizarMapaNavegacion(forzarRuta)
+}
+
+const cambiarProveedorMapaConductor = async () => {
+  if (cambiandoMapa.value) return
+  cambiandoMapa.value = true
+  try {
+    destruirMapaNavegacion()
+    alternarMapaAlternativo()
+    usarMapaAlternativo.value = mapaAlternativoActivo()
+    await prepararGoogleMaps()
+    await nextTick()
+    await inicializarMapaNavegacion(true)
+  } finally {
+    cambiandoMapa.value = false
+  }
 }
 
 const centrarMapaNavegacion = async () => {
@@ -3894,6 +4017,14 @@ watch(
   }
 )
 
+
+// El modo viaje usa el mapa nativo como fondo de pantalla, sin tarjetas opacas.
+watch(
+  () => Boolean(tieneViajeActivo.value && $q.screen.lt.sm),
+  (activo) => document.body.classList.toggle('motrix-driver-trip-screen', activo),
+  { immediate: true, flush: 'sync' }
+)
+
 onMounted(async () => {
   if (!validarSesionConductor()) {
     return
@@ -3953,6 +4084,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  document.body.classList.remove('motrix-driver-trip-screen')
   detenerSeguimientoGPS()
   destruirMapaNavegacion()
   desconectarWebsocket()
