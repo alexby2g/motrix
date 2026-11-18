@@ -1,24 +1,24 @@
 <template>
-  <q-page class="motrix-perfil-oscuro">
+  <q-page class="motrix-perfil-claro">
     <div class="motrix-perfil-contenido">
       <div class="motrix-perfil-cabecera row items-center justify-between">
-        <q-btn flat round icon="arrow_back" color="white" aria-label="Volver" @click="volver" />
-        <div class="text-h6 text-weight-bold">Perfil</div>
-        <q-btn flat round icon="refresh" color="white" :loading="cargando" aria-label="Actualizar perfil" @click="cargarPerfil" />
+        <q-btn flat round icon="arrow_back" color="grey-9" aria-label="Volver" @click="volver" />
+        <div class="text-h6 text-weight-bold">Mi perfil</div>
+        <q-btn flat round icon="refresh" color="green-8" :loading="cargando" aria-label="Actualizar perfil" @click="cargarPerfil" />
       </div>
-
       <div class="motrix-perfil-identidad">
-        <q-avatar size="96px" color="teal-8" text-color="white" class="motrix-perfil-avatar" @click="abrirVisorFoto">
+        <q-avatar size="92px" color="green-8" text-color="white" class="motrix-perfil-avatar" @click="abrirVisorFoto">
           <img v-if="fotoPerfilUrl && !fotoPerfilError" :src="fotoPerfilUrl" :alt="`Foto de ${nombreUsuario}`" @error="fotoPerfilError = true">
           <span v-else>{{ iniciales }}</span>
         </q-avatar>
         <div class="text-h6 text-weight-bold q-mt-md">{{ nombreUsuario }}</div>
         <div class="motrix-perfil-email">{{ usuario?.email || usuario?.telefono || 'Pasajero MOTRIX' }}</div>
-        <q-btn flat no-caps dense color="green-3" icon="photo_camera" label="Cambiar foto" class="q-mt-sm" :loading="subiendoFotoPerfil" @click="abrirSelectorFotoPerfil" />
+        <q-btn outline no-caps dense color="green-8" icon="photo_camera" label="Cambiar foto"
+          class="q-mt-md motrix-perfil-foto-btn" :loading="subiendoFotoPerfil" @click="abrirSelectorFotoPerfil" />
         <input ref="fotoPerfilInput" type="file" accept="image/jpeg,image/png,image/webp" class="profile-file-input" @change="seleccionarFotoPerfil">
       </div>
 
-      <div class="motrix-perfil-seccion">Mi cuenta</div>
+      <div class="motrix-perfil-seccion">Cuenta</div>
       <div class="motrix-perfil-lista">
         <q-expansion-item icon="manage_accounts" label="Mis datos personales" expand-icon="chevron_right">
           <div class="motrix-perfil-detalles">
@@ -32,6 +32,10 @@
           <q-item-section>Cambiar contraseña</q-item-section>
           <q-item-section side><q-icon name="chevron_right" /></q-item-section>
         </q-item>
+      </div>
+
+      <div class="motrix-perfil-seccion">Mis viajes</div>
+      <div class="motrix-perfil-lista">
         <q-item clickable v-ripple @click="irAHistorial">
           <q-item-section avatar><q-icon name="history" /></q-item-section>
           <q-item-section>Historial de viajes</q-item-section>
@@ -44,11 +48,11 @@
         </q-item>
       </div>
 
-      <div class="motrix-perfil-seccion">Soporte y seguridad</div>
+      <div class="motrix-perfil-seccion">Ayuda y seguridad</div>
       <div class="motrix-perfil-lista">
-        <q-item clickable v-ripple @click="router.push('/pasajero')">
+        <q-item clickable v-ripple @click="dialogAyuda = true">
           <q-item-section avatar><q-icon name="help_outline" /></q-item-section>
-          <q-item-section>Volver al inicio</q-item-section>
+          <q-item-section>Ayuda</q-item-section>
           <q-item-section side><q-icon name="chevron_right" /></q-item-section>
         </q-item>
         <q-item clickable v-ripple @click="abrirEliminarCuenta">
@@ -57,9 +61,31 @@
           <q-item-section side><q-icon name="chevron_right" /></q-item-section>
         </q-item>
       </div>
+
+      <div class="motrix-perfil-lista motrix-perfil-sesion">
+        <q-item clickable v-ripple :disable="cerrandoSesion" @click="cerrarSesion">
+          <q-item-section avatar><q-icon name="logout" color="negative" /></q-item-section>
+          <q-item-section class="text-negative text-weight-medium">Cerrar sesión</q-item-section>
+          <q-item-section side><q-spinner v-if="cerrandoSesion" color="negative" size="20px" /><q-icon v-else name="chevron_right" /></q-item-section>
+        </q-item>
+      </div>
       <div class="motrix-perfil-pie">MOTRIX · Movilidad en Trinidad</div>
     </div>
 
+    <q-dialog v-model="dialogAyuda">
+      <q-card style="width: min(94vw, 450px)">
+        <q-card-section class="row items-center">
+          <q-icon name="help_outline" color="green-8" size="28px" class="q-mr-sm" />
+          <div class="text-h6">Ayuda para pasajeros</div>
+        </q-card-section>
+        <q-card-section>
+          <p>Para solicitar un mototaxi, selecciona tu origen y destino y confirma la tarifa propuesta.</p>
+          <p>Durante el viaje puedes comunicarte con tu conductor desde la pantalla de seguimiento. Si tienes una emergencia, utiliza la opción SOS disponible durante el servicio.</p>
+          <p class="text-caption text-grey-7 q-mb-none">Los conductores son registrados por el equipo de MOTRIX. No necesitas crear una cuenta de conductor.</p>
+        </q-card-section>
+        <q-card-actions align="right"><q-btn flat color="green-8" label="Entendido" v-close-popup /></q-card-actions>
+      </q-card>
+    </q-dialog>
             <q-dialog v-model="dialogEliminarCuenta" persistent>
               <q-card class="delete-dialog">
                 <q-card-section class="row items-center">
@@ -137,12 +163,15 @@ import {
   api
 } from 'src/boot/axios.js'
 import PhotoViewerDialog from 'src/components/PhotoViewerDialog.vue'
+import { ES_APLICACION_NATIVA } from 'src/config/runtime.js'
 
 const $q = useQuasar()
 const router = useRouter()
 const route = useRoute()
 
 const cargando = ref(false)
+const dialogAyuda = ref(false)
+const cerrandoSesion = ref(false)
 const visorFoto = ref(false)
 const fotoPerfilError = ref(false)
 const fotoPerfilInput = ref(null)
@@ -396,6 +425,22 @@ async function eliminarCuenta() {
   }
 }
 
+async function cerrarSesion() {
+  if (cerrandoSesion.value) return
+  cerrandoSesion.value = true
+  try {
+    await api.post('/auth/logout')
+  } catch (error) {
+    if (error?.response?.status !== 401) {
+      console.warn('No se pudo cerrar la sesión en el servidor:', error)
+    }
+  } finally {
+    limpiarSesionLocal()
+    cerrandoSesion.value = false
+    await router.replace(ES_APLICACION_NATIVA ? '/login' : '/presentacion')
+  }
+}
+
 function volver() {
   router.push('/pasajero')
 }
@@ -534,18 +579,20 @@ onMounted(() => {
 </style>
 
 <style>
-.motrix-perfil-oscuro { min-height: 100%; background: #111317 !important; color: #f2f5f5; }
-.motrix-perfil-contenido { width: min(100%, 700px); margin: auto; padding: 12px 18px 38px; }
-.motrix-perfil-cabecera { min-height: 58px; }
-.motrix-perfil-identidad { display: flex; align-items: center; flex-direction: column; text-align: center; padding: 14px 0 22px; }
-.motrix-perfil-avatar { cursor: pointer; font-size: 34px; }
-.motrix-perfil-email { font-size: 13px; color: #aab2bb; overflow-wrap: anywhere; }
-.motrix-perfil-seccion { font-weight: 700; margin: 14px 0 10px; }
-.motrix-perfil-lista { overflow: hidden; border: 1px solid #373b43; border-radius: 17px; background: #1b1e24; }
-.motrix-perfil-lista .q-item, .motrix-perfil-lista .q-expansion-item__container > .q-item { min-height: 56px; color: #e8edf0; }
-.motrix-perfil-lista .q-item:not(:last-child), .motrix-perfil-lista .q-expansion-item:not(:last-child) { border-bottom: 1px solid #30343c; }
-.motrix-perfil-lista .q-item__section--avatar { min-width: 42px; color: #b4c2c8; }
-.motrix-perfil-lista .q-item__section--side { color: #b4c2c8; }
-.motrix-perfil-detalles { padding: 8px 16px 17px 56px; color: #c9d3d7; line-height: 1.9; font-size: 13px; }
-.motrix-perfil-pie { padding-top: 22px; text-align: center; color: #89929c; font-size: 12px; }
+.motrix-perfil-claro { min-height: 100%; background: #f6f8f7 !important; color: #192e22; }
+.motrix-perfil-contenido { width: min(100%, 700px); margin: auto; padding: 12px 17px 36px; }
+.motrix-perfil-cabecera { min-height: 54px; }
+.motrix-perfil-identidad { display: flex; align-items: center; flex-direction: column; text-align: center; padding: 17px 0 24px; }
+.motrix-perfil-avatar { cursor: pointer; font-size: 34px; box-shadow: 0 0 0 5px #fff, 0 7px 22px #16452b20; }
+.motrix-perfil-email { font-size: 13px; color: #7b8981; overflow-wrap: anywhere; }
+.motrix-perfil-foto-btn { border-radius: 24px !important; }
+.motrix-perfil-seccion { font-weight: 750; margin: 17px 0 10px; color: #25382b; }
+.motrix-perfil-lista { overflow: hidden; border: 1px solid #e0e7e2; border-radius: 16px; background: #fff; box-shadow: 0 2px 9px #153a2a0a; }
+.motrix-perfil-lista .q-item, .motrix-perfil-lista .q-expansion-item__container > .q-item { min-height: 57px; color: #26392c; }
+.motrix-perfil-lista .q-item:not(:last-child), .motrix-perfil-lista .q-expansion-item:not(:last-child) { border-bottom: 1px solid #edf1ed; }
+.motrix-perfil-lista .q-item__section--avatar { min-width: 42px; color: #38764e; }
+.motrix-perfil-lista .q-item__section--side { color: #98a59b; }
+.motrix-perfil-detalles { padding: 8px 16px 17px 56px; color: #55655b; line-height: 1.9; font-size: 13px; }
+.motrix-perfil-sesion { margin-top: 21px; }
+.motrix-perfil-pie { padding-top: 23px; text-align: center; color: #91a097; font-size: 12px; }
 </style>
