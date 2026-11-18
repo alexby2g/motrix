@@ -51,7 +51,10 @@
           </div>
         </div>
 
-        <div v-if="error" class="motrix-chat-error" role="alert">{{ error }}</div>
+        <div v-if="error" class="motrix-chat-error" role="alert">
+          <div>{{ error }}</div>
+          <q-btn v-if="errorCodigo !== 404" flat dense no-caps color="negative" icon="refresh" label="Reintentar" @click="cargarMensajes()" />
+        </div>
         <div class="motrix-chat-respuestas">
           <q-chip
             v-for="frase in respuestasRapidas"
@@ -119,6 +122,7 @@ const consultando = ref(false)
 const mensajes = ref([])
 const texto = ref('')
 const error = ref('')
+const errorCodigo = ref(null)
 const contenedorMensajes = ref(null)
 let temporizador = null
 
@@ -164,15 +168,29 @@ async function cargarMensajes(silencioso = false) {
     const ultimoAnterior = mensajes.value[mensajes.value.length - 1]?.id
     mensajes.value = recibidos
     error.value = ''
+    errorCodigo.value = null
     if (recibidos[recibidos.length - 1]?.id !== ultimoAnterior) {
       await bajarAlUltimoMensaje()
     }
     if (Number(respuesta.data?.no_leidos || 0) > 0) {
-      await api.post(rutaMensajes() + '/leidos')
+      // Un fallo al confirmar lectura no debe invalidar los mensajes recibidos.
+      try {
+        await api.post(rutaMensajes() + '/leidos')
+      } catch (errorLectura) {
+        console.warn('No se pudo confirmar la lectura del chat', errorLectura?.response?.status)
+      }
     }
   } catch (e) {
     if (idConsultado === Number(props.viajeId)) {
-      error.value = e.response?.data?.mensaje || 'No se pudieron cargar los mensajes. Intenta nuevamente.'
+      errorCodigo.value = e.response?.status || null
+      error.value = e.response?.status === 404
+        ? 'El servidor aún no tiene habilitado el chat de viajes. Se necesita actualizar la API.'
+        : e.response?.status === 401
+          ? 'La sesión expiró. Vuelve a iniciar sesión.'
+          : e.response?.status === 403
+            ? 'No tienes acceso a los mensajes de este viaje.'
+            : e.response?.data?.mensaje || e.response?.data?.message
+              || 'No se pudieron cargar los mensajes. Revisa la conexión e intenta nuevamente.'
     }
   } finally {
     consultando.value = false
@@ -196,7 +214,11 @@ async function enviarMensaje() {
     }
     await bajarAlUltimoMensaje()
   } catch (e) {
-    error.value = e.response?.data?.mensaje || 'No se pudo enviar. Comprueba tu conexión.'
+    errorCodigo.value = e.response?.status || null
+    error.value = e.response?.status === 404
+      ? 'El servidor aún no tiene habilitado el envío de mensajes. Se necesita actualizar la API.'
+      : e.response?.data?.mensaje || e.response?.data?.message
+        || 'No se pudo enviar. Comprueba tu conexión.'
     if (e.response?.status === 409) abierto.value = false
   } finally {
     enviando.value = false
