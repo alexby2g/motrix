@@ -516,3 +516,36 @@ body.motrix-map-request-screen .motrix-cambiar-mapa {
 body.motrix-map-request-screen .motrix-request-fields {
   max-height: min(42dvh, 380px) !important;
 }
+
+
+/* Android Google Maps: eliminar fondos opacos en toda la cadena del WebView.
+   La vista nativa se inserta debajo del WebView por @capacitor/google-maps. */
+html:has(body.motrix-google-native-map),
+body.motrix-google-native-map,
+body.motrix-google-native-map #q-app,
+body.motrix-google-native-map .q-layout,
+body.motrix-google-native-map .q-page-container,
+body.motrix-google-native-map .motrix-page-container,
+body.motrix-google-native-map .motrix-solicitud-page,
+body.motrix-google-native-map .motrix-solicitud-page > .row,
+body.motrix-google-native-map .motrix-solicitud-page > .row > .col-12,
+body.motrix-google-native-map .motrix-solicitud-card,
+body.motrix-google-native-map .motrix-request-form,
+body.motrix-google-native-map .motrix-request-form-section,
+body.motrix-google-native-map .motrix-request-grid,
+body.motrix-google-native-map .motrix-request-map,
+body.motrix-google-native-map .motrix-request-map .map-wrapper,
+body.motrix-google-native-map .motrix-request-map .mapa-viaje {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+body.motrix-google-native-map .motrix-solicitud-header {
+  background: transparent !important;
+}
+
+body.motrix-google-native-map .motrix-request-map .mapa-viaje {
+  position: relative !important;
+  overflow: visible !important;
+}
