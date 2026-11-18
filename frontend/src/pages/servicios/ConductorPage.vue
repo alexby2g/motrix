@@ -2018,14 +2018,16 @@ const objetivoNavegacionTexto = computed(() => {
 })
 
 const distanciaNavegacionTexto = computed(() => {
+  if (!ubicacionConductorDisponible.value) return 'Esperando GPS'
   return navegacionDistanciaKm.value > 0
     ? `${navegacionDistanciaKm.value.toFixed(2)} km`
-    : 'Calculando...'
+    : navegacionCargando.value ? 'Calculando...' : 'Sin ruta disponible'
 })
 
 const tiempoNavegacionTexto = computed(() => {
+  if (!ubicacionConductorDisponible.value) return 'Esperando GPS'
   if (navegacionDuracionMin.value <= 0) {
-    return 'Calculando...'
+    return navegacionCargando.value ? 'Calculando...' : 'Sin estimación'
   }
 
   const minutos = Math.max(1, Math.round(navegacionDuracionMin.value))
