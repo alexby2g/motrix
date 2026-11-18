@@ -2411,11 +2411,20 @@ async function inicializarMapaSeguimiento() {
     if (!contenedor.isConnected || !puedeMostrarSeguimiento.value) return
     mapaProveedor.value = proveedorMapa()
 
-    mapaSeguimiento = await crearMapaMotrix(
+    const creado = await crearMapaMotrix(
       contenedor,
       { zoomControl: true }
-    ).setView(
-      [LAT_TRINIDAD, LNG_TRINIDAD],
+    )
+    // Si la pantalla cambió durante la carga de Android, no dejar
+    // una segunda instancia nativa invisible detrás del viaje.
+    if (!contenedor.isConnected || !puedeMostrarSeguimiento.value) {
+      creado.remove()
+      return
+    }
+    mapaSeguimiento = creado.setView(
+      coordenadasConductor.value
+        || obtenerCoordenadasViaje('origen')
+        || [LAT_TRINIDAD, LNG_TRINIDAD],
       14
     )
 
@@ -3658,6 +3667,17 @@ function activarSeleccionDestinoMapa() {
   }
 }
 
+function destruirMapaSolicitud() {
+  if (mapa) {
+    mapa.remove()
+    mapa = null
+  }
+  inicializandoMapa = false
+  marcadorOrigen = null
+  marcadorDestino = null
+  lineaRuta = null
+}
+
 async function inicializarMapa() {
   if (
     mapa
@@ -3682,7 +3702,14 @@ async function inicializarMapa() {
 
     await prepararGoogleMaps()
     if (!contenedor.isConnected || viajeActivo.value) return
-    mapa = (await crearMapaMotrix(contenedor)).setView(
+    const creado = await crearMapaMotrix(contenedor)
+    // No reactivar el mapa de búsqueda si se aceptó el viaje
+    // mientras Google Maps estaba terminando de inicializar.
+    if (!contenedor.isConnected || viajeActivo.value) {
+      creado.remove()
+      return
+    }
+    mapa = creado.setView(
       [LAT_TRINIDAD, LNG_TRINIDAD],
       14
     )
@@ -5248,7 +5275,13 @@ function volver() {
 
 watch(() => viajeActivo.value?.id || null, (nuevoId, anteriorId) => {
   if (nuevoId !== anteriorId) mostrarDetallesPasajero.value = false
-})
+  if (nuevoId) {
+    // Debe existir un único Google Maps nativo en el flujo activo.
+    // El mapa de buscar/solicitar permanece oculto con v-show,
+    // pero su capa Android seguiría visible si no se destruye.
+    destruirMapaSolicitud()
+  }
+}, { flush: 'sync' })
 
 watch(mostrarMapaPasajero, async () => {
   destruirMapaSeguimiento()
