@@ -582,6 +582,8 @@ onMounted(() => {
 
 <style>
 .motrix-perfil-claro { min-height: 100%; background: #f6f8f7 !important; color: #192e22; }
+/* El mapa nativo no debe transparentar la pantalla del perfil. */
+body.motrix-google-native-map .q-page.motrix-perfil-claro { background: #f6f8f7 !important; }
 .motrix-perfil-contenido { width: min(100%, 700px); margin: auto; padding: 12px 17px 36px; }
 .motrix-perfil-cabecera { min-height: 54px; }
 .motrix-perfil-identidad { display: flex; align-items: center; flex-direction: column; text-align: center; padding: 17px 0 24px; }
