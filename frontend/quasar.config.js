@@ -17,7 +17,8 @@ export default defineConfig((ctx) => {
       'menu-fix.scss',
       'monitoreo-icon-fix.scss',
       'mobile-dialog-scroll-fix.scss',
-      'mapa-inmersivo.scss'
+      'mapa-inmersivo.scss',
+      'viaje-mobile-2026.scss'
     ],
 
     extras: [
