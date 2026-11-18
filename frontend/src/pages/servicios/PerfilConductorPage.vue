@@ -18,6 +18,20 @@
         </q-avatar>
         <div class="text-h6 text-weight-bold q-mt-md text-center">{{ nombreCompleto }}</div>
         <div class="motrix-perfil-subtitulo">Conductor MOTRIX · Trinidad, Beni</div>
+        <div class="motrix-perfil-estadisticas">
+          <div>
+            <strong>{{ resumenConductor ? resumenConductor.viajes_totales ?? 0 : '—' }}</strong>
+            <span>Viajes realizados</span>
+          </div>
+          <div>
+            <strong>{{ promedioCalificacion }}</strong>
+            <span>Calificación</span>
+          </div>
+          <div>
+            <strong>{{ anioRegistro }}</strong>
+            <span>Miembro desde</span>
+          </div>
+        </div>
         <div class="motrix-conductor-estados">
           <q-chip dense icon="two_wheeler" color="green-1" text-color="green-9">
             Chaleco {{ valor(perfil?.nro_chaleco) }}
@@ -261,6 +275,20 @@ const $q = useQuasar()
 const router = useRouter()
 
 const cargando = ref(false)
+const resumenConductor = ref(null)
+const anioRegistro = computed(() => {
+  const fecha = usuario.value?.created_at
+  if (!fecha) return '—'
+  const anio = new Date(fecha).getFullYear()
+  return Number.isFinite(anio) && anio > 2000 ? anio : '—'
+})
+const promedioCalificacion = computed(() => {
+  if (!resumenConductor.value || Number(resumenConductor.value.total_calificaciones || 0) <= 0) {
+    return '—'
+  }
+  const promedio = Number(resumenConductor.value.promedio_calificacion)
+  return Number.isFinite(promedio) ? promedio.toFixed(1) : '—'
+})
 const cerrandoSesion = ref(false)
 const perfil = ref(null)
 const fotoPerfilError = ref(false)
@@ -490,7 +518,8 @@ async function cargarPerfil() {
   try {
     const [
       respuestaPerfil,
-      respuestaUsuario
+      respuestaUsuario,
+      respuestaGanancias
     ] = await Promise.all([
       api.get(
         '/conductor/perfil',
@@ -500,8 +529,11 @@ async function cargarPerfil() {
           }
         }
       ),
-      api.get('/auth/me')
+      api.get('/auth/me'),
+      api.get('/conductor/ganancias').catch(() => ({ data: null }))
     ])
+
+    resumenConductor.value = respuestaGanancias?.data || null
 
     perfil.value =
       respuestaPerfil.data
@@ -746,6 +778,18 @@ onMounted(() => {
 .profile-photo { width: 100%; height: 100%; object-fit: cover; }
 .profile-file-input { display: none; }
 .motrix-perfil-subtitulo { font-size: 13px; color: #778a80; margin-top: 3px; }
+.motrix-perfil-estadisticas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 440px);
+  margin-top: 16px;
+  padding: 12px 0;
+  border-top: 1px solid #e3eae5;
+}
+.motrix-perfil-estadisticas > div { min-width: 0; text-align: center; }
+.motrix-perfil-estadisticas > div:not(:last-child) { border-right: 1px solid #e3eae5; }
+.motrix-perfil-estadisticas strong { display:block; font-weight:800; font-size:16px; color:#203a2a; }
+.motrix-perfil-estadisticas span { display:block; font-size:11px; color:#85938a; margin-top:2px; }
 .motrix-conductor-estados { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; margin-top: 12px; }
 .motrix-perfil-foto-btn { border-radius: 24px !important; }
 .motrix-perfil-seccion {
