@@ -52,8 +52,9 @@ function tarea(promise) {
 
 function tipoMarcador(icono) {
   const html = String(icono?.options?.html || '')
-  if (/destino/i.test(html)) return { r: 214, g: 54, b: 71, a: 255 }
-  if (/conductor|moto/i.test(html)) return { r: 17, g: 107, b: 58, a: 255 }
+  if (/destino|destination/i.test(html)) return { r: 214, g: 54, b: 71, a: 255 }
+  if (/conductor|driver|moto/i.test(html)) return { r: 25, g: 118, b: 210, a: 255 }
+  if (/origen|pickup|pasajero/i.test(html)) return { r: 33, g: 186, b: 69, a: 255 }
   return { r: 3, g: 147, b: 80, a: 255 }
 }
 
