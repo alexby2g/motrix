@@ -1077,6 +1077,18 @@
 
                       <div class="map-actions">
                         <q-btn
+                          v-if="mapaProveedor === 'Google Maps (Android)'"
+                          round
+                          flat
+                          icon="help_outline"
+                          color="primary"
+                          size="sm"
+                          aria-label="Comprobar Google Maps sin conectar el celular"
+                          @click="mostrarDiagnosticoMapa"
+                        >
+                          <q-tooltip>¿Google Maps está en blanco? Comprobar</q-tooltip>
+                        </q-btn>
+                        <q-btn
                           round
                           flat
                           icon="layers"
@@ -1428,6 +1440,40 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="dialogDiagnosticoMapa">
+      <q-card style="width: min(94vw, 410px)">
+        <q-card-section class="row items-center justify-between">
+          <div class="text-subtitle1 text-weight-bold">Comprobar Google Maps</div>
+          <q-btn flat round dense icon="close" v-close-popup />
+        </q-card-section>
+        <q-separator />
+        <q-card-section>
+          <div v-if="cargandoDiagnosticoMapa" class="row items-center q-gutter-sm">
+            <q-spinner color="primary" size="24px" />
+            <span>Comprobando Android...</span>
+          </div>
+          <template v-else-if="diagnosticoMapa">
+            <div class="q-mb-sm text-caption text-grey-7">
+              Haz una captura de esta ventana y envíamela. No muestra tu clave API.
+            </div>
+            <div class="q-mb-xs"><b>Paquete:</b> {{ diagnosticoMapa.paquete || 'No disponible' }}</div>
+            <div class="q-mb-xs"><b>Clave de Google Maps:</b> {{ diagnosticoMapa.claveConfigurada ? 'Configurada' : 'No detectada' }}</div>
+            <div class="q-mb-xs"><b>Servicios de Google:</b> {{ diagnosticoMapa.serviciosGoogle || 'No disponible' }}</div>
+            <div class="q-mb-xs"><b>Motor:</b> {{ diagnosticoMapa.motor || 'No disponible' }}</div>
+            <div class="q-mb-xs"><b>Tamaño del mapa:</b> {{ diagnosticoMapa.vista || 'No disponible' }}</div>
+            <div class="q-mb-xs"><b>Internet:</b> {{ diagnosticoMapa.conexion || 'No disponible' }}</div>
+            <div class="q-mb-xs" style="overflow-wrap:anywhere"><b>Firma SHA-1:</b> {{ diagnosticoMapa.firmaSha1 || 'No disponible' }}</div>
+            <div v-if="diagnosticoMapa.error" class="text-negative q-mt-sm">
+              {{ diagnosticoMapa.error }}
+            </div>
+          </template>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat color="primary" label="Cerrar" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <PhotoViewerDialog
       v-model="visorFotoConductor"
       :src="fotoConductorUrl"
@@ -1455,6 +1501,7 @@ import {
 
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
+import { registerPlugin } from '@capacitor/core'
 import axios from 'axios'
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
@@ -1502,6 +1549,10 @@ const comentarioCalificacion = ref('')
 const enviandoCalificacion = ref(false)
 const distanciaKm = ref(0)
 const mapaProveedor = ref('OpenStreetMap')
+const dialogDiagnosticoMapa = ref(false)
+const cargandoDiagnosticoMapa = ref(false)
+const diagnosticoMapa = ref(null)
+const motrixMapsDiagnostico = registerPlugin('MotrixMapsDiagnostico')
 const mapaAlternativo = ref(mapaAlternativoActivo())
 const seleccionandoDestinoMapa = ref(false)
 
@@ -3467,6 +3518,31 @@ async function colocarDestino(lat, lng, direccionConocida = null) {
 
   if (origenCoords.value) {
     await obtenerRuta()
+  }
+}
+
+async function mostrarDiagnosticoMapa() {
+  dialogDiagnosticoMapa.value = true
+  cargandoDiagnosticoMapa.value = true
+  diagnosticoMapa.value = null
+  try {
+    const estado = window.__MOTRIX_NATIVE_APP__
+      ? await motrixMapsDiagnostico.estado()
+      : { paquete: 'Navegador web', claveConfigurada: false, serviciosGoogle: 'No aplica', firmaSha1: 'No aplica' }
+    const elemento = document.querySelector('.motrix-google-map-element')
+    const dimensiones = elemento?.getBoundingClientRect()
+    diagnosticoMapa.value = {
+      ...estado,
+      motor: mapa?.isNative ? 'Google Maps Android' : proveedorMapa(),
+      vista: dimensiones
+        ? Math.round(dimensiones.width) + ' × ' + Math.round(dimensiones.height) + ' px'
+        : 'No se encontró el mapa nativo',
+      conexion: navigator.onLine ? 'Conectado' : 'Sin conexión'
+    }
+  } catch (error) {
+    diagnosticoMapa.value = { error: String(error?.message || error) }
+  } finally {
+    cargandoDiagnosticoMapa.value = false
   }
 }
 
