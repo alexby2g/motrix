@@ -1,12 +1,12 @@
 <template>
   <q-page
     :class="[
-      $q.screen.lt.sm ? 'q-pa-sm bg-grey-2 motrix-conductor-page' : 'q-pa-md bg-grey-2 motrix-conductor-page',
-      { 'motrix-driver-trip-page': $q.screen.lt.sm && tieneViajeActivo }
+      vistaConductorMovil ? 'q-pa-sm bg-grey-2 motrix-conductor-page' : 'q-pa-md bg-grey-2 motrix-conductor-page',
+      { 'motrix-driver-trip-page': vistaConductorMovil && tieneViajeActivo }
     ]"
   >
     <!-- ENCABEZADO -->
-    <q-card v-if="!($q.screen.lt.sm && tieneViajeActivo)" class="bg-primary text-white border-radius-lg shadow-2 q-mb-md">
+    <q-card v-if="!(vistaConductorMovil && tieneViajeActivo)" class="bg-primary text-white border-radius-lg shadow-2 q-mb-md">
       <q-card-section class="row items-center q-col-gutter-md">
         <div class="col">
           <div class="row items-center no-wrap">
@@ -39,7 +39,7 @@
     </q-card>
 
     <!-- ESTADO DEL CONDUCTOR -->
-    <q-card v-if="!($q.screen.lt.sm && tieneViajeActivo)" class="border-radius-lg shadow-1 q-mb-md motrix-conductor-estado">
+    <q-card v-if="!(vistaConductorMovil && tieneViajeActivo)" class="border-radius-lg shadow-1 q-mb-md motrix-conductor-estado">
       <q-card-section>
         <div class="row items-center q-col-gutter-md">
           <div class="col-12 col-sm">
@@ -123,18 +123,20 @@
 
     <!-- VIAJE ACTIVO EN CELULAR: mapa visible desde el primer segundo.
          Las acciones llaman a los mismos metodos del flujo original. -->
-    <section v-if="$q.screen.lt.sm && tieneViajeActivo" class="motrix-driver-live" aria-label="Viaje activo del mototaxista">
+    <section v-if="vistaConductorMovil && tieneViajeActivo" class="motrix-driver-live" aria-label="Viaje activo del mototaxista">
       <div class="motrix-driver-map-stage">
         <div id="mapa-navegacion-conductor" class="mapa-navegacion motrix-driver-map-canvas" />
         <div class="motrix-driver-map-status">
           <q-icon name="two_wheeler" size="19px" color="positive" />
           <div class="min-width-zero">
             <div class="text-weight-bold">Viaje #{{ viajeActivo.id }}</div>
-            <div class="text-caption">{{ viajeActivo.estado }}</div>
+            <div class="text-caption">{{ viajeActivo.estado }} · {{ proveedorMapaConductor }}</div>
           </div>
           <q-btn flat dense round icon="refresh" aria-label="Actualizar viaje" :loading="loading" @click="cargarTodo(true)" />
         </div>
         <div class="motrix-driver-map-controls">
+          <q-btn round unelevated icon="bug_report" color="white" text-color="green-9"
+            aria-label="Diagnóstico de Google Maps" @click="mostrarDiagnosticoConductor" />
           <q-btn round unelevated icon="my_location" color="white" text-color="green-9"
             aria-label="Centrar mapa" @click="centrarMapaNavegacion" />
           <q-btn round unelevated icon="layers" color="white" text-color="green-9"
@@ -226,8 +228,38 @@
       </div>
     </section>
 
+
+    <q-dialog v-model="dialogDiagnosticoConductor">
+      <q-card style="width: min(94vw, 460px); max-width: 94vw">
+        <q-card-section class="row items-center justify-between">
+          <div class="text-subtitle1 text-weight-bold">Diagnóstico de Google Maps</div>
+          <q-btn flat round dense icon="close" v-close-popup />
+        </q-card-section>
+        <q-separator />
+        <q-card-section>
+          <q-spinner v-if="cargandoDiagnosticoConductor" color="positive" size="28px" />
+          <template v-else-if="diagnosticoConductor">
+            <div><strong>Motor:</strong> {{ diagnosticoConductor.motor }}</div>
+            <div><strong>Carga de calles:</strong> {{ diagnosticoConductor.cargaCalles }}</div>
+            <div><strong>Mapa:</strong> {{ diagnosticoConductor.vista }}</div>
+            <div><strong>Internet:</strong> {{ diagnosticoConductor.conexion }}</div>
+            <div><strong>GPS:</strong> {{ diagnosticoConductor.gps }}</div>
+            <div><strong>Paquete Android:</strong> {{ diagnosticoConductor.paquete }}</div>
+            <div><strong>Clave instalada:</strong> {{ diagnosticoConductor.claveConfigurada ? 'Sí' : 'No detectada' }}</div>
+            <div><strong>Servicios Google:</strong> {{ diagnosticoConductor.serviciosGoogle }}</div>
+            <div style="overflow-wrap:anywhere"><strong>Firma SHA-1:</strong> {{ diagnosticoConductor.firmaSha1 }}</div>
+            <div v-if="diagnosticoConductor.error" class="text-negative">{{ diagnosticoConductor.error }}</div>
+            <div class="text-caption q-mt-md">Si Google Maps no carga calles, verifica que la clave Android autorice este paquete y la firma SHA-1 en Google Cloud.</div>
+          </template>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat color="positive" label="Cambiar mapa" v-close-popup @click="cambiarProveedorMapaConductor" />
+          <q-btn flat color="primary" label="Cerrar" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <!-- VIAJE ACTIVO: diseño de escritorio conservado -->
-    <div v-if="$q.screen.gt.xs && tieneViajeActivo" class="q-mb-md">
+    <div v-if="!vistaConductorMovil && tieneViajeActivo" class="q-mb-md">
       <div class="row items-center q-mb-sm">
         <q-icon
           name="navigation"
@@ -1822,6 +1854,7 @@ import {
 } from 'vue'
 
 import { useQuasar } from 'quasar'
+import { registerPlugin } from '@capacitor/core'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Echo from 'laravel-echo'
@@ -2003,6 +2036,12 @@ const tieneViajeActivo = computed(() => {
   return Boolean(viajeActivo.value && viajeActivo.value.id)
 })
 
+// Android debe usar el panel de navegacion movil incluso en telefonos
+// que exponen un viewport mayor a 600px. No altera la vista de escritorio.
+const vistaConductorMovil = computed(() =>
+  $q.screen.lt.md || Boolean(window.__MOTRIX_NATIVE_APP__)
+)
+
 const nombreMototaxista = computed(() => {
   return mototaxista.value?.persona?.nombre || `Mototaxista #${MOTOTAXISTA_ID}`
 })
@@ -2011,6 +2050,11 @@ const nombreMototaxista = computed(() => {
 const visorQrPago = ref(false)
 const cambiandoMapa = ref(false)
 const usarMapaAlternativo = ref(mapaAlternativoActivo())
+const dialogDiagnosticoConductor = ref(false)
+const cargandoDiagnosticoConductor = ref(false)
+const diagnosticoConductor = ref(null)
+const proveedorMapaConductor = ref('Preparando mapa...')
+const pluginDiagnosticoConductor = registerPlugin('MotrixMapsDiagnostico')
 const qrPagoConductorUrl = computed(() => {
   return String(
     mototaxista.value?.qr_pago_ruta || ''
@@ -2446,6 +2490,7 @@ const eliminarCapaMapa = (capa) => {
 }
 
 const destruirMapaNavegacion = () => {
+  proveedorMapaConductor.value = 'Preparando mapa...'
   // Invalida una creación pendiente al cambiar de viaje o proveedor.
   generacionMapaNavegacion += 1
   if (temporizadorMapaConductor) {
@@ -2727,11 +2772,12 @@ const inicializarMapaNavegacion = async (forzarRuta = true) => {
       return
     }
     mapaNavegacion = creado.setView([-14.8308, -64.9024], 14)
+    proveedorMapaConductor.value = mapaNavegacion.isNative ? 'Google Maps Android' : 'Mapa de respaldo'
 
     document.body.classList.toggle('motrix-conductor-google-native', Boolean(mapaNavegacion.isNative))
     // Si el SDK Android no entrega las calles, usar OpenStreetMap
     // automaticamente en lugar de dejar un rectangulo vacio.
-    if (mapaNavegacion.isNative && $q.screen.lt.sm) {
+    if (mapaNavegacion.isNative && vistaConductorMovil.value) {
       temporizadorMapaConductor = window.setTimeout(async () => {
         if (
           mapaNavegacion?.isNative
@@ -2787,6 +2833,31 @@ const cambiarProveedorMapaConductor = async () => {
     await inicializarMapaNavegacion(true)
   } finally {
     cambiandoMapa.value = false
+  }
+}
+
+const mostrarDiagnosticoConductor = async () => {
+  dialogDiagnosticoConductor.value = true
+  cargandoDiagnosticoConductor.value = true
+  diagnosticoConductor.value = null
+  try {
+    const estado = window.__MOTRIX_NATIVE_APP__
+      ? await pluginDiagnosticoConductor.estado()
+      : { paquete: 'Navegador web', claveConfigurada: false, serviciosGoogle: 'No aplica', firmaSha1: 'No aplica' }
+    const elemento = document.querySelector('#mapa-navegacion-conductor capacitor-google-map')
+    const dimensiones = elemento?.getBoundingClientRect()
+    diagnosticoConductor.value = {
+      ...estado,
+      motor: proveedorMapaConductor.value,
+      cargaCalles: estadoCargaGoogleMapsNativo(),
+      vista: dimensiones ? Math.round(dimensiones.width) + ' x ' + Math.round(dimensiones.height) + ' px' : 'Sin mapa nativo visible',
+      conexion: navigator.onLine ? 'Conectado' : 'Sin conexión',
+      gps: gpsMensaje.value
+    }
+  } catch (error) {
+    diagnosticoConductor.value = { error: String(error?.message || error) }
+  } finally {
+    cargandoDiagnosticoConductor.value = false
   }
 }
 
@@ -3588,13 +3659,17 @@ const enviarUbicacion = async (posicion) => {
   const latitud = posicion.coords.latitude
   const longitud = posicion.coords.longitude
 
+  // El marcador propio responde al GPS antes de recibir la respuesta HTTP.
+  // El pasajero solo recibe esta posicion despues de que la API la confirme.
+  ultimaUbicacion.value = { latitud, longitud }
+  gpsEstado.value = 'activo'
+  gpsMensaje.value = 'Sincronizando ubicación...'
+
   await api.patch(
     '/conductor/ubicacion',
     { latitud, longitud }
   )
 
-  ultimaUbicacion.value = { latitud, longitud }
-  gpsEstado.value = 'activo'
   gpsMensaje.value = 'Ubicación compartida'
   ultimaUbicacionEnviada = Date.now()
 }
@@ -4083,7 +4158,7 @@ watch(
 
 // El modo viaje usa el mapa nativo como fondo de pantalla, sin tarjetas opacas.
 watch(
-  () => Boolean(tieneViajeActivo.value && $q.screen.lt.sm),
+  () => Boolean(tieneViajeActivo.value && vistaConductorMovil.value),
   (activo) => document.body.classList.toggle('motrix-driver-trip-screen', activo),
   { immediate: true, flush: 'sync' }
 )
