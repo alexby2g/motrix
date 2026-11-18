@@ -47,16 +47,14 @@
             <div><q-icon name="gps_fixed" :color="edadUbicacion === null || edadUbicacion >= 60 ? 'warning' : 'positive'" size="18px" /> {{ ultimaActualizacionTexto }}</div>
           </div>
           <div v-if="incidenciaActiva" class="motrix-passenger-incident"><q-icon name="warning" /> Incidente {{ incidenciaActiva.codigo || '' }}: {{ incidenciaActiva.estado }}</div>
-          <div class="motrix-passenger-contact-row">
-            <LlamadaPrivadaPrueba :viaje-id="viajeActivo.id" :estado="viajeActivo.estado" class="motrix-passenger-contact" />
-            <ViajeChat :viaje-id="viajeActivo.id" :estado="viajeActivo.estado" rol="pasajero" class="motrix-passenger-contact" />
-            <q-btn v-if="sosDisponible" flat dense no-caps color="negative" icon="sos" label="SOS" @click="abrirDialogoSos" />
-          </div>
         </div>
-        <div class="motrix-passenger-primary-actions">
-          <q-btn outline no-caps color="green-9" icon="info_outline" label="Detalles" @click="mostrarDetallesPasajero = true" />
-          <q-btn unelevated no-caps color="positive" icon="share_location" label="Compartir" :loading="compartiendoViaje" @click="compartirViaje" />
-          <q-btn v-if="puedeCancelar" flat no-caps color="negative" icon="close" label="Cancelar" :loading="cancelando" @click="confirmarCancelacion" />
+        <!-- Sólo las tres acciones solicitadas. Las demás funciones
+             permanecen implementadas sin ocupar el mapa del viaje. -->
+        <div class="motrix-passenger-contact-row motrix-passenger-three-actions">
+          <LlamadaPrivadaPrueba :viaje-id="viajeActivo.id" :estado="viajeActivo.estado" class="motrix-passenger-contact" />
+          <ViajeChat :viaje-id="viajeActivo.id" :estado="viajeActivo.estado" rol="pasajero" class="motrix-passenger-contact" />
+          <q-btn unelevated no-caps color="positive" icon="share_location"
+            label="Compartir viaje" :loading="compartiendoViaje" @click="compartirViaje" />
         </div>
       </div>
     </section>
@@ -1718,6 +1716,9 @@ let marcadorDestino = null
 let lineaRuta = null
 
 let mapaSeguimiento = null
+// Primer encuadre solamente. Después el usuario puede explorar libremente
+// sin que la actualización del GPS o de OSRM le robe la cámara.
+let vistaSeguimientoCentrada = false
 let inicializandoMapaSeguimiento = false
 let marcadorConductorSeguimiento = null
 let marcadorOrigenSeguimiento = null
@@ -2357,6 +2358,7 @@ function destruirMapaSeguimiento() {
   }
 
   mapaSeguimiento = null
+  vistaSeguimientoCentrada = false
   inicializandoMapaSeguimiento = false
   marcadorConductorSeguimiento = null
   marcadorOrigenSeguimiento = null
@@ -2598,8 +2600,6 @@ async function dibujarRutaSeguimiento(conductor, objetivo) {
         }
       }
     ).addTo(mapaSeguimiento)
-
-    centrarMapaSeguimiento()
   } catch (error) {
     console.error('Error calculando seguimiento:', error)
 
@@ -2630,8 +2630,6 @@ async function dibujarRutaSeguimiento(conductor, objetivo) {
         dashArray: '8 8'
       }
     ).addTo(mapaSeguimiento)
-
-    centrarMapaSeguimiento()
   }
 }
 
@@ -2687,10 +2685,14 @@ async function actualizarMapaSeguimiento() {
       ? destino
       : origen
 
+    // Hacer el encuadre inicial ANTES de solicitar la ruta por red,
+    // nunca varios segundos después cuando el usuario ya está navegando.
+    if (!vistaSeguimientoCentrada && (conductor || objetivo)) {
+      vistaSeguimientoCentrada = true
+      centrarMapaSeguimiento()
+    }
     if (conductor && objetivo) {
       await dibujarRutaSeguimiento(conductor, objetivo)
-    } else {
-      centrarMapaSeguimiento()
     }
 
     mapaSeguimiento.invalidateSize()
@@ -5205,18 +5207,29 @@ async function compartirViaje() {
       }
     }
 
-    await navigator.clipboard?.writeText?.(url)
+    let enlaceCopiado = false
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+        enlaceCopiado = true
+      }
+    } catch (error) {
+      // Algunos WebView bloquean el portapapeles, pero el enlace sigue disponible.
+      console.warn('No se pudo copiar el enlace de seguimiento:', error)
+    }
 
     $q.dialog({
-      title: 'Seguimiento compartido',
-      message: `Enlace temporal: ${url}`,
+      title: 'Compartir seguimiento',
+      message: `Enlace temporal de tu viaje (mantén pulsado para copiar): ${url}`,
       ok: { label: 'Entendido', color: 'green-8' }
     })
 
     $q.notify({
       type: 'positive',
       icon: 'link',
-      message: 'Enlace de seguimiento creado. También se copió cuando el dispositivo lo permitió.'
+      message: enlaceCopiado
+        ? 'Enlace de seguimiento creado y copiado.'
+        : 'Enlace de seguimiento creado. Puedes copiarlo desde la ventana.'
     })
   } catch (error) {
     $q.notify({
