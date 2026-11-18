@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-sm q-pa-md-md bg-grey-2 motrix-solicitud-page">
+  <q-page class="q-pa-sm q-pa-md-md motrix-solicitud-page">
     <div class="row justify-center">
       <div class="col-12 col-xl-10">
         <q-card class="solicitud-card shadow-2 motrix-solicitud-card"
