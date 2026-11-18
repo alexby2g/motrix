@@ -56,6 +56,15 @@ class AppServiceProvider extends ServiceProvider
             'motrix-password-recovery',
             function (Request $request) {
                 $login = mb_strtolower(trim((string) $request->input('login', '')));
+                $phone = preg_replace('/\\D+/', '', $login) ?? '';
+                if (str_starts_with($phone, '00591') && strlen($phone) === 13) {
+                    $phone = substr($phone, 5);
+                } elseif (str_starts_with($phone, '591') && strlen($phone) === 11) {
+                    $phone = substr($phone, 3);
+                }
+                $identifier = preg_match('/^[67][0-9]{7}$/', $phone)
+                    ? $phone
+                    : $login;
 
                 $ruta = (string) $request->path();
                 $solicitud = str_ends_with($ruta, '/solicitar');
@@ -65,8 +74,8 @@ class AppServiceProvider extends ServiceProvider
                 return [
                     Limit::perHour(30)->by('recuperacion-ip:' . (string) $request->ip()),
                     $solicitud
-                        ? Limit::perHour(3)->by('recuperacion-sms:' . hash('sha256', $login))
-                        : Limit::perHour(15)->by('recuperacion-codigo:' . (string) $request->ip() . '|' . hash('sha256', $login)),
+                        ? Limit::perHour(3)->by('recuperacion-sms:' . hash('sha256', $identifier))
+                        : Limit::perHour(15)->by('recuperacion-codigo:' . (string) $request->ip() . '|' . hash('sha256', $identifier)),
                 ];
             }
         );
