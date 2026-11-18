@@ -1,7 +1,7 @@
-/* MOTRIX 1.1.67 — Cabina de viaje: mapa en primer plano.
+/* MOTRIX — Cabina de viaje: mapa en primer plano.
    La vista nativa de Google Maps esta DETRAS del WebView en Android:
    no puede existir ninguna superficie opaca entre el mapa y la ventana. */
-@media (max-width: 599px) {
+@media (max-width: 1023px) {
   body.motrix-driver-trip-screen {
     overflow: hidden !important;
   }
