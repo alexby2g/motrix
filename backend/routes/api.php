@@ -17,6 +17,7 @@ use App\Http\Controllers\PagoSindicalController;
 use App\Http\Controllers\ImagenController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\IncidenciaViajeController;
+use App\Http\Controllers\MensajeViajeController;
 use App\Http\Controllers\FederacionController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\PasswordRecoveryController;
@@ -277,6 +278,20 @@ Route::middleware([
                 ]
             );
 
+            // Chat privado del viaje: la autorización por solicitud se valida en el controlador.
+            Route::get(
+                '/solicitudes/{id}/mensajes',
+                [MensajeViajeController::class, 'index']
+            )->whereNumber('id');
+            Route::post(
+                '/solicitudes/{id}/mensajes',
+                [MensajeViajeController::class, 'store']
+            )->whereNumber('id')->middleware('throttle:20,1');
+            Route::post(
+                '/solicitudes/{id}/mensajes/leidos',
+                [MensajeViajeController::class, 'marcarLeidos']
+            )->whereNumber('id')->middleware('throttle:30,1');
+
             Route::get(
                 '/solicitudes/{id}/incidencias',
                 [
@@ -364,6 +379,20 @@ Route::middleware([
                     'calificarViajePasajero',
                 ]
             );
+
+            // Chat privado del viaje: la autorización por solicitud se valida en el controlador.
+            Route::get(
+                '/solicitudes/{id}/mensajes',
+                [MensajeViajeController::class, 'index']
+            )->whereNumber('id');
+            Route::post(
+                '/solicitudes/{id}/mensajes',
+                [MensajeViajeController::class, 'store']
+            )->whereNumber('id')->middleware('throttle:20,1');
+            Route::post(
+                '/solicitudes/{id}/mensajes/leidos',
+                [MensajeViajeController::class, 'marcarLeidos']
+            )->whereNumber('id')->middleware('throttle:30,1');
 
             Route::post(
                 '/solicitudes/{id}/compartir',
