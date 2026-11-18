@@ -1520,6 +1520,11 @@
                 :src="qrPagoConductorUrl"
                 alt="QR de cobro MOTRIX"
                 class="cobro-qr-image"
+                  role="button"
+                  tabindex="0"
+                  aria-label="Ampliar QR de cobro"
+                  @click="visorQrPago = true"
+                  @keydown.enter="visorQrPago = true"
               >
 
               <q-banner
@@ -1602,6 +1607,11 @@
                   :src="qrPagoConductorUrl"
                   alt="QR de cobro MOTRIX"
                   class="cobro-qr-image"
+                  role="button"
+                  tabindex="0"
+                  aria-label="Ampliar QR de cobro"
+                  @click="visorQrPago = true"
+                  @keydown.enter="visorQrPago = true"
                 >
 
                 <q-banner
@@ -1671,6 +1681,20 @@
       </q-card>
     </q-dialog>
   </q-page>
+    <q-dialog v-model="visorQrPago">
+      <q-card class="motrix-qr-ampliado">
+        <q-card-section class="row items-center justify-between">
+          <div class="text-subtitle1 text-weight-bold">QR para pagar el viaje</div>
+          <q-btn flat round dense icon="close" v-close-popup aria-label="Cerrar QR" />
+        </q-card-section>
+        <q-card-section class="text-center q-pt-none">
+          <img v-if="qrPagoConductorUrl" :src="qrPagoConductorUrl" alt="Código QR de pago ampliado" class="motrix-qr-imagen-grande">
+          <div class="q-mt-sm text-weight-medium">{{ qrPagoMetodoConductor }}</div>
+          <div class="text-caption text-grey-7">{{ qrPagoTitularConductor }}</div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
 </template>
 
 <script setup>
@@ -1871,6 +1895,7 @@ const nombreMototaxista = computed(() => {
 })
 
 
+const visorQrPago = ref(false)
 const qrPagoConductorUrl = computed(() => {
   return String(
     mototaxista.value?.qr_pago_ruta || ''
@@ -2304,6 +2329,7 @@ const eliminarCapaMapa = (capa) => {
 }
 
 const destruirMapaNavegacion = () => {
+  document.body.classList.remove('motrix-conductor-google-native')
   if (mapaNavegacion) {
     mapaNavegacion.remove()
   }
@@ -2557,13 +2583,16 @@ const inicializarMapaNavegacion = async (forzarRuta = true) => {
       attributionControl: true
     })).setView([-14.8308, -64.9024], 14)
 
-    L.tileLayer(
-      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      {
-        attribution: '© OpenStreetMap',
-        maxZoom: 19
-      }
-    ).addTo(mapaNavegacion)
+    document.body.classList.toggle('motrix-conductor-google-native', Boolean(mapaNavegacion.isNative))
+    if (!mapaNavegacion.isNative) {
+      L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+          attribution: '© OpenStreetMap',
+          maxZoom: 19
+        }
+      ).addTo(mapaNavegacion)
+    }
   }
 
   window.setTimeout(() => {
@@ -4415,4 +4444,26 @@ onBeforeUnmount(() => {
     border-radius: 12px;
   }
 }
+</style>
+
+<style>
+body.motrix-conductor-google-native,
+body.motrix-conductor-google-native #q-app,
+body.motrix-conductor-google-native .q-layout,
+body.motrix-conductor-google-native .q-page-container,
+body.motrix-conductor-google-native .motrix-conductor-page,
+body.motrix-conductor-google-native .motrix-conductor-mapa,
+body.motrix-conductor-google-native .motrix-conductor-navegacion,
+body.motrix-conductor-google-native .mapa-navegacion-wrapper,
+body.motrix-conductor-google-native .mapa-navegacion {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+body.motrix-conductor-google-native .motrix-conductor-navegacion,
+body.motrix-conductor-google-native .mapa-navegacion-wrapper {
+  overflow: visible !important;
+}
+.motrix-qr-ampliado { width: min(94vw, 500px); border-radius: 18px; }
+.motrix-qr-imagen-grande { display: block; width: 100%; max-height: 70vh; object-fit: contain; }
 </style>
