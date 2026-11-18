@@ -4891,8 +4891,11 @@ async function cargarViajeActivo(
   const solicitudAnterior = viajeActivo.value
 
   try {
+    // Evitar respuestas de seguimiento cacheadas: la posicion del
+    // conductor cambia durante todo el trayecto.
     const respuesta = await api.get(
-      '/pasajero/viaje-activo'
+      '/pasajero/viaje-activo',
+      { params: { _t: Date.now() } }
     )
 
     const solicitudActual = (
@@ -5229,6 +5232,10 @@ function volver() {
   router.push('/pasajero')
 }
 
+
+watch(() => viajeActivo.value?.id || null, (nuevoId, anteriorId) => {
+  if (nuevoId !== anteriorId) mostrarDetallesPasajero.value = false
+})
 
 watch(mostrarMapaPasajero, async () => {
   destruirMapaSeguimiento()
