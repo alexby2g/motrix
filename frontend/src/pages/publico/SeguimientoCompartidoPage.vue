@@ -26,7 +26,30 @@
           <q-card-section class="q-pa-lg">
             <div class="row q-col-gutter-lg">
               <div class="col-12 col-md-7">
-                <div ref="mapaRef" class="shared-map" />
+                <div class="shared-map-wrap">
+                  <div ref="mapaRef" class="shared-map" />
+                  <div class="shared-map-status">
+                    <q-icon name="two_wheeler" color="positive" size="25px" />
+                    <div class="col min-width-zero">
+                      <strong>{{ tituloEstado }}</strong>
+                      <div class="text-caption">{{ datos.seguimiento_activo ? 'Ubicación actualizada durante el viaje' : 'Seguimiento finalizado' }}</div>
+                    </div>
+                    <q-btn dense round flat icon="my_location" color="green-8"
+                      aria-label="Centrar recorrido" @click="centrarMapa" />
+                  </div>
+                  <div class="shared-map-legend">
+                    <span><i class="shared-dot shared-dot--blue" /> Conductor</span>
+                    <span><i class="shared-dot shared-dot--green" /> Recogida</span>
+                    <span><i class="shared-dot shared-dot--red" /> Destino</span>
+                  </div>
+                  <div v-if="datos.seguimiento_activo && !hayGps" class="shared-map-notice">
+                    Esperando la próxima ubicación GPS del conductor.
+                  </div>
+                </div>
+                <div class="shared-map-metrics">
+                  <span><q-icon name="route" color="positive" /> {{ distanciaRutaTexto }}</span>
+                  <span><q-icon name="schedule" color="orange-8" /> {{ tiempoRutaTexto }}</span>
+                </div>
                 <div class="text-caption text-grey-6 q-mt-sm">
                   La ubicación del conductor solo se comparte mientras el viaje está activo.
                 </div>
@@ -98,6 +121,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import L from 'leaflet'
+import { obtenerRutaCallesMotrix } from 'src/utils/rutasViajeMotrix.js'
 import 'leaflet/dist/leaflet.css'
 import { api } from 'src/boot/axios.js'
 import PhotoViewerDialog from 'src/components/PhotoViewerDialog.vue'
@@ -109,13 +133,46 @@ const datos = ref(null)
 const mapaRef = ref(null)
 const visorFoto = ref(false)
 let mapa = null
+const marcadores = new Map()
+let lineaRuta = null
+let claveRutaDibujada = ''
+let ultimaRutaCalculadaEn = 0
+let rutaEnCurso = false
+let inicialCentrada = false
+let numeroCarga = 0
 let intervalo = null
+const distanciaRutaKm = ref(null)
+const tiempoRutaMin = ref(null)
+const rutaDirecta = ref(false)
+const calculandoRuta = ref(false)
 
 const viaje = computed(() => datos.value?.viaje || {})
 const conductor = computed(() => datos.value?.conductor || null)
 const nombreConductor = computed(() => conductor.value?.nombre || 'Mototaxista MOTRIX')
 const promedioCalificacion = computed(() => Number(conductor.value?.promedio_calificacion || 0))
 const totalCalificaciones = computed(() => Number(conductor.value?.total_calificaciones || 0))
+const estadoViaje = computed(() => String(viaje.value?.estado || '').trim().toLowerCase())
+const tituloEstado = computed(() => {
+  if (estadoViaje.value === 'aceptado') return 'Tu mototaxista va a recoger al pasajero'
+  if (estadoViaje.value === 'llegó') return 'El mototaxista llegó al punto de recogida'
+  if (estadoViaje.value === 'en curso') return 'Viaje en curso hacia el destino'
+  return 'Seguimiento del viaje MOTRIX'
+})
+const hayGps = computed(() =>
+  numero(conductor.value?.latitud) !== null && numero(conductor.value?.longitud) !== null
+)
+const distanciaRutaTexto = computed(() => {
+  if (!datos.value?.seguimiento_activo) return 'Seguimiento cerrado'
+  if (!hayGps.value) return 'Esperando GPS'
+  if (distanciaRutaKm.value === null) return calculandoRuta.value ? 'Calculando ruta...' : 'Ruta pendiente'
+  const distancia = Number(distanciaRutaKm.value).toFixed(2)
+  return rutaDirecta.value ? distancia + ' km en línea recta' : distancia + ' km por calles'
+})
+const tiempoRutaTexto = computed(() => {
+  if (!datos.value?.seguimiento_activo || !hayGps.value) return 'Sin estimación'
+  if (rutaDirecta.value || tiempoRutaMin.value === null) return 'Tiempo no disponible'
+  return tiempoRutaMin.value + ' min aprox.'
+})
 
 function apiOrigen() {
   try { return new URL(api.defaults.baseURL).origin } catch { return window.location.origin }
@@ -137,32 +194,120 @@ function numero(valor) {
 
 function puntosMapa() {
   const puntos = []
-  const oLat = numero(viaje.value.latitud_origen); const oLng = numero(viaje.value.longitud_origen)
-  const dLat = numero(viaje.value.latitud_destino); const dLng = numero(viaje.value.longitud_destino)
-  const cLat = numero(conductor.value?.latitud); const cLng = numero(conductor.value?.longitud)
-  if (oLat !== null && oLng !== null) puntos.push({ lat: oLat, lng: oLng, label: 'Origen', color: '#2e7d32' })
-  if (dLat !== null && dLng !== null) puntos.push({ lat: dLat, lng: dLng, label: 'Destino', color: '#c62828' })
-  if (cLat !== null && cLng !== null) puntos.push({ lat: cLat, lng: cLng, label: nombreConductor.value, color: '#1565c0' })
+  const oLat = numero(viaje.value.latitud_origen)
+  const oLng = numero(viaje.value.longitud_origen)
+  const dLat = numero(viaje.value.latitud_destino)
+  const dLng = numero(viaje.value.longitud_destino)
+  const cLat = numero(conductor.value?.latitud)
+  const cLng = numero(conductor.value?.longitud)
+  if (oLat !== null && oLng !== null) puntos.push({ id: 'recogida', lat: oLat, lng: oLng, label: 'Punto de recogida', color: '#22b35b' })
+  if (dLat !== null && dLng !== null) puntos.push({ id: 'destino', lat: dLat, lng: dLng, label: 'Destino', color: '#ca364b' })
+  if (cLat !== null && cLng !== null) puntos.push({ id: 'conductor', lat: cLat, lng: cLng, label: nombreConductor.value, color: '#1976d2' })
   return puntos
+}
+
+function centrarMapa() {
+  if (!mapa) return
+  const conductorPunto = puntosMapa().find(p => p.id === 'conductor')
+  const objetivo = puntosMapa().find(p => p.id === (estadoViaje.value === 'en curso' ? 'destino' : 'recogida'))
+  const puntos = [conductorPunto, objetivo].filter(Boolean).map(p => [p.lat, p.lng])
+  if (puntos.length >= 2) mapa.fitBounds(puntos, { padding: [45, 45], maxZoom: 16 })
+  else if (puntos.length === 1) mapa.setView(puntos[0], 16)
+  else mapa.setView([-14.8308, -64.9024], 13)
+}
+
+async function actualizarRuta() {
+  if (!mapa || !datos.value?.seguimiento_activo || rutaEnCurso) return
+  const posiciones = puntosMapa()
+  const conductorPunto = posiciones.find(p => p.id === 'conductor')
+  const objetivo = posiciones.find(p => p.id === (estadoViaje.value === 'en curso' ? 'destino' : 'recogida'))
+  if (!conductorPunto || !objetivo) return
+
+  const origen = [conductorPunto.lat, conductorPunto.lng]
+  const destino = [objetivo.lat, objetivo.lng]
+  const clave = [estadoViaje.value, ...origen.map(v => v.toFixed(4)), ...destino.map(v => v.toFixed(5))].join('|')
+  if (clave === claveRutaDibujada && lineaRuta
+    && (!rutaDirecta.value || Date.now() - ultimaRutaCalculadaEn < 30000)) return
+
+  rutaEnCurso = true
+  calculandoRuta.value = true
+  const generacion = numeroCarga
+  try {
+    const resultado = await obtenerRutaCallesMotrix(origen, destino)
+    if (!mapa || !datos.value?.seguimiento_activo || generacion !== numeroCarga
+      || (estadoViaje.value === 'en curso' ? 'destino' : 'recogida') !== objetivo.id) return
+
+    if (lineaRuta) mapa.removeLayer(lineaRuta)
+    if (resultado.disponible) {
+      lineaRuta = L.geoJSON(resultado.geometria, {
+        style: { color: estadoViaje.value === 'en curso' ? '#303f9f' : '#1976d2', weight: 6, opacity: 0.88 }
+      }).addTo(mapa)
+      distanciaRutaKm.value = resultado.distanciaKm
+      tiempoRutaMin.value = resultado.duracionMin
+      rutaDirecta.value = false
+    } else {
+      lineaRuta = L.polyline([origen, destino], {
+        color: '#1976d2', weight: 5, opacity: 0.7, dashArray: '9 9'
+      }).addTo(mapa)
+      // Nunca confundir una línea de orientación con ruta de conducción.
+      const distanciaMetros = mapa.distance(origen, destino)
+      distanciaRutaKm.value = Number((distanciaMetros / 1000).toFixed(2))
+      tiempoRutaMin.value = null
+      rutaDirecta.value = true
+    }
+    claveRutaDibujada = clave
+    ultimaRutaCalculadaEn = Date.now()
+    // Sin fitBounds automático: quien recibe el enlace puede explorar.
+  } catch (err) {
+    console.warn('No se pudo mostrar la ruta del enlace:', err)
+  } finally {
+    rutaEnCurso = false
+    calculandoRuta.value = false
+  }
 }
 
 async function dibujarMapa() {
   await nextTick()
   if (!mapaRef.value) return
-  if (mapa) { mapa.remove(); mapa = null }
+  if (!mapa) {
+    mapa = L.map(mapaRef.value, { zoomControl: false })
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '&copy; OpenStreetMap'
+    }).addTo(mapa)
+    L.control.zoom({ position: 'bottomright' }).addTo(mapa)
+  }
+
   const puntos = puntosMapa()
-  mapa = L.map(mapaRef.value, { zoomControl: true })
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mapa)
-  const bounds = []
+  const presentes = new Set(puntos.map(p => p.id))
+  for (const [id, marcador] of marcadores) {
+    if (!presentes.has(id)) {
+      mapa.removeLayer(marcador)
+      marcadores.delete(id)
+    }
+  }
   puntos.forEach((p) => {
-    L.circleMarker([p.lat, p.lng], { radius: 9, color: p.color, fillColor: p.color, fillOpacity: 0.9, weight: 3 })
-      .addTo(mapa).bindPopup(p.label)
-    bounds.push([p.lat, p.lng])
+    const posicion = [p.lat, p.lng]
+    const actual = marcadores.get(p.id)
+    if (actual) {
+      actual.setLatLng(posicion)
+    } else {
+      const marcador = L.circleMarker(posicion, {
+        radius: p.id === 'conductor' ? 12 : 10,
+        color: '#fff', weight: 3, fillColor: p.color, fillOpacity: 1
+      }).addTo(mapa)
+      // Texto no fiable como nodo DOM, nunca inyectado como HTML.
+      marcador.bindPopup(document.createTextNode(p.label))
+      marcadores.set(p.id, marcador)
+    }
   })
-  if (bounds.length > 1) mapa.fitBounds(bounds, { padding: [35, 35] })
-  else if (bounds.length === 1) mapa.setView(bounds[0], 16)
-  else mapa.setView([-14.8347, -64.9040], 13)
-  setTimeout(() => mapa?.invalidateSize(), 80)
+
+  if (!inicialCentrada) {
+    inicialCentrada = true
+    centrarMapa()
+    window.setTimeout(() => mapa?.invalidateSize(), 120)
+  }
+  // La ruta se consulta en segundo plano, sin impedir actualizaciones GPS.
+  void actualizarRuta()
 }
 
 async function cargar() {
@@ -172,7 +317,13 @@ async function cargar() {
     const token = String(route.params.token || '').trim()
     const respuesta = await api.get(`/viaje-compartido/${encodeURIComponent(token)}`, { params: { _t: Date.now() } })
     datos.value = respuesta.data
+    numeroCarga += 1
     error.value = ''
+    if (!datos.value?.seguimiento_activo && lineaRuta && mapa) {
+      mapa.removeLayer(lineaRuta)
+      lineaRuta = null
+      claveRutaDibujada = ''
+    }
     await dibujarMapa()
   } catch (err) {
     const estado = Number(err?.response?.status || 0)
@@ -204,6 +355,8 @@ onBeforeUnmount(() => {
   if (intervalo) window.clearInterval(intervalo)
   if (mapa) mapa.remove()
   mapa = null
+  marcadores.clear()
+  lineaRuta = null
 })
 </script>
 
@@ -211,6 +364,43 @@ onBeforeUnmount(() => {
 .shared-page { min-height: 100vh; background: #eef5f0; }
 .shared-shell { max-width: 1120px; }
 .shared-header { background: linear-gradient(135deg, #1b5e20, #2e7d32); }
-.shared-map { min-height: 420px; border-radius: 14px; overflow: hidden; border: 1px solid #d8e4dc; }
-@media (max-width: 599px) { .shared-map { min-height: 330px; } }
+.shared-map-wrap { position: relative; overflow: hidden; border-radius: 18px; border: 1px solid #d8e4dc; background: #edf3ef; }
+.shared-map { height: min(64vh, 640px); min-height: 450px; }
+.shared-map-status {
+  position: absolute; top: 12px; left: 12px; right: 12px; z-index: 500;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; background: rgba(255,255,255,.97);
+  color: #173d2a; border-radius: 16px; box-shadow: 0 5px 24px #1d3c281f;
+}
+.shared-map-status strong { font-size: 14px; }
+.shared-map-status .text-caption { color: #527862; }
+.shared-map-legend {
+  position: absolute; top: 85px; left: 12px; z-index: 500;
+  display: flex; gap: 10px; flex-wrap: wrap; border-radius: 20px;
+  padding: 8px 11px; background: rgba(255,255,255,.97);
+  box-shadow: 0 3px 18px #1d3c281b; font-size: 12px; color: #3a5045;
+}
+.shared-map-legend span { display:flex; align-items:center; gap:5px; }
+.shared-dot { width: 10px; height:10px; border-radius:50%; display:inline-block; }
+.shared-dot--blue { background:#1976d2; }
+.shared-dot--green { background:#22b35b; }
+.shared-dot--red { background:#ca364b; }
+.shared-map-notice {
+  position:absolute; z-index:500; left:12px; right:12px; top:135px;
+  background:#fff8e8; color:#81591c; border-radius:12px; padding:8px 12px; font-size:12px;
+}
+.shared-map-metrics { display:flex; flex-wrap:wrap; gap:8px; padding-top:10px; }
+.shared-map-metrics span {
+  border:1px solid #e0ebe4; border-radius:20px; padding:8px 12px;
+  font-size:12px; font-weight:650; color:#34483b; background:white;
+}
+.shared-map-metrics .q-icon { margin-right:4px; }
+@media (max-width: 599px) {
+  .shared-page { padding: 9px !important; }
+  .shared-header { padding: 12px !important; }
+  .shared-map { height: 60dvh; min-height: 380px; }
+  .shared-map-status { left:9px; right:9px; top:9px; }
+  .shared-map-legend { left:9px; top:85px; }
+  .shared-map-metrics span { font-size:11px; }
+}
 </style>
