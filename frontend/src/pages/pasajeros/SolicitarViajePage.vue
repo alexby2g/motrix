@@ -1460,6 +1460,7 @@
             <div class="q-mb-xs"><b>Clave de Google Maps:</b> {{ diagnosticoMapa.claveConfigurada ? 'Configurada' : 'No detectada' }}</div>
             <div class="q-mb-xs"><b>Servicios de Google:</b> {{ diagnosticoMapa.serviciosGoogle || 'No disponible' }}</div>
             <div class="q-mb-xs"><b>Motor:</b> {{ diagnosticoMapa.motor || 'No disponible' }}</div>
+            <div class="q-mb-xs"><b>Calles de Google:</b> {{ diagnosticoMapa.cargaCalles || 'No disponible' }}</div>
             <div class="q-mb-xs"><b>Tamaño del mapa:</b> {{ diagnosticoMapa.vista || 'No disponible' }}</div>
             <div class="q-mb-xs"><b>Internet:</b> {{ diagnosticoMapa.conexion || 'No disponible' }}</div>
             <div class="q-mb-xs" style="overflow-wrap:anywhere"><b>Firma SHA-1:</b> {{ diagnosticoMapa.firmaSha1 || 'No disponible' }}</div>
@@ -1506,6 +1507,7 @@ import axios from 'axios'
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 import L, { prepararGoogleMaps, proveedorMapa, crearMapaMotrix, mapaAlternativoActivo, alternarMapaAlternativo } from 'src/utils/mapaMotrix.js'
+import { estadoCargaGoogleMapsNativo } from 'src/utils/mapaNativoCapacitor.js'
 import 'leaflet/dist/leaflet.css'
 
 import { api } from '../../boot/axios.js'
@@ -3534,6 +3536,7 @@ async function mostrarDiagnosticoMapa() {
     diagnosticoMapa.value = {
       ...estado,
       motor: mapa?.isNative ? 'Google Maps Android' : proveedorMapa(),
+      cargaCalles: estadoCargaGoogleMapsNativo(),
       vista: dimensiones
         ? Math.round(dimensiones.width) + ' × ' + Math.round(dimensiones.height) + ' px'
         : 'No se encontró el mapa nativo',
