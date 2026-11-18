@@ -2,6 +2,21 @@ import { api } from 'src/boot/axios.js'
 
 let oyentesInstalados = false
 let registroPendiente = null
+const CLAVE_FCM_ACTUAL = 'motrix_fcm_token_dispositivo'
+
+/** Desvincula únicamente este celular, no los demás teléfonos del usuario. */
+export async function desvincularPushMotrix() {
+  if (!pluginNativo()) return
+  const token = localStorage.getItem(CLAVE_FCM_ACTUAL)
+  if (!token || !localStorage.getItem('motrix_token')) return
+  try {
+    await api.delete('/push/devices', { data: { token }, timeout: 7000 })
+  } catch (error) {
+    // No impedir cerrar sesión cuando el teléfono está sin Internet.
+    console.warn('No se pudo desactivar el aviso push del dispositivo:', error?.message)
+  }
+}
+
 
 function pluginNativo() {
   if (typeof window === 'undefined') return null
@@ -51,6 +66,7 @@ export function inicializarPushMotrix(router) {
     if (!oyentesInstalados) {
       await push.addListener('registration', async ({ value }) => {
         if (!value || !localStorage.getItem('motrix_token')) return
+        localStorage.setItem(CLAVE_FCM_ACTUAL, value)
         try {
           await api.post('/push/devices', {
             token: value,
