@@ -1,6 +1,67 @@
 <template>
-  <q-page class="q-pa-sm q-pa-md-md motrix-solicitud-page" :class="{ 'motrix-pasajero-viaje-activo': Boolean(viajeActivo) }">
-    <div class="row justify-center">
+  <q-page class="q-pa-sm q-pa-md-md motrix-solicitud-page" :class="{ 'motrix-pasajero-viaje-activo': Boolean(viajeActivo), 'motrix-passenger-trip-page': mostrarMapaPasajero }">
+    <!-- Seguimiento inmersivo: la misma API y el mismo mapa que usa la ficha original. -->
+    <section v-if="mostrarMapaPasajero" class="motrix-passenger-live" aria-label="Seguimiento de tu viaje">
+      <div class="motrix-passenger-map-stage">
+        <div id="mapa-seguimiento-pasajero" class="motrix-passenger-map-canvas" />
+        <div class="motrix-passenger-map-status">
+          <q-icon name="two_wheeler" size="20px" color="positive" />
+          <div class="min-width-zero">
+            <div class="motrix-passenger-map-trip">Viaje #{{ viajeActivo.id }}</div>
+            <div class="motrix-passenger-map-state">{{ estadoSeguimientoTexto }}</div>
+          </div>
+          <q-btn flat round dense icon="refresh" aria-label="Actualizar viaje" :loading="cargandoViaje" @click="cargarViajeActivo(true)" />
+        </div>
+        <div class="motrix-passenger-map-controls">
+          <q-btn unelevated round icon="my_location" color="white" text-color="green-9" aria-label="Centrar mapa" @click="centrarMapaSeguimiento" />
+        </div>
+        <div v-if="!tieneUbicacionConductor" class="motrix-passenger-gps-warning">
+          <q-icon name="gps_off" size="19px" /> Esperando GPS del conductor. Recogida y destino señalados.
+        </div>
+        <div v-else-if="edadUbicacion !== null && edadUbicacion >= 60" class="motrix-passenger-gps-warning">
+          <q-icon name="gps_off" size="19px" /> Ubicación del conductor sin actualizar.
+        </div>
+        <div class="motrix-passenger-map-legend">
+          <span><i class="motrix-passenger-dot motrix-passenger-dot--blue" /> Conductor</span>
+          <span><i class="motrix-passenger-dot motrix-passenger-dot--green" /> Recogida</span>
+          <span><i class="motrix-passenger-dot motrix-passenger-dot--red" /> Destino</span>
+        </div>
+      </div>
+      <div class="motrix-passenger-sheet">
+        <div class="motrix-passenger-handle" />
+        <div class="motrix-passenger-sheet-scroll">
+          <div class="motrix-passenger-sheet-title">
+            <div class="min-width-zero">
+              <div class="motrix-passenger-eyebrow">{{ estadoNormalizado === 'aceptado' ? 'Tu conductor está en camino' : estadoNormalizado === 'llegó' ? 'Tu conductor llegó' : 'En camino al destino' }}</div>
+              <div class="motrix-passenger-driver-name">{{ nombreConductor || 'Mototaxista MOTRIX' }}</div>
+            </div>
+            <div class="motrix-passenger-fare">{{ formatearPrecio(viajeActivo.precio) }}</div>
+          </div>
+          <div class="motrix-passenger-places">
+            <div class="motrix-passenger-place"><q-icon name="radio_button_checked" color="positive" size="19px" /><span>{{ viajeActivo.origen || 'Punto de recogida' }}</span></div>
+            <div class="motrix-passenger-place"><q-icon name="location_on" color="negative" size="19px" /><span>{{ viajeActivo.destino || 'Destino' }}</span></div>
+          </div>
+          <div class="motrix-passenger-metrics">
+            <div><q-icon name="route" color="positive" size="18px" /> {{ distanciaSeguimientoTexto }}</div>
+            <div><q-icon name="schedule" color="orange-8" size="18px" /> {{ tiempoSeguimientoTexto }}</div>
+            <div><q-icon name="gps_fixed" :color="edadUbicacion === null || edadUbicacion >= 60 ? 'warning' : 'positive'" size="18px" /> {{ ultimaActualizacionTexto }}</div>
+          </div>
+          <div v-if="incidenciaActiva" class="motrix-passenger-incident"><q-icon name="warning" /> Incidente {{ incidenciaActiva.codigo || '' }}: {{ incidenciaActiva.estado }}</div>
+          <div class="motrix-passenger-contact-row">
+            <LlamadaPrivadaPrueba :viaje-id="viajeActivo.id" :estado="viajeActivo.estado" class="motrix-passenger-contact" />
+            <ViajeChat :viaje-id="viajeActivo.id" :estado="viajeActivo.estado" rol="pasajero" class="motrix-passenger-contact" />
+            <q-btn v-if="sosDisponible" flat dense no-caps color="negative" icon="sos" label="SOS" @click="abrirDialogoSos" />
+          </div>
+        </div>
+        <div class="motrix-passenger-primary-actions">
+          <q-btn outline no-caps color="green-9" icon="info_outline" label="Detalles" @click="mostrarDetallesPasajero = true" />
+          <q-btn unelevated no-caps color="positive" icon="share_location" label="Compartir" :loading="compartiendoViaje" @click="compartirViaje" />
+          <q-btn v-if="puedeCancelar" flat no-caps color="negative" icon="close" label="Cancelar" :loading="cancelando" @click="confirmarCancelacion" />
+        </div>
+      </div>
+    </section>
+
+    <div v-show="!mostrarMapaPasajero" class="row justify-center">
       <div class="col-12 col-xl-10">
         <q-card class="solicitud-card shadow-2 motrix-solicitud-card"
           :class="{ 'motrix-modo-solicitud': !cargandoInicial && !viajeActivo && !viajeFinalizado }">
@@ -34,6 +95,15 @@
                 </div>
               </div>
 
+              <q-btn
+                flat
+                round
+                icon="map"
+                color="white"
+                v-if="mostrarDetallesPasajero && puedeMostrarSeguimiento && vistaSeguimientoMovil"
+                aria-label="Volver al seguimiento en mapa"
+                @click="mostrarDetallesPasajero = false"
+              />
               <q-btn
                 flat
                 round
@@ -606,7 +676,7 @@
                   </q-banner>
 
                   <template v-else>
-                    <div class="map-wrapper seguimiento-map-wrapper">
+                    <div v-if="!mostrarMapaPasajero" class="map-wrapper seguimiento-map-wrapper">
                       <div
                         id="mapa-seguimiento-pasajero"
                         class="mapa-viaje"
@@ -1553,6 +1623,11 @@ const RADIO_BUSQUEDA_TRINIDAD_KM = 35
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search'
 
 const cargandoInicial = ref(true)
+const mostrarDetallesPasajero = ref(false)
+const vistaSeguimientoMovil = computed(() => $q.screen.lt.md || Boolean(window.__MOTRIX_NATIVE_APP__))
+const mostrarMapaPasajero = computed(() =>
+  vistaSeguimientoMovil.value && puedeMostrarSeguimiento.value && !mostrarDetallesPasajero.value
+)
 const cargandoViaje = ref(false)
 const enviando = ref(false)
 const aceptandoOferta = ref(false)
@@ -2566,11 +2641,7 @@ async function actualizarMapaSeguimiento() {
     return
   }
 
-  if (!tieneUbicacionConductor.value) {
-    destruirMapaSeguimiento()
-    return
-  }
-
+  // Mostrar recogida y destino incluso cuando el GPS aun no esta disponible.
   if (actualizandoSeguimiento.value) {
     return
   }
@@ -5159,6 +5230,12 @@ function volver() {
 }
 
 
+watch(mostrarMapaPasajero, async () => {
+  destruirMapaSeguimiento()
+  await nextTick()
+  if (puedeMostrarSeguimiento.value) await actualizarMapaSeguimiento()
+})
+
 watch(
   () => [
     viajeActivo.value?.id || null,
@@ -5193,6 +5270,10 @@ watch(resultadosDestino, async (resultados) => {
     panel.scrollTop += primeraFila - limite
   }
 })
+
+watch(mostrarMapaPasajero, (activo) => {
+  document.body.classList.toggle('motrix-passenger-trip-screen', activo)
+}, { immediate: true, flush: 'sync' })
 
 watch(
   [cargandoInicial, viajeActivo, viajeFinalizado],
@@ -5256,6 +5337,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  document.body.classList.remove('motrix-passenger-trip-screen')
   document.body.classList.remove('motrix-map-request-screen')
   desconectarWebsocketPasajero()
   dialogNotificacion.value = false
