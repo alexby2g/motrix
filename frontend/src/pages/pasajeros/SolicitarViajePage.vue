@@ -1599,6 +1599,7 @@ import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 import L, { prepararGoogleMaps, proveedorMapa, crearMapaMotrix, mapaAlternativoActivo, alternarMapaAlternativo } from 'src/utils/mapaMotrix.js'
 import { estadoCargaGoogleMapsNativo } from 'src/utils/mapaNativoCapacitor.js'
+import { obtenerRutaCallesMotrix } from 'src/utils/rutasViajeMotrix.js'
 import 'leaflet/dist/leaflet.css'
 
 import { api } from '../../boot/axios.js'
@@ -1703,6 +1704,8 @@ const notificacionFotoError = ref(false)
 
 const distanciaSeguimientoKm = ref(null)
 const tiempoSeguimientoMin = ref(null)
+const rutaSeguimientoAproximada = ref(false)
+const rutaSeguimientoBuscando = ref(false)
 const actualizandoSeguimiento = ref(false)
 
 const origenCoords = ref(null)
@@ -1725,6 +1728,9 @@ let marcadorOrigenSeguimiento = null
 let marcadorDestinoSeguimiento = null
 let lineaRutaSeguimiento = null
 let ultimaClaveRutaSeguimiento = null
+let ultimaRutaSeguimientoEn = 0
+let rutaSeguimientoEnCurso = false
+let generacionRutaSeguimiento = 0
 let animacionMarcadorConductor = null
 let intervaloActualizacion = null
 let intervaloIncidencias = null
@@ -2159,17 +2165,21 @@ const estadoSeguimientoTexto = computed(() => {
 
 const distanciaSeguimientoTexto = computed(() => {
   if (!tieneUbicacionConductor.value) return 'Esperando GPS'
-  const distancia = Number.parseFloat(distanciaSeguimientoKm.value)
-  return Number.isFinite(distancia)
-    ? `${distancia.toFixed(2)} km`
-    : 'Ruta pendiente'
+  const distancia = distanciaSeguimientoKm.value
+  if (distancia === null || !Number.isFinite(Number(distancia))) {
+    return rutaSeguimientoBuscando.value ? 'Calculando ruta...' : 'Ruta pendiente'
+  }
+  return rutaSeguimientoAproximada.value
+    ? `${Number(distancia).toFixed(2)} km en línea recta`
+    : `${Number(distancia).toFixed(2)} km por calles`
 })
 
 const tiempoSeguimientoTexto = computed(() => {
   if (!tieneUbicacionConductor.value) return 'Esperando GPS'
-  const minutos = Number.parseInt(tiempoSeguimientoMin.value, 10)
-  return Number.isFinite(minutos)
-    ? `${Math.max(1, minutos)} min`
+  if (rutaSeguimientoAproximada.value) return 'Tiempo no disponible'
+  const minutos = tiempoSeguimientoMin.value
+  return minutos !== null && Number.isFinite(Number(minutos))
+    ? `${Math.max(1, Number(minutos))} min aprox.`
     : 'Sin estimación'
 })
 
@@ -2348,6 +2358,7 @@ function calcularDistanciaRecta(origen, destino) {
 }
 
 function destruirMapaSeguimiento() {
+  generacionRutaSeguimiento += 1
   if (animacionMarcadorConductor) {
     window.cancelAnimationFrame(animacionMarcadorConductor)
     animacionMarcadorConductor = null
@@ -2365,9 +2376,13 @@ function destruirMapaSeguimiento() {
   marcadorDestinoSeguimiento = null
   lineaRutaSeguimiento = null
   ultimaClaveRutaSeguimiento = null
+  ultimaRutaSeguimientoEn = 0
+  rutaSeguimientoEnCurso = false
 
   distanciaSeguimientoKm.value = null
   tiempoSeguimientoMin.value = null
+  rutaSeguimientoAproximada.value = false
+  rutaSeguimientoBuscando.value = false
 }
 
 async function inicializarMapaSeguimiento() {
@@ -2537,99 +2552,83 @@ function centrarMapaSeguimiento() {
 }
 
 async function dibujarRutaSeguimiento(conductor, objetivo) {
-  if (!mapaSeguimiento || !conductor || !objetivo) {
-    return
-  }
+  if (!mapaSeguimiento || !conductor || !objetivo || rutaSeguimientoEnCurso) return
 
-  const claveRuta = [
-    estadoNormalizado.value,
+  const fase = estadoNormalizado.value
+  const viajeId = viajeActivo.value?.id
+  const clave = [
+    viajeId,
+    fase,
     conductor[0].toFixed(4),
     conductor[1].toFixed(4),
     objetivo[0].toFixed(5),
     objetivo[1].toFixed(5)
   ].join('|')
 
-  if (claveRuta === ultimaClaveRutaSeguimiento && lineaRutaSeguimiento) {
+  // No inundar los servidores comunitarios. Un trazado por calles válido
+  // se conserva mientras el conductor no haya avanzado ~11 m.
+  const ahora = Date.now()
+  if (clave === ultimaClaveRutaSeguimiento && lineaRutaSeguimiento
+    && (!rutaSeguimientoAproximada.value || ahora - ultimaRutaSeguimientoEn < 30000)) {
     return
   }
 
-  ultimaClaveRutaSeguimiento = claveRuta
+  rutaSeguimientoEnCurso = true
+  rutaSeguimientoBuscando.value = true
+  const version = generacionRutaSeguimiento
+  const mapaAlIniciar = mapaSeguimiento
 
   try {
-    const origenTexto = `${conductor[1]},${conductor[0]}`
-    const destinoTexto = `${objetivo[1]},${objetivo[0]}`
-
-    const respuesta = await axios.get(
-      'https://router.project-osrm.org/route/v1/driving/'
-        + `${origenTexto};${destinoTexto}`,
-      {
-        params: {
-          overview: 'full',
-          geometries: 'geojson',
-          steps: false
-        }
-      }
-    )
-
-    const ruta = respuesta.data?.routes?.[0]
-
-    if (!ruta) {
-      throw new Error('No se encontró una ruta de seguimiento.')
-    }
-
-    distanciaSeguimientoKm.value = Number.parseFloat(
-      (ruta.distance / 1000).toFixed(2)
-    )
-
-    tiempoSeguimientoMin.value = Math.max(
-      1,
-      Math.round(ruta.duration / 60)
-    )
+    // Esta consulta tiene timeout y un proveedor alternativo. No se espera
+    // desde la actualización de los marcadores, que siguen mostrando GPS.
+    const ruta = await obtenerRutaCallesMotrix(conductor, objetivo)
+    if (version !== generacionRutaSeguimiento
+      || mapaAlIniciar !== mapaSeguimiento
+      || viajeId !== viajeActivo.value?.id
+      || fase !== estadoNormalizado.value) return
 
     if (lineaRutaSeguimiento) {
       mapaSeguimiento.removeLayer(lineaRutaSeguimiento)
+      lineaRutaSeguimiento = null
     }
 
-    lineaRutaSeguimiento = L.geoJSON(
-      ruta.geometry,
-      {
+    if (ruta.disponible) {
+      lineaRutaSeguimiento = L.geoJSON(ruta.geometria, {
         style: {
-          color: '#1976d2',
+          color: fase === 'en curso' ? '#303f9f' : '#1976d2',
           weight: 7,
-          opacity: 0.88
+          opacity: 0.92
         }
-      }
-    ).addTo(mapaSeguimiento)
-  } catch (error) {
-    console.error('Error calculando seguimiento:', error)
-
-    const distanciaRecta = calcularDistanciaRecta(
-      conductor,
-      objetivo
-    )
-
-    distanciaSeguimientoKm.value = Number.parseFloat(
-      distanciaRecta.toFixed(2)
-    )
-
-    tiempoSeguimientoMin.value = Math.max(
-      1,
-      Math.round((distanciaRecta / 25) * 60)
-    )
-
-    if (lineaRutaSeguimiento) {
-      mapaSeguimiento.removeLayer(lineaRutaSeguimiento)
-    }
-
-    lineaRutaSeguimiento = L.polyline(
-      [conductor, objetivo],
-      {
+      }).addTo(mapaSeguimiento)
+      distanciaSeguimientoKm.value = ruta.distanciaKm
+      tiempoSeguimientoMin.value = ruta.duracionMin
+      rutaSeguimientoAproximada.value = false
+    } else {
+      // Línea punteada explícitamente provisional: nunca afirmar que
+      // es una ruta vial o estimar minutos de recorrido ficticios.
+      lineaRutaSeguimiento = L.polyline([conductor, objetivo], {
         color: '#1976d2',
         weight: 5,
-        opacity: 0.65,
-        dashArray: '8 8'
-      }
-    ).addTo(mapaSeguimiento)
+        opacity: 0.75,
+        dashArray: '10 9'
+      }).addTo(mapaSeguimiento)
+      distanciaSeguimientoKm.value = Number(
+        calcularDistanciaRecta(conductor, objetivo).toFixed(2)
+      )
+      tiempoSeguimientoMin.value = null
+      rutaSeguimientoAproximada.value = true
+    }
+
+    ultimaClaveRutaSeguimiento = clave
+    ultimaRutaSeguimientoEn = Date.now()
+    // No utilizar fitBounds aquí: se respetan los gestos del usuario.
+  } catch (error) {
+    console.warn('No se pudo dibujar la ruta del viaje:', error)
+  } finally {
+    if (version === generacionRutaSeguimiento) {
+      rutaSeguimientoEnCurso = false
+      rutaSeguimientoBuscando.value = false
+    }
   }
 }
 
@@ -2692,7 +2691,8 @@ async function actualizarMapaSeguimiento() {
       centrarMapaSeguimiento()
     }
     if (conductor && objetivo) {
-      await dibujarRutaSeguimiento(conductor, objetivo)
+      // La red nunca bloquea la actualización del GPS cada dos segundos.
+      void dibujarRutaSeguimiento(conductor, objetivo)
     }
 
     mapaSeguimiento.invalidateSize()
