@@ -174,6 +174,9 @@
             <span><q-icon name="schedule" color="orange-8" /> {{ tiempoNavegacionTexto }}</span>
             <span><q-icon name="payments" color="green-8" /> {{ viajeActivo.metodo_pago || 'Pago por confirmar' }}</span>
           </div>
+          <q-btn v-if="!usarMapaAlternativo" flat dense no-caps color="green-8"
+            icon="layers" label="¿Mapa en blanco? Cambiar mapa"
+            class="q-mt-xs" :loading="cambiandoMapa" @click="cambiarProveedorMapaConductor" />
           <div v-if="navegacionError" class="motrix-driver-route-warning">
             {{ navegacionError }} Puedes usar «Ir al pasajero» para navegar por fuera de MOTRIX.
           </div>
