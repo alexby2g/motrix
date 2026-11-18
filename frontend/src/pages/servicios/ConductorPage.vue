@@ -1989,6 +1989,8 @@ let solicitudesInicializadas = false
 const solicitudesNotificadas = new Set()
 
 let mapaNavegacion = null
+let inicializacionMapaNavegacion = null
+let generacionMapaNavegacion = 0
 let temporizadorMapaConductor = null
 let marcadorConductor = null
 let marcadorOrigenViaje = null
@@ -2444,6 +2446,8 @@ const eliminarCapaMapa = (capa) => {
 }
 
 const destruirMapaNavegacion = () => {
+  // Invalida una creación pendiente al cambiar de viaje o proveedor.
+  generacionMapaNavegacion += 1
   if (temporizadorMapaConductor) {
     window.clearTimeout(temporizadorMapaConductor)
     temporizadorMapaConductor = null
@@ -2686,6 +2690,23 @@ const inicializarMapaNavegacion = async (forzarRuta = true) => {
     return
   }
 
+  // El cambio de estado, el GPS y el montaje pueden activar este método juntos.
+  // Se serializa la creación para no montar dos mapas en el mismo contenedor.
+  if (inicializacionMapaNavegacion) {
+    try {
+      await inicializacionMapaNavegacion
+    } catch (error) {
+      console.warn('No se pudo completar la creación anterior del mapa:', error)
+    }
+    if (!tieneViajeActivo.value) return
+    if (mapaNavegacion) {
+      await actualizarMapaNavegacion(forzarRuta)
+      return
+    }
+  }
+
+  const generacion = generacionMapaNavegacion
+  const tarea = async () => {
   await nextTick()
 
   const contenedor = document.getElementById(
@@ -2696,11 +2717,16 @@ const inicializarMapaNavegacion = async (forzarRuta = true) => {
 
   if (!mapaNavegacion) {
     await prepararGoogleMaps()
-    if (!contenedor.isConnected || !tieneViajeActivo.value) return
-    mapaNavegacion = (await crearMapaMotrix(contenedor, {
+    if (!contenedor.isConnected || !tieneViajeActivo.value || generacion !== generacionMapaNavegacion) return
+    const creado = await crearMapaMotrix(contenedor, {
       zoomControl: true,
       attributionControl: true
-    })).setView([-14.8308, -64.9024], 14)
+    })
+    if (!contenedor.isConnected || !tieneViajeActivo.value || generacion !== generacionMapaNavegacion) {
+      creado.remove()
+      return
+    }
+    mapaNavegacion = creado.setView([-14.8308, -64.9024], 14)
 
     document.body.classList.toggle('motrix-conductor-google-native', Boolean(mapaNavegacion.isNative))
     // Si el SDK Android no entrega las calles, usar OpenStreetMap
@@ -2737,6 +2763,16 @@ const inicializarMapaNavegacion = async (forzarRuta = true) => {
   }, 150)
 
   await actualizarMapaNavegacion(forzarRuta)
+  }
+  const proceso = tarea()
+  inicializacionMapaNavegacion = proceso
+  try {
+    await proceso
+  } finally {
+    if (inicializacionMapaNavegacion === proceso) {
+      inicializacionMapaNavegacion = null
+    }
+  }
 }
 
 const cambiarProveedorMapaConductor = async () => {
