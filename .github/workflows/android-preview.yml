@@ -57,6 +57,29 @@ jobs:
         working-directory: frontend/src-capacitor
         run: npm install --no-audit --no-fund
 
+      - name: Activar evento nativo cuando Google Maps termina de cargar calles
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          ruta = Path('frontend/src-capacitor/node_modules/@capacitor/google-maps/android/src/main/java/com/capacitorjs/plugins/googlemaps/CapacitorGoogleMap.kt')
+          codigo = ruta.read_text(encoding='utf-8')
+          antes = '            googleMap = map\\n'
+          despues = (
+              '            googleMap = map\\n'
+              '            map.setOnMapLoadedCallback {\\n'
+              '                val datos = JSObject()\\n'
+              '                datos.put("mapId", this@CapacitorGoogleMap.id)\\n'
+              '                delegate.notify("onMapLoaded", datos)\\n'
+              '            }\\n'
+          )
+          if codigo.count(antes) != 1:
+              raise SystemExit('No se encontro punto de instrumentacion de Google Maps')
+          ruta.write_text(codigo.replace(antes, despues, 1), encoding='utf-8')
+          print('Se habilito diagnostico de carga de calles en Android')
+          PY
+
       - name: Preparar Firebase para paquete de pruebas sin modificar produccion
         shell: bash
         env:
@@ -170,8 +193,8 @@ jobs:
         working-directory: frontend/src-capacitor/android
         shell: bash
         env:
-          MOTRIX_VERSION_CODE: '100064'
-          MOTRIX_VERSION_NAME: '1.1.64'
+          MOTRIX_VERSION_CODE: '100065'
+          MOTRIX_VERSION_NAME: '1.1.65'
           MOTRIX_GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.MOTRIX_GOOGLE_MAPS_ANDROID_KEY }}
         run: |
           chmod +x gradlew
@@ -237,7 +260,7 @@ jobs:
       - name: Publicar APK de pruebas para descargar
         uses: actions/upload-artifact@v4
         with:
-          name: MOTRIX-Android-GoogleMaps-1.1.64
+          name: MOTRIX-Android-GoogleMaps-1.1.65
           path: |
             dist-preview/MOTRIX.apk
             dist-preview/MOTRIX.apk.sha256
