@@ -1824,6 +1824,7 @@ import axios from 'axios'
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 import L, { prepararGoogleMaps, crearMapaMotrix, alternarMapaAlternativo, mapaAlternativoActivo } from 'src/utils/mapaMotrix.js'
+import { estadoCargaGoogleMapsNativo } from 'src/utils/mapaNativoCapacitor.js'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../../boot/axios.js'
 import { BROADCAST_AUTH_URL, echoOptions } from '../../config/runtime.js'
@@ -1985,6 +1986,7 @@ let solicitudesInicializadas = false
 const solicitudesNotificadas = new Set()
 
 let mapaNavegacion = null
+let temporizadorMapaConductor = null
 let marcadorConductor = null
 let marcadorOrigenViaje = null
 let marcadorDestinoViaje = null
@@ -2439,6 +2441,10 @@ const eliminarCapaMapa = (capa) => {
 }
 
 const destruirMapaNavegacion = () => {
+  if (temporizadorMapaConductor) {
+    window.clearTimeout(temporizadorMapaConductor)
+    temporizadorMapaConductor = null
+  }
   document.body.classList.remove('motrix-conductor-google-native')
   if (mapaNavegacion) {
     mapaNavegacion.remove()
@@ -2694,6 +2700,24 @@ const inicializarMapaNavegacion = async (forzarRuta = true) => {
     })).setView([-14.8308, -64.9024], 14)
 
     document.body.classList.toggle('motrix-conductor-google-native', Boolean(mapaNavegacion.isNative))
+    // Si el SDK Android no entrega las calles, usar OpenStreetMap
+    // automaticamente en lugar de dejar un rectangulo vacio.
+    if (mapaNavegacion.isNative && $q.screen.lt.sm) {
+      temporizadorMapaConductor = window.setTimeout(async () => {
+        if (
+          mapaNavegacion?.isNative
+          && !cambiandoMapa.value
+          && estadoCargaGoogleMapsNativo() !== 'Calles cargadas por Google Maps'
+        ) {
+          await cambiarProveedorMapaConductor()
+          $q.notify({
+            type: 'info',
+            position: 'top',
+            message: 'Google Maps tardó en cargar. Activamos el mapa alternativo.'
+          })
+        }
+      }, 14000)
+    }
     if (!mapaNavegacion.isNative) {
       L.tileLayer(
         'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
