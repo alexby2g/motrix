@@ -217,7 +217,12 @@
                             v-if="qrPagoConductorUrl"
                             :src="qrPagoConductorUrl"
                             alt="QR de cobro del mototaxista"
-                            class="qr-pago-image"
+                            class="qr-pago-image cursor-pointer"
+                            role="button"
+                            tabindex="0"
+                            aria-label="Ampliar QR de cobro"
+                            @click="visorQrPago = true"
+                            @keydown.enter="visorQrPago = true"
                           >
 
                           <q-banner
@@ -229,6 +234,9 @@
                             Coordina el pago directamente con el conductor.
                           </q-banner>
 
+                          <q-btn v-if="qrPagoConductorUrl" flat no-caps color="indigo-8"
+                            icon="zoom_in" label="Ampliar QR" class="full-width q-mt-sm"
+                            @click="visorQrPago = true" />
                           <div
                             v-if="qrPagoConductorUrl"
                             class="q-mt-md"
@@ -1475,7 +1483,22 @@
       </q-card>
     </q-dialog>
 
-    <PhotoViewerDialog
+    <q-dialog v-model="visorQrPago" :maximized="$q.screen.lt.sm">
+      <q-card class="motrix-qr-visor-pasajero">
+        <q-card-section class="row items-center justify-between">
+          <div class="text-h6 text-weight-bold">QR para pagar el viaje</div>
+          <q-btn round dense flat icon="close" v-close-popup aria-label="Cerrar QR" />
+        </q-card-section>
+        <q-card-section class="column items-center">
+          <img v-if="qrPagoConductorUrl" :src="qrPagoConductorUrl"
+            alt="Código QR de cobro ampliado" class="motrix-qr-pasajero-grande" />
+          <div class="text-weight-bold q-mt-md">{{ qrPagoMetodoConductor }}</div>
+          <div class="text-caption text-grey-7">Titular: {{ qrPagoTitularConductor }}</div>
+          <div class="text-caption text-grey-7 q-mt-sm">Verifica con el conductor antes de pagar.</div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+  <PhotoViewerDialog
       v-model="visorFotoConductor"
       :src="fotoConductorUrl"
       :title="nombreConductor || 'Mototaxista MOTRIX'"
@@ -1560,6 +1583,7 @@ const seleccionandoDestinoMapa = ref(false)
 
 const dialogNotificacion = ref(false)
 const websocketConectado = ref(false)
+const visorQrPago = ref(false)
 const visorFotoConductor = ref(false)
 const compartiendoViaje = ref(false)
 
@@ -5939,4 +5963,9 @@ onBeforeUnmount(() => {
     border-radius: 17px;
   }
 }
+</style>
+
+<style>
+.motrix-qr-visor-pasajero { width: min(94vw, 520px); border-radius: 18px; background: #fff; }
+.motrix-qr-pasajero-grande { width: 100%; max-width: 440px; max-height: 70dvh; object-fit: contain; background: #fff; }
 </style>
