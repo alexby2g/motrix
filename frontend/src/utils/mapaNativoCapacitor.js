@@ -1,9 +1,17 @@
 // Puente entre el flujo de viajes existente (API tipo Leaflet) y Google Maps
 // nativo de Capacitor 8. La clave Android solo vive en AndroidManifest.xml
 // durante la compilacion; nunca se incorpora al bundle JavaScript.
+import { registerPlugin } from '@capacitor/core'
+
 let GoogleMapPlugin = null
 let secuenciaMapa = 0
 let mapasActivos = 0
+const eventosGoogleMaps = registerPlugin('CapacitorGoogleMaps')
+let estadoCargaNativa = 'No iniciado'
+
+export function estadoCargaGoogleMapsNativo() {
+  return estadoCargaNativa
+}
 
 export async function prepararMapaNativo() {
   if (typeof window === 'undefined' || !window.__MOTRIX_NATIVE_APP__) return false
@@ -186,6 +194,8 @@ class MapaNativo {
     this.eventos = new Map()
     this.eliminado = false
     this.isNative = true
+    this.handleCarga = null
+    this.temporizadorCarga = null
 
     tarea(instancia.setOnMapClickListener((evento) => {
       this.eventos.get('click')?.({
@@ -238,6 +248,8 @@ class MapaNativo {
     this.marcadores.forEach((marcador) => { marcador.eliminado = true })
     this.lineas.forEach((linea) => { linea.eliminado = true })
     this.idsMarcadores.clear()
+    if (this.temporizadorCarga) window.clearTimeout(this.temporizadorCarga)
+    tarea(this.handleCarga?.remove())
     tarea(this.instancia.destroy())
     this.elemento.remove()
     mapasActivos = Math.max(0, mapasActivos - 1)
@@ -251,10 +263,21 @@ export async function crearMapaNativo(contenedor) {
   elemento.className = 'motrix-google-map-element'
   contenedor.appendChild(elemento)
   document.body.classList.add('motrix-google-native-map')
+  const id = 'motrix-native-' + (++secuenciaMapa)
+  let handleCarga = null
+  let temporizadorCarga = null
+  estadoCargaNativa = 'Iniciando vista de Google Maps'
 
   try {
+    // El SDK informa cuando realmente se cargan las calles, no solo
+    // cuando se crea el mapa. El evento se instrumenta en Android CI.
+    handleCarga = await eventosGoogleMaps.addListener('onMapLoaded', (evento) => {
+      if (evento.mapId !== id) return
+      estadoCargaNativa = 'Calles cargadas por Google Maps'
+      if (temporizadorCarga) window.clearTimeout(temporizadorCarga)
+    })
     const instancia = await GoogleMapPlugin.create({
-      id: 'motrix-native-' + (++secuenciaMapa),
+      id,
       element: elemento,
       apiKey: 'android-native-manifest',
       config: {
@@ -265,8 +288,22 @@ export async function crearMapaNativo(contenedor) {
       forceCreate: true
     })
     mapasActivos += 1
-    return new MapaNativo(instancia, elemento)
+    const mapa = new MapaNativo(instancia, elemento)
+    mapa.handleCarga = handleCarga
+    if (estadoCargaNativa !== 'Calles cargadas por Google Maps') {
+      estadoCargaNativa = 'Vista creada; esperando calles de Google Maps'
+    }
+    temporizadorCarga = window.setTimeout(() => {
+      if (estadoCargaNativa !== 'Calles cargadas por Google Maps') {
+        estadoCargaNativa = 'Las calles no se cargaron en 12 segundos'
+      }
+    }, 12000)
+    mapa.temporizadorCarga = temporizadorCarga
+    return mapa
   } catch (error) {
+    estadoCargaNativa = 'Error al iniciar Google Maps: ' + String(error?.message || error)
+    if (temporizadorCarga) window.clearTimeout(temporizadorCarga)
+    tarea(handleCarga?.remove())
     elemento.remove()
     if (!mapasActivos) document.body.classList.remove('motrix-google-native-map')
     throw error
