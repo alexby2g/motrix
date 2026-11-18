@@ -33,6 +33,12 @@
           </q-card-section>
 
           <q-card-section class="q-pa-md q-pa-lg-md">
+            <q-banner v-if="viajeEnCurso" rounded class="motrix-viaje-en-curso q-mb-md">
+              <template #avatar><q-icon name="two_wheeler" size="30px" color="positive" /></template>
+              <div class="text-weight-bold">Tienes un viaje activo</div>
+              <div class="text-caption">Viaje #{{ viajeEnCurso.id }} · {{ viajeEnCurso.estado }}</div>
+              <q-btn unelevated color="positive" no-caps icon="map" label="Volver a mi viaje" class="q-mt-sm" @click="irASolicitar" />
+            </q-banner>
             <div class="welcome-row">
               <div>
                 <div class="text-caption text-grey-6">
@@ -243,10 +249,21 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { api } from 'src/boot/axios.js'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const viajeEnCurso = ref(null)
+
+onMounted(async () => {
+  try {
+    const respuesta = await api.get('/pasajero/viaje-activo')
+    viajeEnCurso.value = respuesta.data?.solicitud || null
+  } catch {
+    viajeEnCurso.value = null
+  }
+})
 
 function leerUsuario() {
   try {
@@ -408,4 +425,12 @@ function irAPerfil() {
 
 <style scoped>
 .passenger-motrix-logo{width:58px;height:58px;border-radius:17px;overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,.16)}.passenger-motrix-logo img{width:100%;height:100%;display:block;object-fit:cover}.passenger-hero{background:linear-gradient(135deg,#0f5f31,#2b9348)!important}.home-card{border-radius:22px!important;overflow:hidden;border:1px solid #e0ebe2}.action-card{border-radius:18px!important;transition:transform .18s ease,box-shadow .18s ease}.action-card:hover{transform:translateY(-3px);box-shadow:0 18px 36px rgba(25,85,44,.10)}
+</style>
+
+<style scoped>
+.motrix-viaje-en-curso {
+  border: 1px solid #cce5d5;
+  background: #f0fbf3;
+  color: #15452c;
+}
 </style>
