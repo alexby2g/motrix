@@ -6,7 +6,12 @@ RUN apt-get update \
         unzip \
         libpq-dev \
         libonig-dev \
+        libpng-dev \
+        libjpeg62-turbo-dev \
+        libfreetype6-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
+        gd \
         bcmath \
         pcntl \
         mbstring \
