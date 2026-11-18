@@ -158,7 +158,8 @@ class PasswordRecoveryController extends Controller
             'password' => ['required', 'string', 'min:8', 'max:255', 'confirmed'],
         ]);
 
-        $user = $this->findUser(trim((string) $data['login']));
+        $phone = $this->phoneRegistry->normalize((string) $data['login']);
+        $user = $this->findUser($phone);
 
         if (! $user || ! in_array($user->role, ['conductor', 'pasajero'], true)) {
             return $this->invalidTokenResponse();
