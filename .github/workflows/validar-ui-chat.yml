@@ -66,3 +66,21 @@ jobs:
           cp .env.example .env
           php artisan key:generate --force
           php artisan test --filter=MotrixPasswordRecoveryTest
+      - name: Preparar paquete de actualización manual backend Hostinger
+        working-directory: backend
+        run: |
+          zip -q -r "${{ runner.temp }}/MOTRIX-Backend-SMS-HOSTINGER.zip" \
+            app/Http/Controllers/PasswordRecoveryController.php \
+            app/Http/Controllers/AuthController.php \
+            app/Providers/AppServiceProvider.php \
+            config/services.php
+          cp ../docs/MOTRIX_RECUPERACION_SMS_HOSTINGER.md "${{ runner.temp }}/GUIA-SMS-HOSTINGER.md"
+      - name: Publicar paquete backend para instalación manual
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOTRIX-Backend-SMS-HOSTINGER-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/MOTRIX-Backend-SMS-HOSTINGER.zip
+            ${{ runner.temp }}/GUIA-SMS-HOSTINGER.md
+          if-no-files-found: error
+          retention-days: 14
