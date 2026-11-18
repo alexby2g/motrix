@@ -707,6 +707,7 @@ import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 
 import { api } from '../boot/axios.js'
+import { desvincularPushMotrix } from 'src/services/pushNotifications.js'
 import { esContenedorNativo } from '../services/googleAuth.js'
 import { echoOptions } from '../config/runtime.js'
 window.Pusher = Pusher
@@ -2300,6 +2301,7 @@ async function cerrarSesion() {
   cerrandoSesion.value = true
 
   try {
+    await desvincularPushMotrix()
     await api.post('/auth/logout')
   } catch (error) {
     const estado = error?.response?.status
