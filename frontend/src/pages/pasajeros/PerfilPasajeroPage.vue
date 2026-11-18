@@ -162,6 +162,7 @@ import {
 import {
   api
 } from 'src/boot/axios.js'
+import { desvincularPushMotrix } from 'src/services/pushNotifications.js'
 import PhotoViewerDialog from 'src/components/PhotoViewerDialog.vue'
 import { ES_APLICACION_NATIVA } from 'src/config/runtime.js'
 
@@ -429,6 +430,7 @@ async function cerrarSesion() {
   if (cerrandoSesion.value) return
   cerrandoSesion.value = true
   try {
+    await desvincularPushMotrix()
     await api.post('/auth/logout')
   } catch (error) {
     if (error?.response?.status !== 401) {
