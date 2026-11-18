@@ -26,11 +26,11 @@
 
               <div class="col">
                 <div class="text-h5 text-weight-bold">
-                  Solicitar mototaxi
+                  {{ viajeActivo ? 'Mi viaje' : 'Solicitar mototaxi' }}
                 </div>
 
                 <div class="text-caption text-green-1">
-                  Marca tu origen y destino en el mapa
+                  {{ viajeActivo ? 'Consulta el estado y seguimiento de tu viaje' : 'Marca tu origen y destino en el mapa' }}
                 </div>
               </div>
 
