@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class MensajeViajeController extends Controller
 {
@@ -146,9 +147,17 @@ class MensajeViajeController extends Controller
             }
         );
 
-        broadcast(
-            new MensajeViajeEnviado($mensaje)
-        );
+        // El mensaje ya esta guardado: si falla Reverb, no duplicar el envio.
+        // El cliente podra recuperarlo en la siguiente consulta.
+        try {
+            broadcast(new MensajeViajeEnviado($mensaje));
+        } catch (\Throwable $error) {
+            Log::warning('No se pudo emitir mensaje de viaje en tiempo real.', [
+                'solicitud_id' => (int) $solicitud->id,
+                'mensaje_id' => (int) $mensaje->id,
+                'error' => $error->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'mensaje' => 'Mensaje enviado correctamente.',
