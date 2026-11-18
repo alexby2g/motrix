@@ -48,7 +48,7 @@
       <div class="motrix-perfil-lista">
         <q-item clickable v-ripple @click="router.push('/pasajero')">
           <q-item-section avatar><q-icon name="help_outline" /></q-item-section>
-          <q-item-section>Ayuda y atención MOTRIX</q-item-section>
+          <q-item-section>Volver al inicio</q-item-section>
           <q-item-section side><q-icon name="chevron_right" /></q-item-section>
         </q-item>
         <q-item clickable v-ripple @click="abrirEliminarCuenta">
