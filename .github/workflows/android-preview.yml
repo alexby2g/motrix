@@ -65,14 +65,14 @@ jobs:
 
           ruta = Path('frontend/src-capacitor/node_modules/@capacitor/google-maps/android/src/main/java/com/capacitorjs/plugins/googlemaps/CapacitorGoogleMap.kt')
           codigo = ruta.read_text(encoding='utf-8')
-          antes = '            googleMap = map\\n'
+          antes = '            googleMap = map\n'
           despues = (
-              '            googleMap = map\\n'
-              '            map.setOnMapLoadedCallback {\\n'
-              '                val datos = JSObject()\\n'
-              '                datos.put("mapId", this@CapacitorGoogleMap.id)\\n'
-              '                delegate.notify("onMapLoaded", datos)\\n'
-              '            }\\n'
+              '            googleMap = map\n'
+              '            map.setOnMapLoadedCallback {\n'
+              '                val datos = JSObject()\n'
+              '                datos.put("mapId", this@CapacitorGoogleMap.id)\n'
+              '                delegate.notify("onMapLoaded", datos)\n'
+              '            }\n'
           )
           if codigo.count(antes) != 1:
               raise SystemExit('No se encontro punto de instrumentacion de Google Maps')
