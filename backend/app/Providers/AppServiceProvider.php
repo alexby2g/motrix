@@ -57,9 +57,16 @@ class AppServiceProvider extends ServiceProvider
             function (Request $request) {
                 $login = mb_strtolower(trim((string) $request->input('login', '')));
 
+                $ruta = (string) $request->path();
+                $solicitud = str_ends_with($ruta, '/solicitar');
+
+                // IP: frena ataques automatizados. Teléfono: limita el
+                // envío de SMS incluso desde distintas IPs.
                 return [
-                    Limit::perHour(30)->by((string) $request->ip()),
-                    Limit::perHour(12)->by((string) $request->ip() . '|' . hash('sha256', $login)),
+                    Limit::perHour(30)->by('recuperacion-ip:' . (string) $request->ip()),
+                    $solicitud
+                        ? Limit::perHour(3)->by('recuperacion-sms:' . hash('sha256', $login))
+                        : Limit::perHour(15)->by('recuperacion-codigo:' . (string) $request->ip() . '|' . hash('sha256', $login)),
                 ];
             }
         );
