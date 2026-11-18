@@ -176,11 +176,8 @@
             <span><q-icon name="schedule" color="orange-8" /> {{ tiempoNavegacionTexto }}</span>
             <span><q-icon name="payments" color="green-8" /> {{ viajeActivo.metodo_pago || 'Pago por confirmar' }}</span>
           </div>
-          <q-btn v-if="!usarMapaAlternativo" flat dense no-caps color="green-8"
-            icon="layers" label="¿Mapa en blanco? Cambiar mapa"
-            class="q-mt-xs" :loading="cambiandoMapa" @click="cambiarProveedorMapaConductor" />
           <div v-if="navegacionError" class="motrix-driver-route-warning">
-            {{ navegacionError }} Puedes usar «Ir al pasajero» para navegar por fuera de MOTRIX.
+            {{ navegacionError }} Puedes utilizar el icono de capas del mapa para cambiar de proveedor.
           </div>
 
           <div v-if="incidenciaActiva" class="motrix-driver-incident">
@@ -219,9 +216,7 @@
               @click="iniciarViaje(viajeActivo)" />
           </template>
           <template v-else-if="viajeActivo.estado === 'En Curso'">
-            <q-btn outline no-caps color="green-9" icon="navigation" label="Ir al destino"
-              @click="abrirNavegacion(viajeActivo, 'destino')" />
-            <q-btn unelevated no-caps color="positive" icon="payments" label="Finalizar y cobrar"
+            <q-btn unelevated no-caps class="full-width" color="positive" icon="payments" label="Finalizar y cobrar"
               @click="abrirModalCobro(viajeActivo)" />
           </template>
         </div>
