@@ -4452,17 +4452,26 @@ body.motrix-conductor-google-native #q-app,
 body.motrix-conductor-google-native .q-layout,
 body.motrix-conductor-google-native .q-page-container,
 body.motrix-conductor-google-native .motrix-conductor-page,
+body.motrix-conductor-google-native .motrix-conductor-viaje,
 body.motrix-conductor-google-native .motrix-conductor-mapa,
 body.motrix-conductor-google-native .motrix-conductor-navegacion,
+body.motrix-conductor-google-native .motrix-conductor-navegacion > .q-card__section,
 body.motrix-conductor-google-native .mapa-navegacion-wrapper,
 body.motrix-conductor-google-native .mapa-navegacion {
   background: transparent !important;
   background-color: transparent !important;
   background-image: none !important;
 }
+body.motrix-conductor-google-native .motrix-conductor-viaje,
 body.motrix-conductor-google-native .motrix-conductor-navegacion,
 body.motrix-conductor-google-native .mapa-navegacion-wrapper {
   overflow: visible !important;
+}
+body.motrix-conductor-google-native .motrix-conductor-viaje > .q-card__section:not(.motrix-conductor-mapa) {
+  background-color: #fff;
+}
+body.motrix-conductor-google-native .motrix-conductor-viaje > .motrix-conductor-viaje-header {
+  background-color: #123e2b !important;
 }
 .motrix-qr-ampliado { width: min(94vw, 500px); border-radius: 18px; }
 .motrix-qr-imagen-grande { display: block; width: 100%; max-height: 70vh; object-fit: contain; }
