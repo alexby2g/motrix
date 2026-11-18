@@ -2017,6 +2017,9 @@ let solicitudesInicializadas = false
 const solicitudesNotificadas = new Set()
 
 let mapaNavegacion = null
+// Se encuadra una sola vez al crear el mapa. El GPS y las rutas nunca
+// interrumpen los gestos de zoom o desplazamiento del conductor.
+let vistaNavegacionCentrada = false
 let inicializacionMapaNavegacion = null
 let generacionMapaNavegacion = 0
 let temporizadorMapaConductor = null
@@ -2498,6 +2501,7 @@ const destruirMapaNavegacion = () => {
   }
 
   mapaNavegacion = null
+  vistaNavegacionCentrada = false
   marcadorConductor = null
   marcadorOrigenViaje = null
   marcadorDestinoViaje = null
@@ -2720,7 +2724,11 @@ const actualizarMapaNavegacion = async (forzarRuta = false) => {
 
   colocarMarcadoresFijos()
   actualizarMarcadorConductor()
-  ajustarVistaMapaNavegacion()
+  // No restablecer la cámara cada 2-3 segundos cuando llega nuevo GPS.
+  if (!vistaNavegacionCentrada) {
+    vistaNavegacionCentrada = true
+    ajustarVistaMapaNavegacion()
+  }
   await calcularRutaNavegacion(forzarRuta)
 }
 
