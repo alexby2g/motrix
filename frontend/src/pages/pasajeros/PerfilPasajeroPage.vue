@@ -13,6 +13,11 @@
         </q-avatar>
         <div class="text-h6 text-weight-bold q-mt-md">{{ nombreUsuario }}</div>
         <div class="motrix-perfil-email">{{ usuario?.email || usuario?.telefono || 'Pasajero MOTRIX' }}</div>
+        <div class="motrix-perfil-estadisticas">
+          <div><strong>{{ viajesCompletados === null ? '—' : viajesCompletados }}</strong><span>Viajes realizados</span></div>
+          <div><strong>Pasajero</strong><span>Tipo de cuenta</span></div>
+          <div><strong>{{ anioRegistro }}</strong><span>Miembro desde</span></div>
+        </div>
         <q-btn outline no-caps dense color="green-8" icon="photo_camera" label="Cambiar foto"
           class="q-mt-md motrix-perfil-foto-btn" :loading="subiendoFotoPerfil" @click="abrirSelectorFotoPerfil" />
         <input ref="fotoPerfilInput" type="file" accept="image/jpeg,image/png,image/webp" class="profile-file-input" @change="seleccionarFotoPerfil">
@@ -171,6 +176,13 @@ const router = useRouter()
 const route = useRoute()
 
 const cargando = ref(false)
+const viajesCompletados = ref(null)
+const anioRegistro = computed(() => {
+  const fecha = usuario.value?.created_at
+  if (!fecha) return '—'
+  const anio = new Date(fecha).getFullYear()
+  return Number.isFinite(anio) && anio > 2000 ? anio : '—'
+})
 const dialogAyuda = ref(false)
 const cerrandoSesion = ref(false)
 const visorFoto = ref(false)
@@ -348,6 +360,20 @@ async function cargarPerfil() {
         'motrix_user',
         JSON.stringify(datos)
       )
+    }
+
+    // Se cuentan viajes finalizados reales, no solicitudes canceladas.
+    // Si la API de historial falla, mostrar "—" sin inventar un cero.
+    try {
+      const historial = await api.get('/pasajero/solicitudes')
+      viajesCompletados.value = Array.isArray(historial.data)
+        ? historial.data.filter(v =>
+            String(v?.estado || '').trim().toLowerCase() === 'finalizado'
+          ).length
+        : null
+    } catch (historialError) {
+      viajesCompletados.value = null
+      console.warn('No se pudieron cargar estadísticas del pasajero:', historialError?.message)
     }
   } catch (error) {
     console.error(
@@ -592,6 +618,15 @@ body.motrix-google-native-map .q-page.motrix-perfil-claro { background: #f6f8f7 
 .motrix-perfil-avatar { cursor: pointer; font-size: 34px; box-shadow: 0 0 0 5px #fff, 0 7px 22px #16452b20; }
 .motrix-perfil-email { font-size: 13px; color: #7b8981; overflow-wrap: anywhere; }
 .motrix-perfil-foto-btn { border-radius: 24px !important; }
+.motrix-perfil-estadisticas {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 440px); margin-top: 16px;
+  padding: 12px 0; border-top: 1px solid #e3eae5;
+}
+.motrix-perfil-estadisticas > div { text-align: center; min-width: 0; }
+.motrix-perfil-estadisticas > div:not(:last-child) { border-right: 1px solid #e3eae5; }
+.motrix-perfil-estadisticas strong { display:block; color:#203a2a; font-size:16px; font-weight:800; }
+.motrix-perfil-estadisticas span { display:block; color:#85938a; font-size:11px; margin-top:2px; }
 .motrix-perfil-seccion { font-weight: 750; margin: 17px 0 10px; color: #25382b; }
 .motrix-perfil-lista { overflow: hidden; border: 1px solid #e0e7e2; border-radius: 16px; background: #fff; box-shadow: 0 2px 9px #153a2a0a; }
 .motrix-perfil-lista .q-item, .motrix-perfil-lista .q-expansion-item__container > .q-item { min-height: 57px; color: #26392c; }
