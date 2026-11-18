@@ -193,8 +193,8 @@ jobs:
         working-directory: frontend/src-capacitor/android
         shell: bash
         env:
-          MOTRIX_VERSION_CODE: '100066'
-          MOTRIX_VERSION_NAME: '1.1.66'
+          MOTRIX_VERSION_CODE: '100067'
+          MOTRIX_VERSION_NAME: '1.1.67'
           MOTRIX_GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.MOTRIX_GOOGLE_MAPS_ANDROID_KEY }}
         run: |
           chmod +x gradlew
@@ -260,7 +260,7 @@ jobs:
       - name: Publicar APK de pruebas para descargar
         uses: actions/upload-artifact@v4
         with:
-          name: MOTRIX-Android-GoogleMaps-1.1.66
+          name: MOTRIX-Android-GoogleMaps-1.1.67
           path: |
             dist-preview/MOTRIX.apk
             dist-preview/MOTRIX.apk.sha256
