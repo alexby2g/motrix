@@ -454,6 +454,8 @@ function irASolicitar() {
 }
 
 onMounted(() => {
+  // La navegación al perfil siempre restaura cabecera y barra inferior.
+  document.body.classList.remove('motrix-map-request-screen')
   cargarPerfil()
 
   if (String(route.query.eliminar || '') === '1') {
