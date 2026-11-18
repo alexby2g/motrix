@@ -25,7 +25,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Lint de las pantallas modificadas
         working-directory: frontend
-        run: npx eslint -c ./eslint.config.js src/components/ViajeChat.vue src/pages/pasajeros/SolicitarViajePage.vue src/pages/pasajeros/PerfilPasajeroPage.vue src/pages/pasajeros/PanelPasajeroPage.vue src/pages/servicios/ConductorPage.vue src/layouts/MainLayout.vue src/utils/mapaMotrix.js src/utils/mapaNativoCapacitor.js src/utils/rutasViajeMotrix.js src/pages/publico/SeguimientoCompartidoPage.vue
+        run: npx eslint -c ./eslint.config.js src/components/ViajeChat.vue src/pages/pasajeros/SolicitarViajePage.vue src/pages/pasajeros/PerfilPasajeroPage.vue src/pages/pasajeros/PanelPasajeroPage.vue src/pages/servicios/ConductorPage.vue src/layouts/MainLayout.vue src/utils/mapaMotrix.js src/utils/mapaNativoCapacitor.js src/utils/rutasViajeMotrix.js src/pages/publico/SeguimientoCompartidoPage.vue src/pages/RecuperarContrasenaPage.vue src/pages/servicios/PerfilConductorPage.vue src/services/pushNotifications.js src/components/ConductorAccountDelete.vue
       - name: Compilar frontend
         working-directory: frontend
         run: npm run build
@@ -38,12 +38,31 @@ jobs:
           retention-days: 14
 
   backend:
-    name: Sintaxis PHP de chat
+    name: Backend PHP y recuperación SMS
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Comprobar rutas y controlador con PHP del runner
+      - name: Instalar PHP para pruebas Laravel
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, xml, intl, gd, zip, pdo_sqlite, sqlite3
+          coverage: none
+          tools: composer:v2
+      - name: Verificar sintaxis de Laravel y recuperación
         run: |
-          php -v
           php -l backend/routes/api.php
           php -l backend/app/Http/Controllers/MensajeViajeController.php
+          php -l backend/app/Http/Controllers/PasswordRecoveryController.php
+          php -l backend/app/Providers/AppServiceProvider.php
+          php -l backend/config/services.php
+          php -l backend/tests/Feature/MotrixPasswordRecoveryTest.php
+      - name: Instalar dependencias backend
+        working-directory: backend
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Probar recuperación SMS sin enviar mensajes reales
+        working-directory: backend
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+          php artisan test --filter=MotrixPasswordRecoveryTest
