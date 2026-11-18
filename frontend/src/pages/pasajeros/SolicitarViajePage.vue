@@ -2082,19 +2082,19 @@ const estadoSeguimientoTexto = computed(() => {
 })
 
 const distanciaSeguimientoTexto = computed(() => {
+  if (!tieneUbicacionConductor.value) return 'Esperando GPS'
   const distancia = Number.parseFloat(distanciaSeguimientoKm.value)
-
   return Number.isFinite(distancia)
     ? `${distancia.toFixed(2)} km`
-    : 'Calculando...'
+    : 'Ruta pendiente'
 })
 
 const tiempoSeguimientoTexto = computed(() => {
+  if (!tieneUbicacionConductor.value) return 'Esperando GPS'
   const minutos = Number.parseInt(tiempoSeguimientoMin.value, 10)
-
   return Number.isFinite(minutos)
     ? `${Math.max(1, minutos)} min`
-    : 'Calculando...'
+    : 'Sin estimación'
 })
 
 const relojSeguimiento = ref(Date.now())
