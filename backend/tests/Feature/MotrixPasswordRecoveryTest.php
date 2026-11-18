@@ -16,7 +16,7 @@ class MotrixPasswordRecoveryTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function habilitarSmsDePruebas(): void
+    private function habilitarSmsDePruebas(bool $aceptar = true): void
     {
         config([
             'services.motrix_sms.twilio_account_sid' => 'AC' . str_repeat('1', 32),
@@ -28,7 +28,9 @@ class MotrixPasswordRecoveryTest extends TestCase
         ]);
 
         Http::fake([
-            'api.twilio.com/*' => Http::response(['sid' => 'SM-motrix-test'], 201),
+            'api.twilio.com/*' => $aceptar
+                ? Http::response(['sid' => 'SM-motrix-test'], 201)
+                : Http::response(['error' => 'rejected'], 403),
         ]);
     }
 
@@ -97,8 +99,7 @@ class MotrixPasswordRecoveryTest extends TestCase
 
     public function test_no_se_crea_otp_si_el_sms_falla(): void
     {
-        $this->habilitarSmsDePruebas();
-        Http::fake(['api.twilio.com/*' => Http::response(['error' => 'rejected'], 403)]);
+        $this->habilitarSmsDePruebas(false);
         [, $usuario] = $this->crearPasajero('rechazo@example.com', '70000004', '200004');
 
         $this->postJson('/api/auth/recuperacion/solicitar', [
