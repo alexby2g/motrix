@@ -157,20 +157,43 @@
   }
   .motrix-passenger-contact { flex: 1 1 115px; min-width: 0; padding: 0 !important; }
   .motrix-passenger-contact :is(.q-btn,button) { min-height: 42px !important; font-size: 12px; }
-  .motrix-passenger-primary-actions {
-    display: flex; align-items: stretch; gap: 7px;
+  /* Acciones fijas del pasajero: llamar, mensajes y compartir.
+     No se tapan entre sí ni ocupan el centro del mapa. */
+  .motrix-passenger-three-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 7px;
     flex: 0 0 auto;
-    padding: 10px 12px 2px;
+    margin: 0;
+    padding: 11px 11px 3px;
     border-top: 1px solid #e7eee9;
     background: white;
   }
-  .motrix-passenger-primary-actions > .q-btn {
-    flex: 1 1 0; min-width: 0; min-height: 48px;
-    border-radius: 12px;
-    padding: 5px 3px;
-    font-size: 12px; font-weight: 750;
+  .motrix-passenger-three-actions > * {
+    min-width: 0;
+    width: 100%;
   }
-  .motrix-passenger-primary-actions > .q-btn .q-btn__content { gap: 4px; }
+  .motrix-passenger-three-actions :is(.q-btn, button) {
+    width: 100%;
+    min-height: 54px !important;
+    height: 100%;
+    border-radius: 12px;
+    padding: 6px 3px;
+    font-size: 11px !important;
+    font-weight: 750;
+    line-height: 1.2;
+    white-space: normal;
+  }
+  .motrix-passenger-three-actions :is(.q-btn__content, .q-btn__content span) {
+    white-space: normal;
+    text-align: center;
+  }
+  @media (max-width: 360px) {
+    .motrix-passenger-three-actions :is(.q-btn,button) {
+      font-size: 10px !important;
+    }
+  }
   /* Google Maps nativo está por detrás del WebView: despejar todas sus capas. */
   body.motrix-passenger-trip-screen.motrix-google-native-map,
   body.motrix-passenger-trip-screen.motrix-google-native-map #q-app,
