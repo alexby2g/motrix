@@ -1859,6 +1859,8 @@ import { estadoCargaGoogleMapsNativo } from 'src/utils/mapaNativoCapacitor.js'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../../boot/axios.js'
 import { BROADCAST_AUTH_URL, echoOptions } from '../../config/runtime.js'
+// Hostinger está usando sincronización REST; no iniciar Reverb en Android.
+const REVERB_HABILITADO = false
 window.Pusher = Pusher
 
 const $q = useQuasar()
@@ -2195,7 +2197,7 @@ const estadoConductorTexto = computed(() => {
   if (tieneViajeActivo.value) return 'Conductor ocupado'
   return disponible.value
     ? 'Disponible para recibir viajes'
-    : 'Conductor desconectado'
+    : 'No disponible para solicitudes'
 })
 
 const estadoConductorDescripcion = computed(() => {
@@ -3281,10 +3283,16 @@ const salirCanalIncidencias = () => {
 const sincronizarCanalIncidencias = async () => {
   const solicitudId = Number(viajeActivo.value?.id || 0)
 
-  if (!echoInstance || !solicitudId) {
+  if (!solicitudId) {
     salirCanalIncidencias()
     incidenciasViaje.value = []
     incidenciaActiva.value = null
+    return
+  }
+
+  if (!REVERB_HABILITADO || !echoInstance) {
+    // Mantener el historial y estado de incidencias SOS aun sin Reverb.
+    await cargarIncidenciasViaje(true)
     return
   }
 
@@ -3309,7 +3317,7 @@ const sincronizarCanalIncidencias = async () => {
 }
 
 const inicializarWebsocket = () => {
-  if (echoInstance) return
+  if (!REVERB_HABILITADO || echoInstance) return
 
   try {
     echoInstance = new Echo({
