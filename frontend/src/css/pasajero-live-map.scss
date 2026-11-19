@@ -1,0 +1,216 @@
+/* MOTRIX · Seguimiento de viaje movil del pasajero.
+   Se conserva la ficha completa en la vista Detalles. */
+@media (max-width: 1023px) {
+  body.motrix-passenger-trip-screen { overflow: hidden !important; }
+  body.motrix-passenger-trip-screen .motrix-header,
+  body.motrix-passenger-trip-screen .passenger-bottom-footer { display: none !important; }
+  body.motrix-passenger-trip-screen .q-page-container,
+  body.motrix-passenger-trip-screen .motrix-page-container { padding: 0 !important; }
+  body.motrix-passenger-trip-screen .motrix-passenger-trip-page {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+  body.motrix-passenger-trip-screen .motrix-passenger-live {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100%; height: 100%; overflow: hidden;
+  }
+  body.motrix-passenger-trip-screen .motrix-passenger-map-stage {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100%; height: 100%; overflow: hidden;
+    background: #eef4ef;
+  }
+  body.motrix-passenger-trip-screen .motrix-passenger-map-canvas {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 0;
+  }
+  .motrix-passenger-map-status {
+    position: absolute;
+    z-index: 12;
+    top: calc(12px + env(safe-area-inset-top));
+    left: 12px; right: 72px;
+    min-height: 60px;
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px;
+    background: white;
+    border: 1px solid #dcebe2;
+    border-radius: 17px;
+    color: #1c3a2a;
+    box-shadow: 0 5px 20px #173d2928;
+  }
+  .motrix-passenger-map-status .min-width-zero { flex: 1; min-width: 0; }
+  .motrix-passenger-map-trip { font-weight: 800; font-size: 13px; }
+  .motrix-passenger-map-state { color: #198144; font-size: 12px; font-weight: 650; }
+  .motrix-passenger-map-controls {
+    position: absolute;
+    z-index: 12;
+    top: calc(12px + env(safe-area-inset-top));
+    right: 12px;
+  }
+  .motrix-passenger-map-controls .q-btn { box-shadow: 0 5px 18px #153d292c; }
+  .motrix-passenger-gps-warning {
+    z-index: 12;
+    position: absolute;
+    top: calc(87px + env(safe-area-inset-top));
+    left: 12px; right: 12px;
+    padding: 9px 12px;
+    display: flex; align-items: center; gap: 7px;
+    border-radius: 13px;
+    background: #fff5e7;
+    color: #86591f;
+    box-shadow: 0 4px 12px #243d2420;
+    font-size: 12px;
+  }
+  .motrix-passenger-map-legend {
+    position: absolute;
+    z-index: 12;
+    top: calc(89px + env(safe-area-inset-top));
+    left: 12px;
+    display: flex; align-items: center; flex-wrap: wrap;
+    gap: 10px;
+    max-width: calc(100% - 24px);
+    padding: 7px 10px;
+    border-radius: 18px;
+    font-size: 11px;
+    background: white;
+    color: #48574f;
+    box-shadow: 0 3px 14px #1b3d2b1a;
+  }
+  .motrix-passenger-map-legend span { display: flex; align-items: center; gap: 4px; }
+  .motrix-passenger-gps-warning ~ .motrix-passenger-map-legend { top: calc(145px + env(safe-area-inset-top)); }
+  .motrix-passenger-dot { width: 9px; height: 9px; display: inline-block; border-radius: 50%; }
+  .motrix-passenger-dot--blue { background: #1976d2; }
+  .motrix-passenger-dot--green { background: #22b35b; }
+  .motrix-passenger-dot--red { background: #ca364b; }
+  .motrix-passenger-sheet {
+    position: absolute;
+    z-index: 20;
+    bottom: 0; left: 0; right: 0;
+    display: flex; flex-direction: column;
+    max-height: min(51dvh, 570px);
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    background: white !important;
+    border-radius: 24px 24px 0 0;
+    color: #183126;
+    box-shadow: 0 -8px 30px #163b2b30;
+    overflow: hidden;
+  }
+  .motrix-passenger-handle {
+    align-self: center;
+    flex: 0 0 auto;
+    width: 44px; height: 5px;
+    margin: 9px 0 3px;
+    border-radius: 9px;
+    background: #d5e1d9;
+  }
+  .motrix-passenger-sheet-scroll {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 9px 15px 7px;
+  }
+  .motrix-passenger-sheet-title {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 9px;
+  }
+  .motrix-passenger-sheet-title .min-width-zero { min-width: 0; flex: 1; }
+  .motrix-passenger-eyebrow { color: #218044; font-size: 12px; font-weight: 750; }
+  .motrix-passenger-driver-name { font-size: 17px; font-weight: 800; line-height: 1.24; }
+  .motrix-passenger-fare { color: #148348; font-size: 17px; font-weight: 800; white-space: nowrap; }
+  .motrix-passenger-places {
+    display: grid; gap: 7px;
+    padding: 10px;
+    background: #f5f8f6;
+    border-radius: 13px;
+  }
+  .motrix-passenger-place { display: flex; align-items: flex-start; gap: 9px; min-width: 0; font-size: 12px; }
+  .motrix-passenger-place span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .motrix-passenger-metrics {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin: 10px 0 5px;
+  }
+  .motrix-passenger-metrics > div {
+    display: flex; align-items: center; gap: 5px;
+    border: 1px solid #e1eae4; border-radius: 20px;
+    background: white;
+    padding: 5px 9px;
+    color: #33453b;
+    font-size: 11px; font-weight: 700;
+  }
+  .motrix-passenger-incident {
+    padding: 7px 10px; border-radius: 10px;
+    color: #a32938; background: #ffeded; font-size: 12px;
+  }
+  .motrix-passenger-contact-row {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    margin-top: 8px;
+  }
+  .motrix-passenger-contact { flex: 1 1 115px; min-width: 0; padding: 0 !important; }
+  .motrix-passenger-contact :is(.q-btn,button) { min-height: 42px !important; font-size: 12px; }
+  /* Acciones fijas del pasajero: llamar, mensajes y compartir.
+     No se tapan entre sí ni ocupan el centro del mapa. */
+  .motrix-passenger-three-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 7px;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 11px 11px 3px;
+    border-top: 1px solid #e7eee9;
+    background: white;
+  }
+  .motrix-passenger-three-actions > * {
+    min-width: 0;
+    width: 100%;
+  }
+  .motrix-passenger-three-actions :is(.q-btn, button) {
+    width: 100%;
+    min-height: 54px !important;
+    height: 100%;
+    border-radius: 12px;
+    padding: 6px 3px;
+    font-size: 11px !important;
+    font-weight: 750;
+    line-height: 1.2;
+    white-space: normal;
+  }
+  .motrix-passenger-three-actions :is(.q-btn__content, .q-btn__content span) {
+    white-space: normal;
+    text-align: center;
+  }
+  @media (max-width: 360px) {
+    .motrix-passenger-three-actions :is(.q-btn,button) {
+      font-size: 10px !important;
+    }
+  }
+  /* Google Maps nativo está por detrás del WebView: despejar todas sus capas. */
+  body.motrix-passenger-trip-screen.motrix-google-native-map,
+  body.motrix-passenger-trip-screen.motrix-google-native-map #q-app,
+  body.motrix-passenger-trip-screen.motrix-google-native-map .q-layout,
+  body.motrix-passenger-trip-screen.motrix-google-native-map .q-page-container,
+  body.motrix-passenger-trip-screen.motrix-google-native-map .motrix-page-container,
+  body.motrix-passenger-trip-screen.motrix-google-native-map .motrix-passenger-trip-page,
+  body.motrix-passenger-trip-screen.motrix-google-native-map .motrix-passenger-live,
+  body.motrix-passenger-trip-screen.motrix-google-native-map .motrix-passenger-map-stage,
+  body.motrix-passenger-trip-screen.motrix-google-native-map .motrix-passenger-map-canvas {
+    background: transparent !important; background-color: transparent !important;
+    background-image: none !important;
+  }
+  body.motrix-passenger-trip-screen.motrix-google-native-map .motrix-passenger-map-canvas capacitor-google-map {
+    display: block !important;
+    position: absolute !important; inset: 0 !important;
+    width: 100% !important; height: 100% !important;
+    background: transparent !important;
+  }
+}

@@ -1,0 +1,86 @@
+name: Validar rediseño móvil y chat MOTRIX
+
+on:
+  pull_request:
+    branches:
+      - oficial-motrix-v1-20261105
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Vue / Quasar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Instalar dependencias
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+      - name: Lint de las pantallas modificadas
+        working-directory: frontend
+        run: npx eslint -c ./eslint.config.js src/components/ViajeChat.vue src/pages/pasajeros/SolicitarViajePage.vue src/pages/pasajeros/PerfilPasajeroPage.vue src/pages/pasajeros/PanelPasajeroPage.vue src/pages/servicios/ConductorPage.vue src/layouts/MainLayout.vue src/utils/mapaMotrix.js src/utils/mapaNativoCapacitor.js src/utils/rutasViajeMotrix.js src/pages/publico/SeguimientoCompartidoPage.vue src/pages/RecuperarContrasenaPage.vue src/pages/servicios/PerfilConductorPage.vue src/services/pushNotifications.js src/components/ConductorAccountDelete.vue
+      - name: Compilar frontend
+        working-directory: frontend
+        run: npm run build
+      - name: Preparar sitio web para publicar seguimiento compartido en Hostinger
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOTRIX-Web-Hostinger-${{ github.sha }}
+          path: frontend/dist/spa/
+          if-no-files-found: error
+          retention-days: 14
+
+  backend:
+    name: Backend PHP y recuperación SMS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar PHP para pruebas Laravel
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, xml, intl, gd, zip, pdo_sqlite, sqlite3
+          coverage: none
+          tools: composer:v2
+      - name: Verificar sintaxis de Laravel y recuperación
+        run: |
+          php -l backend/routes/api.php
+          php -l backend/app/Http/Controllers/MensajeViajeController.php
+          php -l backend/app/Http/Controllers/PasswordRecoveryController.php
+          php -l backend/app/Providers/AppServiceProvider.php
+          php -l backend/config/services.php
+          php -l backend/tests/Feature/MotrixPasswordRecoveryTest.php
+      - name: Instalar dependencias backend
+        working-directory: backend
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Probar recuperación SMS sin enviar mensajes reales
+        working-directory: backend
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+          php artisan test --filter=MotrixPasswordRecoveryTest
+      - name: Preparar paquete de actualización manual backend Hostinger
+        working-directory: backend
+        run: |
+          zip -q -r "${{ runner.temp }}/MOTRIX-Backend-SMS-HOSTINGER.zip" \
+            app/Http/Controllers/PasswordRecoveryController.php \
+            app/Http/Controllers/AuthController.php \
+            app/Providers/AppServiceProvider.php \
+            config/services.php
+          cp ../docs/MOTRIX_RECUPERACION_SMS_HOSTINGER.md "${{ runner.temp }}/GUIA-SMS-HOSTINGER.md"
+      - name: Publicar paquete backend para instalación manual
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOTRIX-Backend-SMS-HOSTINGER-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/MOTRIX-Backend-SMS-HOSTINGER.zip
+            ${{ runner.temp }}/GUIA-SMS-HOSTINGER.md
+          if-no-files-found: error
+          retention-days: 14

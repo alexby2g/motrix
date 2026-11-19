@@ -7,127 +7,138 @@ use App\Models\PasswordResetOtp;
 use App\Models\Persona;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class MotrixPasswordRecoveryTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_recuperacion_por_celular_usa_el_correo_guardado_en_la_cuenta(): void
+    private function habilitarSmsDePruebas(bool $aceptar = true): void
     {
         config([
-            'mail.default' => 'array',
+            'services.motrix_sms.twilio_account_sid' => 'AC' . str_repeat('1', 32),
+            'services.motrix_sms.twilio_auth_token' => 'token-solo-pruebas',
+            'services.motrix_sms.twilio_from' => '+15005550006',
+            'services.motrix_sms.twilio_messaging_service_sid' => null,
             'services.motrix_sms.webhook_url' => null,
             'services.motrix_sms.token' => null,
         ]);
 
-        [, $usuario] = $this->crearPasajero(
-            'recuperacion@example.com',
-            '70000001',
-            '200001'
-        );
+        Http::fake([
+            'api.twilio.com/*' => $aceptar
+                ? Http::response(['sid' => 'SM-motrix-test'], 201)
+                : Http::response(['error' => 'rejected'], 403),
+        ]);
+    }
 
+    public function test_no_asegura_envio_si_el_proveedor_sms_no_esta_configurado(): void
+    {
+        config([
+            'services.motrix_sms.twilio_account_sid' => null,
+            'services.motrix_sms.twilio_auth_token' => null,
+            'services.motrix_sms.twilio_from' => null,
+            'services.motrix_sms.twilio_messaging_service_sid' => null,
+            'services.motrix_sms.webhook_url' => null,
+        ]);
+
+        [, $usuario] = $this->crearPasajero('sin-sms@example.com', '70000001', '200001');
         $this->postJson('/api/auth/recuperacion/solicitar', [
             'login' => '70000001',
+        ])->assertStatus(503);
+
+        $this->assertDatabaseMissing('password_reset_otps', ['user_id' => $usuario->id]);
+    }
+
+    public function test_enviar_sms_solo_al_numero_asociado_a_la_cuenta(): void
+    {
+        $this->habilitarSmsDePruebas();
+        [, $usuario] = $this->crearPasajero('persona@example.com', '70000002', '200002');
+
+        $this->postJson('/api/auth/recuperacion/solicitar', [
+            'login' => '+591 7000-0002',
             'email' => 'intruso@example.com',
-        ])
-            ->assertOk()
-            ->assertJsonStructure(['message'])
-            ->assertJsonMissing(['reset_token']);
+            'to' => '79999999',
+        ])->assertOk()->assertJsonStructure(['message']);
 
-        $otp = PasswordResetOtp::query()
-            ->where('user_id', $usuario->id)
-            ->firstOrFail();
+        $otp = PasswordResetOtp::query()->where('user_id', $usuario->id)->firstOrFail();
+        $this->assertSame('sms', $otp->canal);
+        $this->assertSame('****0002', $otp->destino_enmascarado);
+        $this->assertSame(hash('sha256', '70000002'), $otp->identifier_hash);
+        $this->assertNull($otp->reset_token_hash);
+        $this->assertNull($otp->verified_at);
 
-        $this->assertSame('email', $otp->canal);
-        $this->assertNotNull($otp->destino_enmascarado);
-        $this->assertStringEndsWith('@example.com', (string) $otp->destino_enmascarado);
-        $this->assertStringNotContainsString('intruso', (string) $otp->destino_enmascarado);
+        Http::assertSent(function (HttpRequest $request) {
+            return $request->url() ===
+                'https://api.twilio.com/2010-04-01/Accounts/AC' . str_repeat('1', 32) . '/Messages.json'
+                && $request['To'] === '+59170000002'
+                && $request['From'] === '+15005550006'
+                && ! str_contains((string) $request['Body'], 'intruso@example.com');
+        });
+        Http::assertSentCount(1);
     }
 
-    public function test_cuenta_con_correo_interno_y_sin_sms_queda_sin_canal_configurado(): void
+    public function test_numero_inexistente_no_revela_cuentas_ni_envia_sms(): void
     {
-        config([
-            'mail.default' => 'array',
-            'services.motrix_sms.webhook_url' => null,
-            'services.motrix_sms.token' => null,
-        ]);
+        $this->habilitarSmsDePruebas();
+        $this->crearPasajero('existente@example.com', '70000003', '200003');
 
-        [, $usuario] = $this->crearPasajero(
-            'pasajero.70000002@motrix.invalid',
-            '70000002',
-            '200002'
-        );
-
-        $this->postJson('/api/auth/recuperacion/solicitar', [
-            'login' => '70000002',
+        $desconocido = $this->postJson('/api/auth/recuperacion/solicitar', [
+            'login' => '79999999',
         ])->assertOk();
 
-        $otp = PasswordResetOtp::query()
-            ->where('user_id', $usuario->id)
-            ->firstOrFail();
-
-        $this->assertSame('sin_configurar', $otp->canal);
-        $this->assertNull($otp->destino_enmascarado);
-    }
-
-    public function test_correo_motrix_test_no_se_trata_como_destino_real(): void
-    {
-        config([
-            'mail.default' => 'array',
-            'services.motrix_sms.webhook_url' => null,
-            'services.motrix_sms.token' => null,
-        ]);
-
-        [, $usuario] = $this->crearPasajero(
-            'pasajero.70000006@motrix.test',
-            '70000006',
-            '200006'
-        );
-
-        $this->postJson('/api/auth/recuperacion/solicitar', [
-            'login' => '70000006',
+        $real = $this->postJson('/api/auth/recuperacion/solicitar', [
+            'login' => '70000003',
         ])->assertOk();
 
-        $otp = PasswordResetOtp::query()
-            ->where('user_id', $usuario->id)
-            ->firstOrFail();
-
-        $this->assertSame('sin_configurar', $otp->canal);
-        $this->assertNull($otp->destino_enmascarado);
+        $this->assertSame($desconocido->json('message'), $real->json('message'));
+        Http::assertSentCount(1);
     }
 
-    public function test_recuperacion_bloquea_celular_historico_asociado_a_mas_de_una_cuenta(): void
+    public function test_no_se_crea_otp_si_el_sms_falla(): void
     {
-        config([
-            'mail.default' => 'array',
-            'services.motrix_sms.webhook_url' => null,
-            'services.motrix_sms.token' => null,
-        ]);
+        $this->habilitarSmsDePruebas(false);
+        [, $usuario] = $this->crearPasajero('rechazo@example.com', '70000004', '200004');
 
-        $this->crearPasajero(
-            'primero@example.com',
-            '70000007',
-            '200007'
-        );
+        $this->postJson('/api/auth/recuperacion/solicitar', [
+            'login' => '70000004',
+        ])->assertOk();
+
+        $this->assertDatabaseMissing('password_reset_otps', ['user_id' => $usuario->id]);
+    }
+
+    public function test_no_reenvia_multiples_sms_en_el_mismo_minuto(): void
+    {
+        $this->habilitarSmsDePruebas();
+        $this->crearPasajero('limite@example.com', '70000005', '200005');
+
+        $this->postJson('/api/auth/recuperacion/solicitar', ['login' => '70000005'])->assertOk();
+        $this->postJson('/api/auth/recuperacion/solicitar', ['login' => '+59170000005'])->assertOk();
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_rechaza_celular_ambiguo_y_no_envia_sms(): void
+    {
+        $this->habilitarSmsDePruebas();
+        $this->crearPasajero('primero@example.com', '70000006', '200006');
 
         $persona = Persona::query()->create([
             'nombre' => 'Segundo',
             'apellidos' => 'Historico',
-            'telefono' => '+591 7000-0007',
-            'ci' => '200008',
+            'telefono' => '+591 7000-0006',
+            'ci' => '200016',
         ]);
-
         $pasajero = Pasajero::query()->create([
             'email' => 'segundo@example.com',
             'password' => null,
             'id_persona' => $persona->id,
         ]);
-
         User::factory()->create([
-            'name' => 'Segundo Historico',
-            'nickname' => 'segundo-historico',
+            'name' => 'Segundo',
+            'nickname' => 'historico-segundo',
             'email' => 'segundo@example.com',
             'role' => 'pasajero',
             'pasajero_id' => $pasajero->id,
@@ -137,180 +148,78 @@ class MotrixPasswordRecoveryTest extends TestCase
             'sindicato_id' => null,
         ]);
 
-        $this->postJson('/api/auth/recuperacion/solicitar', [
-            'login' => '70000007',
-        ])->assertOk()
-            ->assertJsonStructure(['message']);
-
-        $this->assertDatabaseCount(
-            'password_reset_otps',
-            0
-        );
+        $this->postJson('/api/auth/recuperacion/solicitar', ['login' => '70000006'])->assertOk();
+        $this->assertDatabaseCount('password_reset_otps', 0);
+        Http::assertNothingSent();
     }
 
-    public function test_recuperacion_reconoce_celular_historico_con_formato_bolivia(): void
+    public function test_cinco_intentos_fallidos_bloquean_el_codigo_correcto(): void
     {
-        config([
-            'mail.default' => 'array',
-            'services.motrix_sms.webhook_url' => null,
-            'services.motrix_sms.token' => null,
-        ]);
-
-        $persona = Persona::query()->create([
-            'nombre' => 'Formato',
-            'apellidos' => 'Historico',
-            'telefono' => '+591 7000-0008',
-            'ci' => '200009',
-        ]);
-
-        $pasajero = Pasajero::query()->create([
-            'email' => 'formato@example.com',
-            'password' => null,
-            'id_persona' => $persona->id,
-        ]);
-
-        $usuario = User::factory()->create([
-            'name' => 'Formato Historico',
-            'nickname' => 'formato-historico',
-            'email' => 'formato@example.com',
-            'role' => 'pasajero',
-            'pasajero_id' => $pasajero->id,
-            'persona_id' => $persona->id,
-            'mototaxista_id' => null,
-            'federacion_id' => null,
-            'sindicato_id' => null,
-        ]);
-
-        $this->postJson('/api/auth/recuperacion/solicitar', [
-            'login' => '70000008',
-        ])->assertOk();
-
-        $this->assertDatabaseHas(
-            'password_reset_otps',
-            [
-                'user_id' => $usuario->id,
-                'canal' => 'email',
-            ]
-        );
-    }
-
-    public function test_respuesta_no_revela_si_la_cuenta_existe(): void
-    {
-        config([
-            'mail.default' => 'array',
-            'services.motrix_sms.webhook_url' => null,
-            'services.motrix_sms.token' => null,
-        ]);
-
-        $this->crearPasajero(
-            'existente@example.com',
-            '70000003',
-            '200003'
-        );
-
-        $respuestaExistente = $this->postJson('/api/auth/recuperacion/solicitar', [
-            'login' => '70000003',
-        ])->assertOk();
-
-        $respuestaInexistente = $this->postJson('/api/auth/recuperacion/solicitar', [
-            'login' => '79999999',
-        ])->assertOk();
-
-        $this->assertSame(
-            $respuestaExistente->json('message'),
-            $respuestaInexistente->json('message')
-        );
-    }
-
-    public function test_otp_se_bloquea_al_alcanzar_cinco_intentos_fallidos(): void
-    {
-        [, $usuario] = $this->crearPasajero(
-            'intentos@example.com',
-            '70000004',
-            '200004'
-        );
-
-        PasswordResetOtp::query()->create([
-            'user_id' => $usuario->id,
-            'identifier_hash' => hash('sha256', '70000004'),
-            'code_hash' => Hash::make('123456'),
-            'reset_token_hash' => null,
-            'canal' => 'email',
-            'destino_enmascarado' => 'in******@example.com',
-            'attempts' => 0,
-            'expires_at' => now()->addMinutes(10),
-            'verified_at' => null,
-            'consumed_at' => null,
-        ]);
+        [, $usuario] = $this->crearPasajero('intentos@example.com', '70000007', '200007');
+        $this->crearOtpManual($usuario, '70000007', '123456');
 
         for ($intento = 1; $intento <= 5; $intento++) {
             $this->postJson('/api/auth/recuperacion/verificar', [
-                'login' => '70000004',
+                'login' => '70000007',
                 'codigo' => '000000',
             ])->assertStatus(422);
         }
 
-        $this->assertSame(
-            5,
-            PasswordResetOtp::query()
-                ->where('user_id', $usuario->id)
-                ->value('attempts')
-        );
-
+        $this->assertSame(5, PasswordResetOtp::query()->where('user_id', $usuario->id)->value('attempts'));
         $this->postJson('/api/auth/recuperacion/verificar', [
-            'login' => '70000004',
+            'login' => '70000007',
             'codigo' => '123456',
         ])->assertStatus(422);
     }
 
-    public function test_token_verificado_permite_cambiar_password_una_sola_vez(): void
+    public function test_codigo_correcto_genera_token_de_cambio_y_se_usa_una_vez(): void
     {
-        [$pasajero, $usuario] = $this->crearPasajero(
-            'cambio@example.com',
-            '70000005',
-            '200005'
-        );
+        [$pasajero, $usuario] = $this->crearPasajero('restablecer@example.com', '70000008', '200008');
+        $this->crearOtpManual($usuario, '70000008', '123456');
 
-        $token = str_repeat('a', 64);
+        $respuesta = $this->postJson('/api/auth/recuperacion/verificar', [
+            'login' => '+59170000008',
+            'codigo' => '123456',
+        ])->assertOk()->assertJsonStructure(['reset_token']);
 
-        PasswordResetOtp::query()->create([
-            'user_id' => $usuario->id,
-            'identifier_hash' => hash('sha256', '70000005'),
-            'code_hash' => Hash::make('123456'),
-            'reset_token_hash' => hash('sha256', $token),
-            'canal' => 'email',
-            'destino_enmascarado' => 'ca****@example.com',
-            'attempts' => 1,
-            'expires_at' => now()->addMinutes(10),
-            'verified_at' => now(),
-            'consumed_at' => null,
-        ]);
+        $token = $respuesta->json('reset_token');
+        $this->assertSame(64, strlen($token));
 
         $payload = [
-            'login' => '70000005',
+            'login' => '70000008',
             'reset_token' => $token,
             'password' => 'NuevaClave123!',
             'password_confirmation' => 'NuevaClave123!',
         ];
 
-        $this->postJson('/api/auth/recuperacion/restablecer', $payload)
-            ->assertOk();
-
+        $this->postJson('/api/auth/recuperacion/restablecer', $payload)->assertOk();
         $usuario->refresh();
         $pasajero->refresh();
 
         $this->assertTrue(Hash::check('NuevaClave123!', $usuario->password));
         $this->assertTrue(Hash::check('NuevaClave123!', $pasajero->password));
 
-        $otp = PasswordResetOtp::query()
-            ->where('user_id', $usuario->id)
-            ->firstOrFail();
-
+        $otp = PasswordResetOtp::query()->where('user_id', $usuario->id)->firstOrFail();
         $this->assertNotNull($otp->consumed_at);
         $this->assertNull($otp->reset_token_hash);
 
-        $this->postJson('/api/auth/recuperacion/restablecer', $payload)
-            ->assertStatus(422);
+        $this->postJson('/api/auth/recuperacion/restablecer', $payload)->assertStatus(422);
+    }
+
+    private function crearOtpManual(User $usuario, string $numero, string $codigo): void
+    {
+        PasswordResetOtp::query()->create([
+            'user_id' => $usuario->id,
+            'identifier_hash' => hash('sha256', $numero),
+            'code_hash' => Hash::make($codigo),
+            'reset_token_hash' => null,
+            'canal' => 'sms',
+            'destino_enmascarado' => '****' . substr($numero, -4),
+            'attempts' => 0,
+            'expires_at' => now()->addMinutes(10),
+            'verified_at' => null,
+            'consumed_at' => null,
+        ]);
     }
 
     private function crearPasajero(

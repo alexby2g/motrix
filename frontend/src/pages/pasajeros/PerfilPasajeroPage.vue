@@ -1,276 +1,96 @@
 <template>
-  <q-page class="profile-page q-pa-md q-pa-lg-md">
-    <div class="row justify-center">
-      <div class="col-12 col-md-9 col-lg-7">
-        <q-card class="profile-card shadow-2">
-          <q-card-section class="profile-header text-white">
-            <div class="row items-center no-wrap">
-              <q-btn
-                flat
-                round
-                icon="arrow_back"
-                color="white"
-                class="q-mr-sm"
-                @click="volver"
-              />
+  <q-page class="motrix-perfil-claro">
+    <div class="motrix-perfil-contenido">
+      <div class="motrix-perfil-cabecera row items-center justify-between">
+        <q-btn flat round icon="arrow_back" color="grey-9" aria-label="Volver" @click="volver" />
+        <div class="text-h6 text-weight-bold">Mi perfil</div>
+        <q-btn flat round icon="refresh" color="green-8" :loading="cargando" aria-label="Actualizar perfil" @click="cargarPerfil" />
+      </div>
+      <div class="motrix-perfil-identidad">
+        <q-avatar size="92px" color="green-8" text-color="white" class="motrix-perfil-avatar" @click="abrirVisorFoto">
+          <img v-if="fotoPerfilUrl && !fotoPerfilError" :src="fotoPerfilUrl" :alt="`Foto de ${nombreUsuario}`" @error="fotoPerfilError = true">
+          <span v-else>{{ iniciales }}</span>
+        </q-avatar>
+        <div class="text-h6 text-weight-bold q-mt-md">{{ nombreUsuario }}</div>
+        <div class="motrix-perfil-email">{{ usuario?.email || usuario?.telefono || 'Pasajero MOTRIX' }}</div>
+        <div class="motrix-perfil-estadisticas">
+          <div><strong>{{ viajesCompletados === null ? '—' : viajesCompletados }}</strong><span>Viajes realizados</span></div>
+          <div><strong>Pasajero</strong><span>Tipo de cuenta</span></div>
+          <div><strong>{{ anioRegistro }}</strong><span>Miembro desde</span></div>
+        </div>
+        <q-btn outline no-caps dense color="green-8" icon="photo_camera" label="Cambiar foto"
+          class="q-mt-md motrix-perfil-foto-btn" :loading="subiendoFotoPerfil" @click="abrirSelectorFotoPerfil" />
+        <input ref="fotoPerfilInput" type="file" accept="image/jpeg,image/png,image/webp" class="profile-file-input" @change="seleccionarFotoPerfil">
+      </div>
 
-              <q-avatar
-                color="white"
-                text-color="green-8"
-                icon="account_circle"
-                size="52px"
-                class="q-mr-md"
-              />
+      <div class="motrix-perfil-seccion">Cuenta</div>
+      <div class="motrix-perfil-lista">
+        <q-expansion-item icon="manage_accounts" label="Mis datos personales" expand-icon="chevron_right">
+          <div class="motrix-perfil-detalles">
+            <div><b>Nombre:</b> {{ nombreUsuario }}</div>
+            <div><b>Teléfono:</b> {{ usuario?.telefono || usuario?.nickname || 'No registrado' }}</div>
+            <div><b>Correo:</b> {{ usuario?.email || 'No registrado' }}</div>
+          </div>
+        </q-expansion-item>
+        <q-item clickable v-ripple @click="router.push('/cuenta/cambiar-contrasena')">
+          <q-item-section avatar><q-icon name="lock_outline" /></q-item-section>
+          <q-item-section>Cambiar contraseña</q-item-section>
+          <q-item-section side><q-icon name="chevron_right" /></q-item-section>
+        </q-item>
+      </div>
 
-              <div class="col min-width-zero">
-                <div class="text-h5 text-weight-bold">
-                  Mi perfil
-                </div>
+      <div class="motrix-perfil-seccion">Mis viajes</div>
+      <div class="motrix-perfil-lista">
+        <q-item clickable v-ripple @click="irAHistorial">
+          <q-item-section avatar><q-icon name="history" /></q-item-section>
+          <q-item-section>Historial de viajes</q-item-section>
+          <q-item-section side><q-icon name="chevron_right" /></q-item-section>
+        </q-item>
+        <q-item clickable v-ripple @click="irASolicitar">
+          <q-item-section avatar><q-icon name="two_wheeler" /></q-item-section>
+          <q-item-section>Solicitar mototaxi</q-item-section>
+          <q-item-section side><q-icon name="chevron_right" /></q-item-section>
+        </q-item>
+      </div>
 
-                <div class="text-caption text-green-1">
-                  Cuenta de pasajero MOTRIX
-                </div>
-              </div>
+      <div class="motrix-perfil-seccion">Ayuda y seguridad</div>
+      <div class="motrix-perfil-lista">
+        <q-item clickable v-ripple @click="dialogAyuda = true">
+          <q-item-section avatar><q-icon name="help_outline" /></q-item-section>
+          <q-item-section>Ayuda</q-item-section>
+          <q-item-section side><q-icon name="chevron_right" /></q-item-section>
+        </q-item>
+        <q-item clickable v-ripple @click="abrirEliminarCuenta">
+          <q-item-section avatar><q-icon name="privacy_tip" /></q-item-section>
+          <q-item-section>Privacidad y eliminación de cuenta</q-item-section>
+          <q-item-section side><q-icon name="chevron_right" /></q-item-section>
+        </q-item>
+      </div>
 
-              <q-btn
-                flat
-                round
-                icon="refresh"
-                color="white"
-                :loading="cargando"
-                @click="cargarPerfil"
-              >
-                <q-tooltip>
-                  Actualizar información
-                </q-tooltip>
-              </q-btn>
-            </div>
-          </q-card-section>
+      <div class="motrix-perfil-lista motrix-perfil-sesion">
+        <q-item clickable v-ripple :disable="cerrandoSesion" @click="cerrarSesion">
+          <q-item-section avatar><q-icon name="logout" color="negative" /></q-item-section>
+          <q-item-section class="text-negative text-weight-medium">Cerrar sesión</q-item-section>
+          <q-item-section side><q-spinner v-if="cerrandoSesion" color="negative" size="20px" /><q-icon v-else name="chevron_right" /></q-item-section>
+        </q-item>
+      </div>
+      <div class="motrix-perfil-pie">MOTRIX · Movilidad en Trinidad</div>
+    </div>
 
-          <q-card-section
-            v-if="cargando && !usuario"
-            class="column flex-center q-pa-xl"
-          >
-            <q-spinner
-              color="green-8"
-              size="48px"
-            />
-
-            <div class="text-grey-7 q-mt-md">
-              Cargando tu perfil...
-            </div>
-          </q-card-section>
-
-          <q-card-section
-            v-else
-            class="q-pa-md q-pa-lg-md"
-          >
-            <div class="profile-identity">
-              <q-avatar
-                size="92px"
-                color="green-1"
-                text-color="green-9"
-                class="profile-avatar"
-                :class="{ 'cursor-pointer': Boolean(fotoPerfilUrl) }"
-                @click="abrirVisorFoto"
-              >
-                <img
-                  v-if="fotoPerfilUrl && !fotoPerfilError"
-                  :src="fotoPerfilUrl"
-                  :alt="`Foto de ${nombreUsuario}`"
-                  @error="fotoPerfilError = true"
-                >
-                <span v-else>{{ iniciales }}</span>
-              </q-avatar>
-
-              <input
-                ref="fotoPerfilInput"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                class="profile-file-input"
-                @change="seleccionarFotoPerfil"
-              >
-
-              <q-btn
-                outline
-                no-caps
-                color="green-8"
-                icon="photo_camera"
-                :label="fotoPerfilUrl ? 'Cambiar foto' : 'Agregar foto'"
-                class="q-mt-md"
-                :loading="subiendoFotoPerfil"
-                @click="abrirSelectorFotoPerfil"
-              />
-
-              <div class="text-caption text-grey-6 q-mt-xs text-center">
-                JPG, PNG o WEBP · máximo 4 MB
-              </div>
-
-              <div class="text-center">
-                <div class="text-h5 text-weight-bold text-grey-9 q-mt-md">
-                  {{ nombreUsuario }}
-                </div>
-
-                <q-chip
-                  color="green-1"
-                  text-color="green-9"
-                  icon="person_pin_circle"
-                  class="q-mt-sm text-weight-bold"
-                >
-                  Pasajero
-                </q-chip>
-              </div>
-            </div>
-
-            <q-separator class="q-my-lg" />
-
-            <div class="text-subtitle1 text-weight-bold text-green-9 q-mb-md">
-              Datos de la cuenta
-            </div>
-
-            <div class="profile-grid">
-              <div class="profile-data">
-                <q-icon
-                  name="person"
-                  color="green-8"
-                />
-
-                <div>
-                  <span>Nombre</span>
-                  <strong>
-                    {{ nombreUsuario }}
-                  </strong>
-                </div>
-              </div>
-
-              <div class="profile-data">
-                <q-icon
-                  name="phone_android"
-                  color="green-8"
-                />
-
-                <div>
-                  <span>Celular / usuario</span>
-                  <strong>
-                    {{ usuario?.telefono || usuario?.nickname || 'No registrado' }}
-                  </strong>
-                </div>
-              </div>
-
-              <div class="profile-data">
-                <q-icon
-                  name="email"
-                  color="green-8"
-                />
-
-                <div>
-                  <span>Correo (opcional)</span>
-                  <strong>
-                    {{ usuario?.email || 'No registrado' }}
-                  </strong>
-                </div>
-              </div>
-
-              <div class="profile-data">
-                <q-icon
-                  name="badge"
-                  color="green-8"
-                />
-
-                <div>
-                  <span>Código de pasajero</span>
-                  <strong>
-                    {{
-                      usuario?.pasajero_id
-                        ? `#${usuario.pasajero_id}`
-                        : 'No disponible'
-                    }}
-                  </strong>
-                </div>
-              </div>
-            </div>
-
-            <q-banner
-              rounded
-              class="account-note q-mt-lg"
-            >
-              <template #avatar>
-                <q-icon
-                  name="verified_user"
-                  color="green-8"
-                  size="30px"
-                />
-              </template>
-
-              <div class="text-weight-bold text-green-9">
-                Cuenta protegida
-              </div>
-
-              <div class="text-caption text-grey-7">
-                Esta pantalla consulta tu sesión autenticada mediante
-                MOTRIX. La edición de datos personales se habilitará
-                cuando definamos qué campos puede modificar el pasajero.
-              </div>
-            </q-banner>
-
-            <div class="row q-col-gutter-sm q-mt-md">
-              <div class="col-12">
-                <q-btn
-                  outline
-                  color="green-8"
-                  icon="lock_reset"
-                  label="Cambiar contraseña"
-                  class="full-width"
-                  no-caps
-                  @click="router.push('/cuenta/cambiar-contrasena')"
-                />
-              </div>
-
-              <div class="col-12 col-sm-6">
-                <q-btn
-                  outline
-                  color="green-8"
-                  icon="history"
-                  label="Mis viajes"
-                  class="full-width"
-                  no-caps
-                  @click="irAHistorial"
-                />
-              </div>
-
-              <div class="col-12 col-sm-6">
-                <q-btn
-                  color="green-8"
-                  icon="two_wheeler"
-                  label="Solicitar mototaxi"
-                  class="full-width"
-                  unelevated
-                  no-caps
-                  @click="irASolicitar"
-                />
-              </div>
-            </div>
-
-            <q-separator class="q-my-xl" />
-
-            <div class="danger-zone">
-              <div class="text-subtitle1 text-weight-bold text-red-8">
-                Privacidad y eliminación de cuenta
-              </div>
-              <div class="text-caption text-grey-7 q-mt-xs q-mb-md">
-                Puedes eliminar tu acceso de pasajero y solicitar la eliminación o anonimización
-                de tus datos personales. Esta acción es permanente.
-              </div>
-              <q-btn
-                outline
-                color="red-7"
-                icon="delete_forever"
-                label="Eliminar mi cuenta"
-                no-caps
-                @click="abrirEliminarCuenta"
-              />
-            </div>
-
+    <q-dialog v-model="dialogAyuda">
+      <q-card style="width: min(94vw, 450px)">
+        <q-card-section class="row items-center">
+          <q-icon name="help_outline" color="green-8" size="28px" class="q-mr-sm" />
+          <div class="text-h6">Ayuda para pasajeros</div>
+        </q-card-section>
+        <q-card-section>
+          <p>Para solicitar un mototaxi, selecciona tu origen y destino y confirma la tarifa propuesta.</p>
+          <p>Durante el viaje puedes comunicarte con tu conductor desde la pantalla de seguimiento. Si tienes una emergencia, utiliza la opción SOS disponible durante el servicio.</p>
+          <p class="text-caption text-grey-7 q-mb-none">Los conductores son registrados por el equipo de MOTRIX. No necesitas crear una cuenta de conductor.</p>
+        </q-card-section>
+        <q-card-actions align="right"><q-btn flat color="green-8" label="Entendido" v-close-popup /></q-card-actions>
+      </q-card>
+    </q-dialog>
             <q-dialog v-model="dialogEliminarCuenta" persistent>
               <q-card class="delete-dialog">
                 <q-card-section class="row items-center">
@@ -324,16 +144,7 @@
                 </q-card-actions>
               </q-card>
             </q-dialog>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
-    <PhotoViewerDialog
-      v-model="visorFoto"
-      :src="fotoPerfilUrl"
-      :title="nombreUsuario"
-    />
+    <PhotoViewerDialog v-model="visorFoto" :src="fotoPerfilUrl" :title="nombreUsuario" />
   </q-page>
 </template>
 
@@ -356,13 +167,24 @@ import {
 import {
   api
 } from 'src/boot/axios.js'
+import { desvincularPushMotrix } from 'src/services/pushNotifications.js'
 import PhotoViewerDialog from 'src/components/PhotoViewerDialog.vue'
+import { ES_APLICACION_NATIVA } from 'src/config/runtime.js'
 
 const $q = useQuasar()
 const router = useRouter()
 const route = useRoute()
 
 const cargando = ref(false)
+const viajesCompletados = ref(null)
+const anioRegistro = computed(() => {
+  const fecha = usuario.value?.created_at
+  if (!fecha) return '—'
+  const anio = new Date(fecha).getFullYear()
+  return Number.isFinite(anio) && anio > 2000 ? anio : '—'
+})
+const dialogAyuda = ref(false)
+const cerrandoSesion = ref(false)
 const visorFoto = ref(false)
 const fotoPerfilError = ref(false)
 const fotoPerfilInput = ref(null)
@@ -539,6 +361,20 @@ async function cargarPerfil() {
         JSON.stringify(datos)
       )
     }
+
+    // Se cuentan viajes finalizados reales, no solicitudes canceladas.
+    // Si la API de historial falla, mostrar "—" sin inventar un cero.
+    try {
+      const historial = await api.get('/pasajero/solicitudes')
+      viajesCompletados.value = Array.isArray(historial.data)
+        ? historial.data.filter(v =>
+            String(v?.estado || '').trim().toLowerCase() === 'finalizado'
+          ).length
+        : null
+    } catch (historialError) {
+      viajesCompletados.value = null
+      console.warn('No se pudieron cargar estadísticas del pasajero:', historialError?.message)
+    }
   } catch (error) {
     console.error(
       'No se pudo cargar el perfil:',
@@ -616,6 +452,23 @@ async function eliminarCuenta() {
   }
 }
 
+async function cerrarSesion() {
+  if (cerrandoSesion.value) return
+  cerrandoSesion.value = true
+  try {
+    await desvincularPushMotrix()
+    await api.post('/auth/logout')
+  } catch (error) {
+    if (error?.response?.status !== 401) {
+      console.warn('No se pudo cerrar la sesión en el servidor:', error)
+    }
+  } finally {
+    limpiarSesionLocal()
+    cerrandoSesion.value = false
+    await router.replace(ES_APLICACION_NATIVA ? '/login' : '/presentacion')
+  }
+}
+
 function volver() {
   router.push('/pasajero')
 }
@@ -629,6 +482,8 @@ function irASolicitar() {
 }
 
 onMounted(() => {
+  // La navegación al perfil siempre restaura cabecera y barra inferior.
+  document.body.classList.remove('motrix-map-request-screen')
   cargarPerfil()
 
   if (String(route.query.eliminar || '') === '1') {
@@ -751,4 +606,34 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 }
+</style>
+
+<style>
+.motrix-perfil-claro { min-height: 100%; background: #f6f8f7 !important; color: #192e22; }
+/* El mapa nativo no debe transparentar la pantalla del perfil. */
+body.motrix-google-native-map .q-page.motrix-perfil-claro { background: #f6f8f7 !important; }
+.motrix-perfil-contenido { width: min(100%, 700px); margin: auto; padding: 12px 17px 36px; }
+.motrix-perfil-cabecera { min-height: 54px; }
+.motrix-perfil-identidad { display: flex; align-items: center; flex-direction: column; text-align: center; padding: 17px 0 24px; }
+.motrix-perfil-avatar { cursor: pointer; font-size: 34px; box-shadow: 0 0 0 5px #fff, 0 7px 22px #16452b20; }
+.motrix-perfil-email { font-size: 13px; color: #7b8981; overflow-wrap: anywhere; }
+.motrix-perfil-foto-btn { border-radius: 24px !important; }
+.motrix-perfil-estadisticas {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 440px); margin-top: 16px;
+  padding: 12px 0; border-top: 1px solid #e3eae5;
+}
+.motrix-perfil-estadisticas > div { text-align: center; min-width: 0; }
+.motrix-perfil-estadisticas > div:not(:last-child) { border-right: 1px solid #e3eae5; }
+.motrix-perfil-estadisticas strong { display:block; color:#203a2a; font-size:16px; font-weight:800; }
+.motrix-perfil-estadisticas span { display:block; color:#85938a; font-size:11px; margin-top:2px; }
+.motrix-perfil-seccion { font-weight: 750; margin: 17px 0 10px; color: #25382b; }
+.motrix-perfil-lista { overflow: hidden; border: 1px solid #e0e7e2; border-radius: 16px; background: #fff; box-shadow: 0 2px 9px #153a2a0a; }
+.motrix-perfil-lista .q-item, .motrix-perfil-lista .q-expansion-item__container > .q-item { min-height: 57px; color: #26392c; }
+.motrix-perfil-lista .q-item:not(:last-child), .motrix-perfil-lista .q-expansion-item:not(:last-child) { border-bottom: 1px solid #edf1ed; }
+.motrix-perfil-lista .q-item__section--avatar { min-width: 42px; color: #38764e; }
+.motrix-perfil-lista .q-item__section--side { color: #98a59b; }
+.motrix-perfil-detalles { padding: 8px 16px 17px 56px; color: #55655b; line-height: 1.9; font-size: 13px; }
+.motrix-perfil-sesion { margin-top: 21px; }
+.motrix-perfil-pie { padding-top: 23px; text-align: center; color: #91a097; font-size: 12px; }
 </style>

@@ -47,20 +47,6 @@
           </span>
         </div>
 
-        <q-chip
-          v-if="puedeGestionarIncidencias && $q.screen.gt.xs"
-          :icon="adminWsConectado ? 'sensors' : 'sync'"
-          dense
-          :class="[
-            'live-status-chip q-mr-sm text-weight-bold',
-            adminWsConectado
-              ? 'live-status-chip--ok'
-              : 'live-status-chip--wait'
-          ]"
-        >
-          {{ adminWsConectado ? 'EN VIVO' : 'RECONECTANDO' }}
-        </q-chip>
-
         <q-btn
           v-if="puedeGestionarIncidencias"
           flat
@@ -707,6 +693,7 @@ import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 
 import { api } from '../boot/axios.js'
+import { desvincularPushMotrix } from 'src/services/pushNotifications.js'
 import { esContenedorNativo } from '../services/googleAuth.js'
 import { echoOptions } from '../config/runtime.js'
 window.Pusher = Pusher
@@ -725,6 +712,12 @@ const incidenciaSeleccionada = ref(null)
 const actualizandoIncidencia = ref(false)
 const incidenciasActivasCantidad = ref(0)
 
+// No se utiliza Reverb en el despliegue actual de Hostinger.
+// Se mantiene el código opcional para una reactivación futura.
+const REVERB_HABILITADO = false
+let intervaloIncidenciasAdmin = null
+let incidenciasInicialesCargadas = false
+const incidenciasIdentificadas = new Set()
 let echoAdministrador = null
 let contextoAudioAdministrador = null
 let sonidoAdministradorHabilitado = false
@@ -1389,13 +1382,24 @@ async function cargarResumenIncidencias() {
       ? response.data.incidencias
       : []
 
-    const primeraActiva = incidencias.find(
+    const activas = incidencias.filter(
       incidencia => [
         'Reportado',
         'Recibido',
         'En atención'
       ].includes(incidencia?.estado)
     )
+    const primeraActiva = activas[0]
+    // Evita duplicar avisos de SOS y mantiene las nuevas alertas aun
+    // cuando el servidor no tiene Reverb funcionando.
+    const nueva = activas.find(i => i?.id && !incidenciasIdentificadas.has(i.id))
+    for (const incidencia of activas) {
+      if (incidencia?.id) incidenciasIdentificadas.add(incidencia.id)
+    }
+    if (incidenciasInicialesCargadas && nueva) {
+      mostrarAlertaIncidencia(nueva)
+    }
+    incidenciasInicialesCargadas = true
 
     if (
       primeraActiva
@@ -2058,6 +2062,7 @@ function procesarSolicitudActualizada(data) {
 }
 
 function inicializarNotificacionesAdministrador() {
+  if (!REVERB_HABILITADO) return
   const puedeRecibirTiempoReal = (
     esAdminGeneral.value
     || esAdminServicios.value
@@ -2300,6 +2305,7 @@ async function cerrarSesion() {
   cerrandoSesion.value = true
 
   try {
+    await desvincularPushMotrix()
     await api.post('/auth/logout')
   } catch (error) {
     const estado = error?.response?.status
@@ -2346,10 +2352,20 @@ onMounted(async () => {
     }
   )
 
-  inicializarNotificacionesAdministrador()
+  // Hostinger opera con API REST. Sin WebSocket, los avisos SOS
+  // se consultan periódicamente, manteniendo su centro accesible.
+  void cargarResumenIncidencias()
+  intervaloIncidenciasAdmin = window.setInterval(() => {
+    void cargarResumenIncidencias()
+  }, 15000)
+  if (REVERB_HABILITADO) inicializarNotificacionesAdministrador()
 })
 
 onBeforeUnmount(() => {
+  if (intervaloIncidenciasAdmin) {
+    window.clearInterval(intervaloIncidenciasAdmin)
+    intervaloIncidenciasAdmin = null
+  }
   document.removeEventListener(
     'pointerdown',
     habilitarSonidoAdministrador,
@@ -2863,4 +2879,37 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .motrix-page-container{background:linear-gradient(180deg,#f5f8f5 0%,#f7f9f7 100%)!important}.motrix-toolbar{min-height:76px!important}.motrix-header{box-shadow:0 7px 24px rgba(24,60,43,.07)!important}.motrix-drawer{box-shadow:8px 0 28px rgba(12,48,29,.10)}.drawer-brand{padding-top:28px!important}.drawer-user{border-radius:16px!important;background:rgba(255,255,255,.07)!important}.menu-item{border-radius:12px!important;margin-bottom:3px}.account-trigger{background:#f5f8f5}.header-location{padding:9px 13px;border:1px solid #e0e9e2;border-radius:13px;background:#fbfdfb}
+
+/* Corrige la barra superior sobredimensionada y la navegación en Android. */
+@media (max-width: 599px) {
+  .motrix-toolbar {
+    min-height: 56px !important;
+    padding: 0 10px !important;
+  }
+  .brand-logo-img {
+    width: 36px;
+    height: 36px;
+    margin-right: 9px !important;
+  }
+  .brand-title { font-size: 19px; }
+  .account-trigger { min-width: 38px; min-height: 38px; }
+  .passenger-bottom-nav, .driver-bottom-nav {
+    min-height: 58px;
+    padding-top: 4px;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom));
+  }
+  .passenger-nav-item, .driver-nav-item {
+    min-height: 46px;
+    font-size: 10px;
+  }
+  .passenger-nav-item :deep(.q-icon),
+  .driver-nav-item :deep(.q-icon) { font-size: 21px; }
+  .passenger-qr-slot { min-height: 52px; }
+  .passenger-qr-button {
+    width: 44px;
+    height: 44px;
+    margin-top: -12px;
+    border-width: 3px;
+  }
+}
 </style>

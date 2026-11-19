@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -31,28 +31,62 @@ class PasswordRecoveryController extends Controller
             'login' => ['required', 'string', 'max:150'],
         ]);
 
-        $identifier = trim((string) $data['login']);
-        $user = $this->findUser($identifier);
-
+        // Respuesta uniforme: nunca revelar si un número tiene cuenta.
         $response = [
-            'message' => 'Si la cuenta dispone de un medio de recuperación, recibirás un código de 6 dígitos válido por 10 minutos.',
+            'message' => 'Si este celular está registrado y habilitado, recibirás un SMS con un código de 6 dígitos válido por 10 minutos.',
         ];
 
+        // El acceso al SMS es un requisito real. No crear códigos que
+        // nadie podrá recibir ni fingir un envío exitoso.
+        if (! $this->smsConfigured()) {
+            return response()->json([
+                'message' => 'La recuperación por SMS todavía no está habilitada. Comunícate con soporte MOTRIX.',
+            ], 503);
+        }
+
+        $identifier = trim((string) $data['login']);
+        if (! $this->phoneRegistry->isPhoneLike($identifier)) {
+            return response()->json($response);
+        }
+
+        $phone = $this->phoneRegistry->normalize($identifier);
+        if (! preg_match('/^[67][0-9]{7}$/', $phone)) {
+            return response()->json($response);
+        }
+
+        $user = $this->findUser($phone);
         if (! $user || ! in_array($user->role, ['conductor', 'pasajero'], true)) {
             return response()->json($response);
         }
 
+        // La posesión del celular registrado es la prueba de identidad.
+        // NO aceptar teléfonos arbitrarios enviados en el formulario.
+        if ($this->userPhone($user) !== $phone) {
+            return response()->json($response);
+        }
+
+        $previous = PasswordResetOtp::query()
+            ->where('user_id', $user->id)
+            ->first();
+
+        // Reenvío limitado incluso si se usa otra IP.
+        if ($previous?->updated_at && $previous->updated_at->greaterThan(now()->subSeconds(60))) {
+            return response()->json($response);
+        }
+
         $code = (string) random_int(100000, 999999);
-        [$channel, $destination] = $this->deliverCode($user, $code);
+        if (! $this->sendSmsCode($phone, $code, (int) $user->id)) {
+            return response()->json($response);
+        }
 
         PasswordResetOtp::query()->updateOrCreate(
             ['user_id' => $user->id],
             [
-                'identifier_hash' => hash('sha256', mb_strtolower($identifier)),
+                'identifier_hash' => hash('sha256', $phone),
                 'code_hash' => Hash::make($code),
                 'reset_token_hash' => null,
-                'canal' => $channel,
-                'destino_enmascarado' => $destination,
+                'canal' => 'sms',
+                'destino_enmascarado' => $this->maskPhone($phone),
                 'attempts' => 0,
                 'expires_at' => now()->addMinutes(self::OTP_MINUTES),
                 'verified_at' => null,
@@ -70,7 +104,8 @@ class PasswordRecoveryController extends Controller
             'codigo' => ['required', 'digits:6'],
         ]);
 
-        $user = $this->findUser(trim((string) $data['login']));
+        $phone = $this->phoneRegistry->normalize((string) $data['login']);
+        $user = $this->findUser($phone);
 
         if (! $user || ! in_array($user->role, ['conductor', 'pasajero'], true)) {
             return $this->invalidCodeResponse();
@@ -83,6 +118,9 @@ class PasswordRecoveryController extends Controller
         if (
             ! $record
             || $record->consumed_at
+            || $record->verified_at
+            || $record->canal !== 'sms'
+            || ! hash_equals((string) $record->identifier_hash, hash('sha256', $phone))
             || ! $record->expires_at
             || $record->expires_at->lessThanOrEqualTo(now())
             || $record->attempts >= self::MAX_ATTEMPTS
@@ -120,45 +158,61 @@ class PasswordRecoveryController extends Controller
             'password' => ['required', 'string', 'min:8', 'max:255', 'confirmed'],
         ]);
 
-        $user = $this->findUser(trim((string) $data['login']));
+        $phone = $this->phoneRegistry->normalize((string) $data['login']);
+        $user = $this->findUser($phone);
 
         if (! $user || ! in_array($user->role, ['conductor', 'pasajero'], true)) {
             return $this->invalidTokenResponse();
         }
 
-        $record = PasswordResetOtp::query()
-            ->where('user_id', $user->id)
-            ->first();
-
         $tokenHash = hash('sha256', (string) $data['reset_token']);
 
-        if (
-            ! $record
-            || $record->consumed_at
-            || ! $record->verified_at
-            || ! $record->reset_token_hash
-            || ! hash_equals((string) $record->reset_token_hash, $tokenHash)
-            || ! $record->expires_at
-            || $record->expires_at->lessThanOrEqualTo(now())
-        ) {
+        // Un solo uso, sin carreras de solicitudes concurrentes.
+        // Si falla la actualización, la transacción revierte todo.
+        $actualizado = DB::transaction(function () use ($user, $phone, $tokenHash, $data): bool {
+            $record = PasswordResetOtp::query()
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (
+                ! $record
+                || $record->consumed_at
+                || ! $record->verified_at
+                || $record->canal !== 'sms'
+                || ! hash_equals((string) $record->identifier_hash, hash('sha256', $phone))
+                || ! $record->reset_token_hash
+                || ! hash_equals((string) $record->reset_token_hash, $tokenHash)
+                || ! $record->expires_at
+                || $record->expires_at->lessThanOrEqualTo(now())
+            ) {
+                return false;
+            }
+
+            $user->password = (string) $data['password'];
+            $user->save();
+
+            // Cerrar todas las sesiones y notificaciones de esta cuenta.
+            $user->tokens()->delete();
+            $user->pushDevices()->update(['active' => false]);
+
+            if ($user->pasajero_id) {
+                Pasajero::query()
+                    ->where('id', $user->pasajero_id)
+                    ->first()
+                    ?->update(['password' => (string) $data['password']]);
+            }
+
+            $record->consumed_at = now();
+            $record->reset_token_hash = null;
+            $record->save();
+
+            return true;
+        });
+
+        if (! $actualizado) {
             return $this->invalidTokenResponse();
         }
-
-        $user->password = (string) $data['password'];
-        $user->save();
-        $user->tokens()->delete();
-        $user->pushDevices()->update(['active' => false]);
-
-        if ($user->pasajero_id) {
-            Pasajero::query()
-                ->where('id', $user->pasajero_id)
-                ->first()
-                ?->update(['password' => (string) $data['password']]);
-        }
-
-        $record->consumed_at = now();
-        $record->reset_token_hash = null;
-        $record->save();
 
         return response()->json([
             'message' => 'Contraseña restablecida correctamente. Inicia sesión con tu nueva contraseña.',
@@ -167,154 +221,116 @@ class PasswordRecoveryController extends Controller
 
     private function findUser(string $identifier): ?User
     {
-        $normalized = mb_strtolower(trim($identifier));
-        $phone = $this->phoneRegistry->isPhoneLike($identifier)
-            ? $this->phoneRegistry->normalize($identifier)
-            : '';
-
-        $baseQuery = User::query()
-            ->with([
-                'persona',
-                'mototaxista.persona',
-                'pasajero.persona',
-            ])
-            ->whereIn('role', [
-                'conductor',
-                'pasajero',
-            ]);
-
-        if ($phone !== '') {
-            $userIds = $this->phoneRegistry
-                ->matchingEligibleUserIds($phone);
-
-            if (count($userIds) !== 1) {
-                if (count($userIds) > 1) {
-                    Log::warning(
-                        'Recuperación MOTRIX bloqueada por celular ambiguo.',
-                        [
-                            'identifier_hash' => hash(
-                                'sha256',
-                                $phone
-                            ),
-                            'candidate_user_ids' => $userIds,
-                        ]
-                    );
-                }
-
-                return null;
-            }
-
-            return $baseQuery
-                ->whereKey($userIds[0])
-                ->first();
-        }
-
-        $candidates = $baseQuery
-            ->where(function ($query) use ($normalized) {
-                $query
-                    ->whereRaw(
-                        'LOWER(email) = ?',
-                        [$normalized]
-                    )
-                    ->orWhereRaw(
-                        'LOWER(nickname) = ?',
-                        [$normalized]
-                    );
-            })
-            ->orderBy('id')
-            ->limit(2)
-            ->get();
-
-        if ($candidates->count() !== 1) {
-            if ($candidates->count() > 1) {
-                Log::warning(
-                    'Recuperación MOTRIX bloqueada por identificador ambiguo.',
-                    [
-                        'identifier_hash' => hash(
-                            'sha256',
-                            $normalized
-                        ),
-                        'candidate_user_ids' =>
-                            $candidates
-                                ->pluck('id')
-                                ->map(
-                                    static fn ($id) => (int) $id
-                                )
-                                ->all(),
-                    ]
-                );
-            }
-
+        // Recuperación exclusivamente por celular. Una coincidencia de
+        // correo o alias no reemplaza la posesión del número verificado.
+        if (! $this->phoneRegistry->isPhoneLike($identifier)) {
             return null;
         }
 
-        return $candidates->first();
+        $phone = $this->phoneRegistry->normalize($identifier);
+        if (! preg_match('/^[67][0-9]{7}$/', $phone)) {
+            return null;
+        }
+
+        $userIds = $this->phoneRegistry->matchingEligibleUserIds($phone);
+        if (count($userIds) !== 1) {
+            if (count($userIds) > 1) {
+                Log::warning('Recuperación SMS MOTRIX bloqueada: celular ambiguo.', [
+                    'phone_hash' => hash('sha256', $phone),
+                ]);
+            }
+            return null;
+        }
+
+        return User::query()
+            ->with(['persona', 'mototaxista.persona', 'pasajero.persona'])
+            ->whereIn('role', ['conductor', 'pasajero'])
+            ->whereKey($userIds[0])
+            ->first();
     }
 
-    private function deliverCode(User $user, string $code): array
+    private function smsConfigured(): bool
     {
-        $email = trim((string) $user->email);
+        $sid = trim((string) config('services.motrix_sms.twilio_account_sid'));
+        $token = trim((string) config('services.motrix_sms.twilio_auth_token'));
+        $sender = trim((string) config('services.motrix_sms.twilio_from'));
+        $service = trim((string) config('services.motrix_sms.twilio_messaging_service_sid'));
 
-        $emailLower = mb_strtolower($email);
+        $twilio = $sid !== '' && $token !== '' && ($sender !== '' || $service !== '');
+        $webhook = trim((string) config('services.motrix_sms.webhook_url')) !== '';
 
-        if (
-            $email !== ''
-            && ! str_ends_with($emailLower, '@motrix.invalid')
-            && ! str_ends_with($emailLower, '@motrix.local')
-            && ! str_ends_with($emailLower, '@motrix.test')
-        ) {
+        return $twilio || $webhook;
+    }
+
+    private function sendSmsCode(string $phone, string $code, int $userId): bool
+    {
+        $to = '+591' . $phone;
+        $message = "MOTRIX: tu codigo de recuperacion es {$code}. Valido 10 minutos. No lo compartas.";
+
+        $sid = trim((string) config('services.motrix_sms.twilio_account_sid'));
+        $authToken = trim((string) config('services.motrix_sms.twilio_auth_token'));
+        $sender = trim((string) config('services.motrix_sms.twilio_from'));
+        $service = trim((string) config('services.motrix_sms.twilio_messaging_service_sid'));
+
+        if ($sid !== '' && $authToken !== '' && ($sender !== '' || $service !== '')) {
             try {
-                Mail::raw(
-                    "Tu código de recuperación MOTRIX es {$code}. Vence en " . self::OTP_MINUTES . ' minutos. No compartas este código.',
-                    function ($message) use ($email) {
-                        $message->to($email)
-                            ->subject('Código de recuperación MOTRIX');
-                    }
-                );
-
-                return ['email', $this->maskEmail($email), true];
-            } catch (Throwable $exception) {
-                Log::warning('No se pudo enviar OTP MOTRIX por correo.', [
-                    'user_id' => $user->id,
-                    'message' => $exception->getMessage(),
-                ]);
-            }
-        }
-
-        $phone = $this->userPhone($user);
-        $webhook = trim((string) config('services.motrix_sms.webhook_url'));
-
-        if ($phone !== '' && $webhook !== '') {
-            try {
-                $request = Http::acceptJson()->timeout(8);
-                $token = trim((string) config('services.motrix_sms.token'));
-                if ($token !== '') {
-                    $request = $request->withToken($token);
+                $body = ['To' => $to, 'Body' => $message];
+                if ($service !== '') {
+                    $body['MessagingServiceSid'] = $service;
+                } else {
+                    $body['From'] = $sender;
                 }
 
-                $response = $request->post($webhook, [
-                    'to' => $phone,
-                    'message' => "MOTRIX: tu código de recuperación es {$code}. Vence en " . self::OTP_MINUTES . ' minutos.',
-                    'purpose' => 'password_reset',
-                ]);
+                $response = Http::withBasicAuth($sid, $authToken)
+                    ->asForm()
+                    ->acceptJson()
+                    ->timeout(10)
+                    ->post("https://api.twilio.com/2010-04-01/Accounts/{$sid}/Messages.json", $body);
 
-                if ($response->successful()) {
-                    return ['sms', $this->maskPhone($phone), true];
-                }
+                if ($response->successful()) return true;
 
-                Log::warning('Webhook SMS MOTRIX rechazó el OTP.', [
-                    'user_id' => $user->id,
+                Log::warning('Twilio rechazó un SMS de recuperación MOTRIX.', [
+                    'user_id' => $userId,
                     'status' => $response->status(),
                 ]);
-            } catch (Throwable $exception) {
-                Log::warning('No se pudo enviar OTP MOTRIX por SMS.', [
-                    'user_id' => $user->id,
-                    'message' => $exception->getMessage(),
+            } catch (Throwable $error) {
+                Log::warning('No se pudo solicitar SMS de recuperación a Twilio.', [
+                    'user_id' => $userId,
+                    'tipo' => get_class($error),
                 ]);
             }
+
+            return false;
         }
 
-        return ['sin_configurar', null, false];
+        $url = trim((string) config('services.motrix_sms.webhook_url'));
+        if ($url === '') return false;
+
+        try {
+            $request = Http::acceptJson()->timeout(10);
+            $token = trim((string) config('services.motrix_sms.token'));
+            if ($token !== '') $request = $request->withToken($token);
+
+            $response = $request->post($url, [
+                'to' => $to,
+                'message' => $message,
+                'purpose' => 'password_reset',
+            ]);
+
+            if ($response->successful()) return true;
+
+            Log::warning('Proveedor SMS rechazó una recuperación MOTRIX.', [
+                'user_id' => $userId,
+                'status' => $response->status(),
+            ]);
+        } catch (Throwable $error) {
+            Log::warning('No se pudo solicitar SMS de recuperación MOTRIX.', [
+                'user_id' => $userId,
+                'tipo' => get_class($error),
+            ]);
+        }
+
+        return false;
     }
 
     private function userPhone(User $user): string
@@ -343,13 +359,6 @@ class PasswordRecoveryController extends Controller
         }
 
         return $number;
-    }
-
-    private function maskEmail(string $email): string
-    {
-        [$name, $domain] = array_pad(explode('@', $email, 2), 2, '');
-        $visible = mb_substr($name, 0, min(2, mb_strlen($name)));
-        return $visible . str_repeat('*', max(2, mb_strlen($name) - mb_strlen($visible))) . '@' . $domain;
     }
 
     private function maskPhone(string $phone): string

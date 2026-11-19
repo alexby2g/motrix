@@ -1,11 +1,12 @@
 <template>
   <q-page
-    :class="$q.screen.lt.sm
-      ? 'q-pa-sm bg-grey-2'
-      : 'q-pa-md bg-grey-2'"
+    :class="[
+      vistaConductorMovil ? 'q-pa-sm bg-grey-2 motrix-conductor-page' : 'q-pa-md bg-grey-2 motrix-conductor-page',
+      { 'motrix-driver-trip-page': vistaConductorMovil && tieneViajeActivo }
+    ]"
   >
     <!-- ENCABEZADO -->
-    <q-card class="bg-primary text-white border-radius-lg shadow-2 q-mb-md">
+    <q-card v-if="!(vistaConductorMovil && tieneViajeActivo)" class="bg-primary text-white border-radius-lg shadow-2 q-mb-md">
       <q-card-section class="row items-center q-col-gutter-md">
         <div class="col">
           <div class="row items-center no-wrap">
@@ -38,7 +39,7 @@
     </q-card>
 
     <!-- ESTADO DEL CONDUCTOR -->
-    <q-card class="border-radius-lg shadow-1 q-mb-md">
+    <q-card v-if="!(vistaConductorMovil && tieneViajeActivo)" class="border-radius-lg shadow-1 q-mb-md motrix-conductor-estado">
       <q-card-section>
         <div class="row items-center q-col-gutter-md">
           <div class="col-12 col-sm">
@@ -120,8 +121,136 @@
       </q-card-section>
     </q-card>
 
-    <!-- VIAJE ACTIVO -->
-    <div v-if="tieneViajeActivo" class="q-mb-md">
+    <!-- VIAJE ACTIVO EN CELULAR: mapa visible desde el primer segundo.
+         Las acciones llaman a los mismos metodos del flujo original. -->
+    <section v-if="vistaConductorMovil && tieneViajeActivo" class="motrix-driver-live" aria-label="Viaje activo del mototaxista">
+      <div class="motrix-driver-map-stage">
+        <div id="mapa-navegacion-conductor" class="mapa-navegacion motrix-driver-map-canvas" />
+        <div class="motrix-driver-map-status">
+          <q-icon name="two_wheeler" size="19px" color="positive" />
+          <div class="min-width-zero">
+            <div class="text-weight-bold">Viaje #{{ viajeActivo.id }}</div>
+            <div class="text-caption">{{ viajeActivo.estado }} · {{ proveedorMapaConductor }}</div>
+          </div>
+          <q-btn flat dense round icon="refresh" aria-label="Actualizar viaje" :loading="loading" @click="cargarTodo(true)" />
+        </div>
+        <div class="motrix-driver-map-controls">
+          <q-btn round unelevated icon="bug_report" color="white" text-color="green-9"
+            aria-label="Diagnóstico de Google Maps" @click="mostrarDiagnosticoConductor" />
+          <q-btn round unelevated icon="my_location" color="white" text-color="green-9"
+            aria-label="Centrar mapa" @click="centrarMapaNavegacion" />
+          <q-btn round unelevated icon="layers" color="white" text-color="green-9"
+            :loading="cambiandoMapa" :aria-label="usarMapaAlternativo ? 'Usar Google Maps' : 'Usar mapa alternativo'"
+            @click="cambiarProveedorMapaConductor" />
+        </div>
+        <div v-if="!ubicacionConductorDisponible" class="motrix-driver-gps-alert">
+          <q-icon name="gps_off" size="19px" />
+          Esperando GPS. Activa la ubicación del teléfono.
+        </div>
+        <div class="motrix-driver-map-legend">
+          <span><i class="motrix-driver-dot motrix-driver-dot--blue" /> Tú</span>
+          <span><i class="motrix-driver-dot motrix-driver-dot--green" /> Pasajero</span>
+          <span><i class="motrix-driver-dot motrix-driver-dot--red" /> Destino</span>
+        </div>
+      </div>
+
+      <div class="motrix-driver-sheet">
+        <div class="motrix-driver-handle" />
+        <div class="motrix-driver-sheet-scroll">
+          <div class="motrix-driver-trip-title">
+            <div class="min-width-zero">
+              <div class="motrix-driver-eyebrow">{{ tituloNavegacion }}</div>
+              <div class="motrix-driver-passenger">{{ getPasajeroNombre(viajeActivo) }}</div>
+            </div>
+            <div class="motrix-driver-fare">{{ formatearMonto(viajeActivo.precio) }}</div>
+          </div>
+
+          <div class="motrix-driver-places">
+            <div class="motrix-driver-place"><q-icon name="radio_button_checked" color="positive" size="19px" />
+              <span class="ellipsis">{{ viajeActivo.origen || 'Punto de recogida sin registrar' }}</span></div>
+            <div class="motrix-driver-place"><q-icon name="location_on" color="negative" size="19px" />
+              <span class="ellipsis">{{ viajeActivo.destino || 'Destino sin registrar' }}</span></div>
+          </div>
+          <div class="motrix-driver-metrics">
+            <span><q-icon name="route" color="green-8" /> {{ distanciaNavegacionTexto }}</span>
+            <span><q-icon name="schedule" color="orange-8" /> {{ tiempoNavegacionTexto }}</span>
+            <span><q-icon name="payments" color="green-8" /> {{ viajeActivo.metodo_pago || 'Pago por confirmar' }}</span>
+          </div>
+          <div v-if="navegacionError" class="motrix-driver-route-warning">
+            {{ navegacionError }} Puedes utilizar el icono de capas del mapa para cambiar de proveedor.
+          </div>
+
+          <div v-if="incidenciaActiva" class="motrix-driver-incident">
+            <q-icon name="warning" color="negative" /> Incidencia {{ incidenciaActiva.codigo || '' }}: {{ incidenciaActiva.estado }}
+          </div>
+          <div class="motrix-driver-contact-row">
+            <LlamadaPrivadaPrueba
+              v-if="['Aceptado','Llegó','En Curso'].includes(viajeActivo.estado)"
+              :viaje-id="viajeActivo.id" :estado="viajeActivo.estado" class="motrix-driver-contact" />
+            <ViajeChat
+              v-if="['Aceptado','Llegó','En Curso'].includes(viajeActivo.estado)"
+              :viaje-id="viajeActivo.id" :estado="viajeActivo.estado" rol="conductor"
+              class="motrix-driver-contact" />
+          </div>
+        </div>
+
+        <div class="motrix-driver-primary-actions">
+          <template v-if="viajeActivo.estado === 'Aceptado'">
+            <q-btn outline no-caps color="negative" icon="close" label="Cancelar"
+              :loading="accionando === `cancelar-${viajeActivo.id}`"
+              @click="confirmarCancelacion(viajeActivo)" />
+            <q-btn unelevated no-caps color="positive" icon="done_all" label="Llegué"
+              :loading="accionando === `llegue-${viajeActivo.id}`"
+              @click="marcarLlegada(viajeActivo)" />
+          </template>
+          <template v-else-if="viajeActivo.estado === 'Llegó'">
+            <q-btn outline no-caps color="negative" icon="close" label="Cancelar"
+              :loading="accionando === `cancelar-${viajeActivo.id}`"
+              @click="confirmarCancelacion(viajeActivo)" />
+            <q-btn unelevated no-caps color="positive" icon="play_arrow" label="Iniciar viaje"
+              :loading="accionando === `iniciar-${viajeActivo.id}`"
+              @click="iniciarViaje(viajeActivo)" />
+          </template>
+          <template v-else-if="viajeActivo.estado === 'En Curso'">
+            <q-btn unelevated no-caps class="full-width" color="positive" icon="payments" label="Finalizar y cobrar"
+              @click="abrirModalCobro(viajeActivo)" />
+          </template>
+        </div>
+      </div>
+    </section>
+
+
+    <q-dialog v-model="dialogDiagnosticoConductor">
+      <q-card style="width: min(94vw, 460px); max-width: 94vw">
+        <q-card-section class="row items-center justify-between">
+          <div class="text-subtitle1 text-weight-bold">Diagnóstico de Google Maps</div>
+          <q-btn flat round dense icon="close" v-close-popup />
+        </q-card-section>
+        <q-separator />
+        <q-card-section>
+          <q-spinner v-if="cargandoDiagnosticoConductor" color="positive" size="28px" />
+          <template v-else-if="diagnosticoConductor">
+            <div><strong>Motor:</strong> {{ diagnosticoConductor.motor }}</div>
+            <div><strong>Carga de calles:</strong> {{ diagnosticoConductor.cargaCalles }}</div>
+            <div><strong>Mapa:</strong> {{ diagnosticoConductor.vista }}</div>
+            <div><strong>Internet:</strong> {{ diagnosticoConductor.conexion }}</div>
+            <div><strong>GPS:</strong> {{ diagnosticoConductor.gps }}</div>
+            <div><strong>Paquete Android:</strong> {{ diagnosticoConductor.paquete }}</div>
+            <div><strong>Clave instalada:</strong> {{ diagnosticoConductor.claveConfigurada ? 'Sí' : 'No detectada' }}</div>
+            <div><strong>Servicios Google:</strong> {{ diagnosticoConductor.serviciosGoogle }}</div>
+            <div style="overflow-wrap:anywhere"><strong>Firma SHA-1:</strong> {{ diagnosticoConductor.firmaSha1 }}</div>
+            <div v-if="diagnosticoConductor.error" class="text-negative">{{ diagnosticoConductor.error }}</div>
+            <div class="text-caption q-mt-md">Si Google Maps no carga calles, verifica que la clave Android autorice este paquete y la firma SHA-1 en Google Cloud.</div>
+          </template>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat color="positive" label="Cambiar mapa" v-close-popup @click="cambiarProveedorMapaConductor" />
+          <q-btn flat color="primary" label="Cerrar" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+    <!-- VIAJE ACTIVO: diseño de escritorio conservado -->
+    <div v-if="!vistaConductorMovil && tieneViajeActivo" class="q-mb-md">
       <div class="row items-center q-mb-sm">
         <q-icon
           name="navigation"
@@ -145,8 +274,8 @@
         </q-chip>
       </div>
 
-      <q-card class="viaje-activo-card border-radius-lg shadow-3">
-        <q-card-section class="bg-dark text-white">
+      <q-card class="viaje-activo-card border-radius-lg shadow-3 motrix-conductor-viaje">
+        <q-card-section class="bg-dark text-white motrix-conductor-viaje-header">
           <div class="row items-center no-wrap">
             <q-avatar
               color="positive"
@@ -208,7 +337,7 @@
           />
         </q-card-section>
 
-        <q-card-section class="q-gutter-y-md">
+        <q-card-section class="q-gutter-y-md motrix-conductor-ruta">
           <div class="route-row">
             <div class="route-point route-point-origin" />
             <div class="min-width-zero">
@@ -277,11 +406,11 @@
         </q-card-section>
 
         <!-- MAPA DE NAVEGACIÓN DEL CONDUCTOR -->
-        <q-card-section class="q-pt-none">
+        <q-card-section class="q-pt-none motrix-conductor-mapa">
           <q-card
             flat
             bordered
-            class="navegacion-card"
+            class="navegacion-card motrix-conductor-navegacion"
           >
             <q-card-section class="row items-center q-col-gutter-sm q-pb-sm">
               <div class="col">
@@ -434,11 +563,18 @@
         </q-card-section>
 
         <LlamadaPrivadaPrueba
-  v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
-  :viaje-id="viajeActivo.id"
-  :estado="viajeActivo.estado"
-  class="q-pa-md"
-/>
+          v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
+          :viaje-id="viajeActivo.id"
+          :estado="viajeActivo.estado"
+          class="q-pa-md motrix-conductor-comunicacion"
+        />
+        <ViajeChat
+          v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
+          :viaje-id="viajeActivo.id"
+          :estado="viajeActivo.estado"
+          rol="conductor"
+          class="q-px-md q-pb-md motrix-conductor-comunicacion"
+        />
 <q-card-actions
           v-if="viajeActivo.estado === 'Aceptado'"
           class="q-pa-md bg-grey-1"
@@ -555,7 +691,7 @@
     </div>
 
     <!-- SOLICITUDES DISPONIBLES -->
-    <div v-else class="q-mb-lg">
+    <div v-if="!tieneViajeActivo" class="q-mb-lg">
       <div class="row items-center q-mb-sm">
         <q-icon
           name="notifications_active"
@@ -816,7 +952,7 @@
     </div>
 
     <!-- GANANCIAS Y REPUTACIÓN -->
-    <div class="row q-col-gutter-md q-mb-md">
+    <div v-if="!tieneViajeActivo" class="row q-col-gutter-md q-mb-md">
       <div class="col-12 col-md-7">
         <q-card class="bg-dark text-white border-radius-lg shadow-2 full-height">
           <q-card-section class="row items-center justify-between">
@@ -927,7 +1063,7 @@
     </div>
 
     <!-- HISTORIAL Y CALIFICACIONES RECIBIDAS -->
-    <q-expansion-item
+    <q-expansion-item v-if="!tieneViajeActivo"
       icon="history"
       label="Historial de viajes completados"
       header-class="bg-white text-grey-9 text-bold shadow-1 border-radius-lg"
@@ -1513,6 +1649,11 @@
                 :src="qrPagoConductorUrl"
                 alt="QR de cobro MOTRIX"
                 class="cobro-qr-image"
+                  role="button"
+                  tabindex="0"
+                  aria-label="Ampliar QR de cobro"
+                  @click="visorQrPago = true"
+                  @keydown.enter="visorQrPago = true"
               >
 
               <q-banner
@@ -1524,6 +1665,8 @@
                 antes de registrar un pago digital.
               </q-banner>
 
+              <q-btn v-if="qrPagoConductorUrl" flat no-caps color="indigo-8" icon="zoom_in"
+                label="Ver QR en grande" class="full-width q-mt-sm" @click="visorQrPago = true" />
               <div
                 v-if="qrPagoConductorUrl"
                 class="text-center q-mt-sm"
@@ -1595,6 +1738,11 @@
                   :src="qrPagoConductorUrl"
                   alt="QR de cobro MOTRIX"
                   class="cobro-qr-image"
+                  role="button"
+                  tabindex="0"
+                  aria-label="Ampliar QR de cobro"
+                  @click="visorQrPago = true"
+                  @keydown.enter="visorQrPago = true"
                 >
 
                 <q-banner
@@ -1605,6 +1753,8 @@
                   Registra tu QR de cobro en Mi perfil para utilizar pago mixto.
                 </q-banner>
 
+                <q-btn v-if="qrPagoConductorUrl" flat no-caps color="indigo-8" icon="zoom_in"
+                  label="Ver QR en grande" class="full-width q-mt-sm" @click="visorQrPago = true" />
                 <div
                   v-if="qrPagoConductorUrl"
                   class="q-mt-sm"
@@ -1663,11 +1813,25 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+      <q-dialog v-model="visorQrPago" :maximized="$q.screen.lt.sm">
+      <q-card class="motrix-qr-ampliado">
+        <q-card-section class="row items-center justify-between">
+          <div class="text-subtitle1 text-weight-bold">QR para pagar el viaje</div>
+          <q-btn flat round dense icon="close" v-close-popup aria-label="Cerrar QR" />
+        </q-card-section>
+        <q-card-section class="text-center q-pt-none">
+          <img v-if="qrPagoConductorUrl" :src="qrPagoConductorUrl" alt="Código QR de pago ampliado" class="motrix-qr-imagen-grande">
+          <div class="q-mt-sm text-weight-medium">{{ qrPagoMetodoConductor }}</div>
+          <div class="text-caption text-grey-7">{{ qrPagoTitularConductor }}</div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script setup>
 import LlamadaPrivadaPrueba from 'src/components/LlamadaPrivadaPrueba.vue'
+import ViajeChat from 'src/components/ViajeChat.vue'
 import { fechaDDMMYYYY, fechaHoraDDMMYYYY, fechaHoraUtcBolivia } from 'src/utils/motrixDate.js'
 
 import {
@@ -1681,14 +1845,18 @@ import {
 } from 'vue'
 
 import { useQuasar } from 'quasar'
+import { registerPlugin } from '@capacitor/core'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
-import L from 'leaflet'
+import L, { prepararGoogleMaps, crearMapaMotrix, alternarMapaAlternativo, mapaAlternativoActivo } from 'src/utils/mapaMotrix.js'
+import { estadoCargaGoogleMapsNativo } from 'src/utils/mapaNativoCapacitor.js'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../../boot/axios.js'
 import { BROADCAST_AUTH_URL, echoOptions } from '../../config/runtime.js'
+// Hostinger está usando sincronización REST; no iniciar Reverb en Android.
+const REVERB_HABILITADO = false
 window.Pusher = Pusher
 
 const $q = useQuasar()
@@ -1847,6 +2015,12 @@ let solicitudesInicializadas = false
 const solicitudesNotificadas = new Set()
 
 let mapaNavegacion = null
+// Se encuadra una sola vez al crear el mapa. El GPS y las rutas nunca
+// interrumpen los gestos de zoom o desplazamiento del conductor.
+let vistaNavegacionCentrada = false
+let inicializacionMapaNavegacion = null
+let generacionMapaNavegacion = 0
+let temporizadorMapaConductor = null
 let marcadorConductor = null
 let marcadorOrigenViaje = null
 let marcadorDestinoViaje = null
@@ -1858,11 +2032,25 @@ const tieneViajeActivo = computed(() => {
   return Boolean(viajeActivo.value && viajeActivo.value.id)
 })
 
+// Android debe usar el panel de navegacion movil incluso en telefonos
+// que exponen un viewport mayor a 600px. No altera la vista de escritorio.
+const vistaConductorMovil = computed(() =>
+  $q.screen.lt.md || Boolean(window.__MOTRIX_NATIVE_APP__)
+)
+
 const nombreMototaxista = computed(() => {
   return mototaxista.value?.persona?.nombre || `Mototaxista #${MOTOTAXISTA_ID}`
 })
 
 
+const visorQrPago = ref(false)
+const cambiandoMapa = ref(false)
+const usarMapaAlternativo = ref(mapaAlternativoActivo())
+const dialogDiagnosticoConductor = ref(false)
+const cargandoDiagnosticoConductor = ref(false)
+const diagnosticoConductor = ref(null)
+const proveedorMapaConductor = ref('Preparando mapa...')
+const pluginDiagnosticoConductor = registerPlugin('MotrixMapsDiagnostico')
 const qrPagoConductorUrl = computed(() => {
   return String(
     mototaxista.value?.qr_pago_ruta || ''
@@ -1985,14 +2173,16 @@ const objetivoNavegacionTexto = computed(() => {
 })
 
 const distanciaNavegacionTexto = computed(() => {
+  if (!ubicacionConductorDisponible.value) return 'Esperando GPS'
   return navegacionDistanciaKm.value > 0
     ? `${navegacionDistanciaKm.value.toFixed(2)} km`
-    : 'Calculando...'
+    : navegacionCargando.value ? 'Calculando...' : 'Sin ruta disponible'
 })
 
 const tiempoNavegacionTexto = computed(() => {
+  if (!ubicacionConductorDisponible.value) return 'Esperando GPS'
   if (navegacionDuracionMin.value <= 0) {
-    return 'Calculando...'
+    return navegacionCargando.value ? 'Calculando...' : 'Sin estimación'
   }
 
   const minutos = Math.max(1, Math.round(navegacionDuracionMin.value))
@@ -2003,7 +2193,7 @@ const estadoConductorTexto = computed(() => {
   if (tieneViajeActivo.value) return 'Conductor ocupado'
   return disponible.value
     ? 'Disponible para recibir viajes'
-    : 'Conductor desconectado'
+    : 'No disponible para solicitudes'
 })
 
 const estadoConductorDescripcion = computed(() => {
@@ -2296,11 +2486,20 @@ const eliminarCapaMapa = (capa) => {
 }
 
 const destruirMapaNavegacion = () => {
+  proveedorMapaConductor.value = 'Preparando mapa...'
+  // Invalida una creación pendiente al cambiar de viaje o proveedor.
+  generacionMapaNavegacion += 1
+  if (temporizadorMapaConductor) {
+    window.clearTimeout(temporizadorMapaConductor)
+    temporizadorMapaConductor = null
+  }
+  document.body.classList.remove('motrix-conductor-google-native')
   if (mapaNavegacion) {
     mapaNavegacion.remove()
   }
 
   mapaNavegacion = null
+  vistaNavegacionCentrada = false
   marcadorConductor = null
   marcadorOrigenViaje = null
   marcadorDestinoViaje = null
@@ -2523,7 +2722,11 @@ const actualizarMapaNavegacion = async (forzarRuta = false) => {
 
   colocarMarcadoresFijos()
   actualizarMarcadorConductor()
-  ajustarVistaMapaNavegacion()
+  // No restablecer la cámara cada 2-3 segundos cuando llega nuevo GPS.
+  if (!vistaNavegacionCentrada) {
+    vistaNavegacionCentrada = true
+    ajustarVistaMapaNavegacion()
+  }
   await calcularRutaNavegacion(forzarRuta)
 }
 
@@ -2533,6 +2736,23 @@ const inicializarMapaNavegacion = async (forzarRuta = true) => {
     return
   }
 
+  // El cambio de estado, el GPS y el montaje pueden activar este método juntos.
+  // Se serializa la creación para no montar dos mapas en el mismo contenedor.
+  if (inicializacionMapaNavegacion) {
+    try {
+      await inicializacionMapaNavegacion
+    } catch (error) {
+      console.warn('No se pudo completar la creación anterior del mapa:', error)
+    }
+    if (!tieneViajeActivo.value) return
+    if (mapaNavegacion) {
+      await actualizarMapaNavegacion(forzarRuta)
+      return
+    }
+  }
+
+  const generacion = generacionMapaNavegacion
+  const tarea = async () => {
   await nextTick()
 
   const contenedor = document.getElementById(
@@ -2542,18 +2762,47 @@ const inicializarMapaNavegacion = async (forzarRuta = true) => {
   if (!contenedor) return
 
   if (!mapaNavegacion) {
-    mapaNavegacion = L.map(contenedor, {
+    await prepararGoogleMaps()
+    if (!contenedor.isConnected || !tieneViajeActivo.value || generacion !== generacionMapaNavegacion) return
+    const creado = await crearMapaMotrix(contenedor, {
       zoomControl: true,
       attributionControl: true
-    }).setView([-14.8308, -64.9024], 14)
+    })
+    if (!contenedor.isConnected || !tieneViajeActivo.value || generacion !== generacionMapaNavegacion) {
+      creado.remove()
+      return
+    }
+    mapaNavegacion = creado.setView([-14.8308, -64.9024], 14)
+    proveedorMapaConductor.value = mapaNavegacion.isNative ? 'Google Maps Android' : 'Mapa de respaldo'
 
-    L.tileLayer(
-      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      {
-        attribution: '© OpenStreetMap',
-        maxZoom: 19
-      }
-    ).addTo(mapaNavegacion)
+    document.body.classList.toggle('motrix-conductor-google-native', Boolean(mapaNavegacion.isNative))
+    // Si el SDK Android no entrega las calles, usar OpenStreetMap
+    // automaticamente en lugar de dejar un rectangulo vacio.
+    if (mapaNavegacion.isNative && vistaConductorMovil.value) {
+      temporizadorMapaConductor = window.setTimeout(async () => {
+        if (
+          mapaNavegacion?.isNative
+          && !cambiandoMapa.value
+          && estadoCargaGoogleMapsNativo() !== 'Calles cargadas por Google Maps'
+        ) {
+          await cambiarProveedorMapaConductor()
+          $q.notify({
+            type: 'info',
+            position: 'top',
+            message: 'Google Maps tardó en cargar. Activamos el mapa alternativo.'
+          })
+        }
+      }, 14000)
+    }
+    if (!mapaNavegacion.isNative) {
+      L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+          attribution: '© OpenStreetMap',
+          maxZoom: 19
+        }
+      ).addTo(mapaNavegacion)
+    }
   }
 
   window.setTimeout(() => {
@@ -2561,6 +2810,56 @@ const inicializarMapaNavegacion = async (forzarRuta = true) => {
   }, 150)
 
   await actualizarMapaNavegacion(forzarRuta)
+  }
+  const proceso = tarea()
+  inicializacionMapaNavegacion = proceso
+  try {
+    await proceso
+  } finally {
+    if (inicializacionMapaNavegacion === proceso) {
+      inicializacionMapaNavegacion = null
+    }
+  }
+}
+
+const cambiarProveedorMapaConductor = async () => {
+  if (cambiandoMapa.value) return
+  cambiandoMapa.value = true
+  try {
+    destruirMapaNavegacion()
+    alternarMapaAlternativo()
+    usarMapaAlternativo.value = mapaAlternativoActivo()
+    await prepararGoogleMaps()
+    await nextTick()
+    await inicializarMapaNavegacion(true)
+  } finally {
+    cambiandoMapa.value = false
+  }
+}
+
+const mostrarDiagnosticoConductor = async () => {
+  dialogDiagnosticoConductor.value = true
+  cargandoDiagnosticoConductor.value = true
+  diagnosticoConductor.value = null
+  try {
+    const estado = window.__MOTRIX_NATIVE_APP__
+      ? await pluginDiagnosticoConductor.estado()
+      : { paquete: 'Navegador web', claveConfigurada: false, serviciosGoogle: 'No aplica', firmaSha1: 'No aplica' }
+    const elemento = document.querySelector('#mapa-navegacion-conductor capacitor-google-map')
+    const dimensiones = elemento?.getBoundingClientRect()
+    diagnosticoConductor.value = {
+      ...estado,
+      motor: proveedorMapaConductor.value,
+      cargaCalles: estadoCargaGoogleMapsNativo(),
+      vista: dimensiones ? Math.round(dimensiones.width) + ' x ' + Math.round(dimensiones.height) + ' px' : 'Sin mapa nativo visible',
+      conexion: navigator.onLine ? 'Conectado' : 'Sin conexión',
+      gps: gpsMensaje.value
+    }
+  } catch (error) {
+    diagnosticoConductor.value = { error: String(error?.message || error) }
+  } finally {
+    cargandoDiagnosticoConductor.value = false
+  }
 }
 
 const centrarMapaNavegacion = async () => {
@@ -2980,10 +3279,16 @@ const salirCanalIncidencias = () => {
 const sincronizarCanalIncidencias = async () => {
   const solicitudId = Number(viajeActivo.value?.id || 0)
 
-  if (!echoInstance || !solicitudId) {
+  if (!solicitudId) {
     salirCanalIncidencias()
     incidenciasViaje.value = []
     incidenciaActiva.value = null
+    return
+  }
+
+  if (!REVERB_HABILITADO || !echoInstance) {
+    // Mantener el historial y estado de incidencias SOS aun sin Reverb.
+    await cargarIncidenciasViaje(true)
     return
   }
 
@@ -3008,7 +3313,7 @@ const sincronizarCanalIncidencias = async () => {
 }
 
 const inicializarWebsocket = () => {
-  if (echoInstance) return
+  if (!REVERB_HABILITADO || echoInstance) return
 
   try {
     echoInstance = new Echo({
@@ -3361,13 +3666,17 @@ const enviarUbicacion = async (posicion) => {
   const latitud = posicion.coords.latitude
   const longitud = posicion.coords.longitude
 
+  // El marcador propio responde al GPS antes de recibir la respuesta HTTP.
+  // El pasajero solo recibe esta posicion despues de que la API la confirme.
+  ultimaUbicacion.value = { latitud, longitud }
+  gpsEstado.value = 'activo'
+  gpsMensaje.value = 'Sincronizando ubicación...'
+
   await api.patch(
     '/conductor/ubicacion',
     { latitud, longitud }
   )
 
-  ultimaUbicacion.value = { latitud, longitud }
-  gpsEstado.value = 'activo'
   gpsMensaje.value = 'Ubicación compartida'
   ultimaUbicacionEnviada = Date.now()
 }
@@ -3853,6 +4162,14 @@ watch(
   }
 )
 
+
+// El modo viaje usa el mapa nativo como fondo de pantalla, sin tarjetas opacas.
+watch(
+  () => Boolean(tieneViajeActivo.value && vistaConductorMovil.value),
+  (activo) => document.body.classList.toggle('motrix-driver-trip-screen', activo),
+  { immediate: true, flush: 'sync' }
+)
+
 onMounted(async () => {
   if (!validarSesionConductor()) {
     return
@@ -3912,6 +4229,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  document.body.classList.remove('motrix-driver-trip-screen')
   detenerSeguimientoGPS()
   destruirMapaNavegacion()
   desconectarWebsocket()
@@ -4358,4 +4676,82 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .panel-motrix-logo{width:52px;height:52px;border-radius:16px;overflow:hidden;box-shadow:0 12px 26px rgba(0,0,0,.14)}.panel-motrix-logo img{width:100%;height:100%;display:block;object-fit:cover}.viaje-activo-card{overflow:hidden}.status-info-box{border-radius:14px!important;background:#f8fbf8!important;border:1px solid #e1ece3!important}.q-page>.q-card:first-of-type{background:linear-gradient(135deg,#0e5a30,#238a42)!important;border-radius:20px!important}
+
+/* Cabina del conductor: prioridad al mapa y botones legibles en Android. */
+.motrix-conductor-viaje { border: 1px solid #dfeae2; border-left: 0; border-radius: 20px; }
+.motrix-conductor-viaje-header { background: #123e2b !important; }
+.motrix-conductor-navegacion { border-radius: 20px; }
+.motrix-conductor-estado { border-radius: 18px; }
+.motrix-conductor-viaje .route-row > div:last-child { min-width: 0; overflow-wrap: break-word; }
+@media (max-width: 599px) {
+  .motrix-conductor-page { background: #f4f7f5 !important; }
+  .motrix-conductor-viaje {
+    display: flex; flex-direction: column;
+    overflow: hidden; border-radius: 20px;
+  }
+  .motrix-conductor-viaje-header {
+    padding: 14px !important;
+    background: #123e2b !important;
+  }
+  .motrix-conductor-viaje-header .row > .col {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+  .motrix-conductor-viaje-header .text-h6 {
+    font-size: 16px;
+    line-height: 1.3;
+  }
+  .motrix-conductor-viaje-header .text-h5 { font-size: 19px; }
+  .motrix-conductor-viaje .motrix-conductor-mapa { order: 1; padding: 10px !important; }
+  .motrix-conductor-viaje .motrix-conductor-ruta { order: 2; padding: 14px !important; }
+  .motrix-conductor-viaje .motrix-conductor-comunicacion { order: 3; }
+  .motrix-conductor-viaje > .q-card__actions { order: 4; }
+  .motrix-conductor-navegacion { overflow: hidden; border-radius: 18px; }
+  .motrix-conductor-navegacion .mapa-navegacion-wrapper {
+    height: clamp(290px, 45dvh, 450px);
+  }
+  .motrix-conductor-navegacion .navigation-stat {
+    min-width: 0;
+    align-items: flex-start;
+  }
+  .motrix-conductor-navegacion .navigation-stat > div {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+  .motrix-conductor-viaje > .q-card__actions :deep(.q-btn) {
+    min-height: 46px;
+    border-radius: 12px;
+  }
+}
+</style>
+
+<style>
+body.motrix-conductor-google-native,
+body.motrix-conductor-google-native #q-app,
+body.motrix-conductor-google-native .q-layout,
+body.motrix-conductor-google-native .q-page-container,
+body.motrix-conductor-google-native .motrix-conductor-page,
+body.motrix-conductor-google-native .motrix-conductor-viaje,
+body.motrix-conductor-google-native .motrix-conductor-mapa,
+body.motrix-conductor-google-native .motrix-conductor-navegacion,
+body.motrix-conductor-google-native .motrix-conductor-navegacion > .q-card__section,
+body.motrix-conductor-google-native .mapa-navegacion-wrapper,
+body.motrix-conductor-google-native .mapa-navegacion {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+body.motrix-conductor-google-native .motrix-conductor-viaje,
+body.motrix-conductor-google-native .motrix-conductor-navegacion,
+body.motrix-conductor-google-native .mapa-navegacion-wrapper {
+  overflow: visible !important;
+}
+body.motrix-conductor-google-native .motrix-conductor-viaje > .q-card__section:not(.motrix-conductor-mapa) {
+  background-color: #fff;
+}
+body.motrix-conductor-google-native .motrix-conductor-viaje > .motrix-conductor-viaje-header {
+  background-color: #123e2b !important;
+}
+.motrix-qr-ampliado { width: min(94vw, 500px); border-radius: 18px; }
+.motrix-qr-imagen-grande { display: block; width: 100%; max-height: 70vh; object-fit: contain; }
 </style>

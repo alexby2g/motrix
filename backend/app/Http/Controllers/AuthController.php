@@ -201,6 +201,7 @@ class AuthController extends Controller
 
         return [
             'id' => $user->id,
+            'created_at' => $user->created_at?->toIso8601String(),
             'name' => $user->name,
             'nickname' => $user->nickname,
             'persona_nombre' => trim(

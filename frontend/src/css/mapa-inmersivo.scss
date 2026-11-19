@@ -1,0 +1,551 @@
+/* MOTRIX: mapa inmersivo del pasajero. Activo solo durante nueva solicitud.
+   Las demas pantallas, incluidos viajes activos y administracion, no cambian. */
+
+body.motrix-map-request-screen {
+  overflow: hidden !important;
+}
+
+body.motrix-map-request-screen .motrix-header,
+body.motrix-map-request-screen .passenger-bottom-footer {
+  display: none !important;
+}
+
+body.motrix-map-request-screen .motrix-page-container {
+  padding: 0 !important;
+}
+
+body.motrix-map-request-screen .motrix-solicitud-page {
+  min-height: 100dvh !important;
+  height: 100dvh !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+body.motrix-map-request-screen .motrix-solicitud-page > .row,
+body.motrix-map-request-screen .motrix-solicitud-page > .row > .col-12,
+body.motrix-map-request-screen .motrix-solicitud-card,
+body.motrix-map-request-screen .motrix-request-form,
+body.motrix-map-request-screen .motrix-request-form-section,
+body.motrix-map-request-screen .motrix-request-grid {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.motrix-map-request-screen .motrix-solicitud-card {
+  position: relative !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  box-shadow: none !important;
+}
+
+body.motrix-map-request-screen .motrix-request-form {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+body.motrix-map-request-screen .motrix-request-grid {
+  position: relative !important;
+  display: block !important;
+}
+
+body.motrix-map-request-screen .motrix-request-grid > .col-12 {
+  flex: none !important;
+  max-width: none !important;
+}
+
+body.motrix-map-request-screen .motrix-request-intro,
+body.motrix-map-request-screen .motrix-request-map > .row.items-center.justify-center {
+  display: none !important;
+}
+
+body.motrix-map-request-screen .motrix-request-map {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.motrix-map-request-screen .motrix-request-map .map-wrapper,
+body.motrix-map-request-screen .motrix-request-map .mapa-viaje {
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+body.motrix-map-request-screen .motrix-solicitud-header {
+  position: absolute !important;
+  z-index: 800 !important;
+  top: calc(12px + env(safe-area-inset-top)) !important;
+  left: 0 !important;
+  right: 0 !important;
+  padding: 0 15px !important;
+  border: 0 !important;
+  background: transparent !important;
+  pointer-events: none !important;
+}
+
+body.motrix-map-request-screen .motrix-solicitud-header > .row {
+  justify-content: space-between !important;
+}
+
+body.motrix-map-request-screen .motrix-solicitud-header .row > .col,
+body.motrix-map-request-screen .motrix-solicitud-header .q-avatar {
+  display: none !important;
+}
+
+body.motrix-map-request-screen .motrix-solicitud-header .q-btn {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 50% !important;
+  background: white !important;
+  color: #145c3a !important;
+  box-shadow: 0 4px 18px #1b3c2b29 !important;
+  pointer-events: auto !important;
+}
+
+body.motrix-map-request-screen .motrix-mapa-cinta {
+  position: absolute !important;
+  z-index: 750 !important;
+  top: calc(24px + env(safe-area-inset-top)) !important;
+  left: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  max-width: calc(100% - 155px) !important;
+  padding: 10px 12px !important;
+  border-radius: 30px !important;
+  transform: translateX(-50%) !important;
+  background: white !important;
+  box-shadow: 0 4px 18px #1b3c2b25 !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
+}
+
+body.motrix-map-request-screen .motrix-mapa-gps {
+  position: absolute !important;
+  z-index: 750 !important;
+  top: calc(78px + env(safe-area-inset-top)) !important;
+  right: 15px !important;
+  display: inline-flex !important;
+  background: white !important;
+  box-shadow: 0 4px 18px #1b3c2b29 !important;
+}
+
+body.motrix-map-request-screen .motrix-request-map .map-actions {
+  top: calc(78px + env(safe-area-inset-top)) !important;
+  right: auto !important;
+  left: 15px !important;
+  z-index: 750 !important;
+}
+
+body.motrix-map-request-screen .motrix-request-map .map-actions .q-btn {
+  background: white !important;
+  color: #145c3a !important;
+  box-shadow: 0 4px 18px #1b3c2b29 !important;
+}
+
+body.motrix-map-request-screen .motrix-request-fields {
+  position: absolute !important;
+  z-index: 700 !important;
+  left: 9px !important;
+  right: 9px !important;
+  bottom: calc(67px + env(safe-area-inset-bottom)) !important;
+  width: auto !important;
+  max-width: none !important;
+  max-height: min(47dvh, 450px) !important;
+  margin: 0 !important;
+  padding: 25px 16px 13px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  border: 1px solid #e4e9e6 !important;
+  border-radius: 25px 25px 10px 10px !important;
+  background: #fff !important;
+  box-shadow: 0 -8px 28px #1c392c25 !important;
+}
+
+body.motrix-map-request-screen .motrix-request-fields::before {
+  position: absolute !important;
+  top: 9px !important;
+  left: calc(50% - 20px) !important;
+  width: 40px !important;
+  height: 4px !important;
+  border-radius: 8px !important;
+  background: #d8dfdc !important;
+  content: '' !important;
+}
+
+body.motrix-map-request-screen .motrix-request-fields .q-gutter-y-md > * {
+  margin-top: 11px !important;
+}
+
+body.motrix-map-request-screen .motrix-hoja-servicio {
+  margin-top: 0 !important;
+  gap: 8px;
+}
+
+body.motrix-map-request-screen .motrix-hoja-servicio .q-chip {
+  font-size: 10px;
+  max-width: 132px;
+}
+
+body.motrix-map-request-screen .motrix-request-fields .q-field__control {
+  border-radius: 13px !important;
+  background: #fff !important;
+}
+
+body.motrix-map-request-screen .motrix-request-fields .q-field--with-bottom {
+  padding-bottom: 2px;
+}
+
+body.motrix-map-request-screen .motrix-request-fields .q-btn.full-width {
+  min-height: 42px;
+}
+
+body.motrix-map-request-screen .motrix-elegir-destino {
+  border-radius: 13px !important;
+  background: #f4f8f6 !important;
+}
+
+body.motrix-map-request-screen .motrix-frecuentes {
+  padding-top: 3px;
+}
+
+body.motrix-map-request-screen .motrix-frecuentes-lista {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+}
+
+body.motrix-map-request-screen .motrix-frecuentes-lista::-webkit-scrollbar {
+  display: none;
+}
+
+body.motrix-map-request-screen .motrix-frecuentes-lista .q-btn {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 9px;
+  border-color: #e2e7e4;
+  font-size: 12px;
+}
+
+body.motrix-map-request-screen .motrix-tarifa-resumen {
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #eef7f0;
+  color: #254d37;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+body.motrix-map-request-screen .motrix-detalles-viaje {
+  border: 1px solid #e4ebe6;
+  border-radius: 12px;
+  background: #fff;
+}
+
+body.motrix-map-request-screen .motrix-request-actions {
+  position: absolute !important;
+  z-index: 710 !important;
+  left: 9px !important;
+  right: 9px !important;
+  bottom: env(safe-area-inset-bottom) !important;
+  display: flex !important;
+  height: 67px !important;
+  margin: 0 !important;
+  padding: 8px 13px !important;
+  border: 1px solid #e4e9e6 !important;
+  border-top: 0 !important;
+  border-radius: 0 0 20px 20px !important;
+  background: white !important;
+  box-shadow: 0 8px 22px #1c392c25 !important;
+}
+
+body.motrix-map-request-screen .motrix-request-actions .q-btn:first-child {
+  display: none !important;
+}
+
+body.motrix-map-request-screen .motrix-request-actions .q-btn:last-child {
+  flex: 1 1 auto !important;
+  min-height: 49px !important;
+  border-radius: 14px !important;
+  background: #117342 !important;
+}
+
+/* Transparencia para Google Maps nativo: Android lo dibuja debajo del WebView. */
+html:has(body.motrix-google-native-map),
+body.motrix-google-native-map,
+body.motrix-google-native-map #q-app,
+body.motrix-google-native-map .q-layout,
+body.motrix-google-native-map .motrix-page-container,
+body.motrix-google-native-map .q-page-container,
+body.motrix-google-native-map .q-page,
+body.motrix-google-native-map .motrix-solicitud-card,
+body.motrix-google-native-map .solicitud-card,
+body.motrix-google-native-map .motrix-request-form,
+body.motrix-google-native-map .motrix-request-form-section,
+body.motrix-google-native-map .motrix-request-grid,
+body.motrix-google-native-map .motrix-request-map,
+body.motrix-google-native-map .map-wrapper,
+body.motrix-google-native-map .mapa-viaje,
+body.motrix-google-native-map #mapa-viaje-pasajero,
+body.motrix-google-native-map #mapa-seguimiento-pasajero,
+body.motrix-google-native-map .motrix-conductor-page,
+body.motrix-google-native-map .motrix-conductor-mapa,
+body.motrix-google-native-map .motrix-conductor-navegacion,
+body.motrix-google-native-map .mapa-navegacion-wrapper,
+body.motrix-google-native-map .mapa-navegacion,
+body.motrix-google-native-map #mapa-navegacion-conductor {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+body.motrix-google-native-map .motrix-request-fields,
+body.motrix-google-native-map .motrix-request-actions,
+body.motrix-google-native-map .motrix-tarifa-resumen,
+body.motrix-google-native-map .motrix-detalles-viaje,
+body.motrix-google-native-map .motrix-solicitud-header .q-btn {
+  background-color: #fff !important;
+}
+
+body.motrix-google-native-map capacitor-google-map {
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+}
+
+
+/* Seguimiento del pasajero: el mapa esta dentro de una tarjeta.
+   Las superficies del mapa deben ser transparentes hasta llegar al WebView. */
+body.motrix-google-native-map .motrix-seguimiento-card,
+body.motrix-google-native-map .motrix-seguimiento-card > .q-card__section:not(.motrix-seguimiento-cabecera),
+body.motrix-google-native-map .motrix-active-content {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+body.motrix-google-native-map .motrix-seguimiento-cabecera {
+  background: white !important;
+}
+
+/* Navegacion del conductor: conservar la cabecera y datos legibles,
+   dejando transparente la zona que aloja el mapa nativo. */
+body.motrix-google-native-map .motrix-conductor-viaje,
+body.motrix-google-native-map .motrix-conductor-mapa,
+body.motrix-google-native-map .motrix-conductor-navegacion {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+body.motrix-google-native-map .motrix-conductor-viaje > .q-card__section:not(.motrix-conductor-mapa):not(.motrix-conductor-viaje-header),
+body.motrix-google-native-map .motrix-conductor-navegacion > .q-card__section,
+body.motrix-google-native-map .motrix-conductor-navegacion > .row {
+  background: white !important;
+}
+
+
+/* MOTRIX: panel de ruta propio, sin carrusel de destinos de la referencia. */
+body.motrix-map-request-screen .motrix-request-fields {
+  max-height: min(44dvh, 400px) !important;
+  padding: 19px 15px 12px !important;
+  border-top: 3px solid #1d8953 !important;
+  border-radius: 21px 21px 9px 9px !important;
+}
+
+body.motrix-map-request-screen .motrix-request-fields::before {
+  display: none !important;
+}
+
+body.motrix-map-request-screen .motrix-hoja-servicio {
+  min-height: 48px;
+  padding: 0 1px 9px;
+  border-bottom: 1px solid #e8eee9;
+}
+
+body.motrix-map-request-screen .motrix-ruta-titulo {
+  font-size: 17px;
+  line-height: 1.2;
+  color: #183d2b;
+}
+
+body.motrix-map-request-screen .motrix-servicio-distintivo {
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+body.motrix-map-request-screen .motrix-origen-grupo {
+  gap: 8px;
+}
+
+body.motrix-map-request-screen .motrix-origen-input {
+  min-width: 0;
+}
+
+body.motrix-map-request-screen .motrix-origen-grupo > .q-btn {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #d9e9de;
+}
+
+body.motrix-map-request-screen .motrix-origen-input .q-field__control,
+body.motrix-map-request-screen .motrix-destino-input .q-field__control {
+  min-height: 48px;
+  border-radius: 12px !important;
+}
+
+body.motrix-map-request-screen .motrix-destino-input .q-field__control {
+  background: #f8fbf9 !important;
+}
+
+body.motrix-map-request-screen .destino-resultados {
+  position: relative;
+  z-index: 900;
+  max-height: min(180px, 27dvh);
+  overflow-y: auto;
+  margin-top: 5px !important;
+  border: 1px solid #dce7df;
+  border-radius: 13px;
+  background: white;
+  box-shadow: 0 8px 18px #1a3b2a1c;
+}
+
+body.motrix-map-request-screen .destino-resultado {
+  min-height: 49px;
+  padding: 5px 8px;
+}
+
+body.motrix-map-request-screen .destino-resultado .q-item__section--avatar {
+  min-width: 38px;
+  padding-right: 7px;
+}
+
+body.motrix-map-request-screen .destino-resultado .q-avatar {
+  font-size: 27px;
+  width: 33px;
+  height: 33px;
+}
+
+body.motrix-map-request-screen .motrix-elegir-destino {
+  min-height: 37px !important;
+  background: #f7faf8 !important;
+  border: 1px dashed #b8d9c3;
+  color: #276a46 !important;
+  font-size: 12px;
+}
+
+body.motrix-map-request-screen .motrix-tarifa-resumen {
+  padding: 8px 10px;
+  border: 1px solid #e0ede3;
+  border-radius: 10px;
+  background: #f5faf6;
+  font-size: 12px;
+}
+
+body.motrix-map-request-screen .motrix-detalles-viaje {
+  border-color: #e7ede9;
+}
+
+body.motrix-map-request-screen .motrix-request-actions {
+  height: 68px !important;
+  border-radius: 0 0 18px 18px !important;
+}
+
+body.motrix-map-request-screen .motrix-mapa-cinta {
+  color: #205f3d;
+  letter-spacing: .1px;
+}
+
+body.motrix-map-request-screen .motrix-mapa-cinta .motrix-mapa-proveedor {
+  display: none !important;
+}
+
+
+/* Interfaz simplificada MOTRIX: comentario directo y GPS en un toque. */
+body.motrix-map-request-screen .motrix-hoja-servicio {
+  padding-bottom: 7px;
+  min-height: 41px;
+}
+
+body.motrix-map-request-screen .motrix-origen-input,
+body.motrix-map-request-screen .motrix-origen-input .q-field__control {
+  cursor: pointer;
+}
+
+body.motrix-map-request-screen .motrix-comentario-viaje .q-field__control {
+  min-height: 44px;
+  border-radius: 12px !important;
+  background: #fff !important;
+}
+
+body.motrix-map-request-screen .motrix-comentario-viaje textarea {
+  min-height: 24px !important;
+  max-height: 75px;
+  resize: none;
+}
+
+body.motrix-map-request-screen .motrix-request-map .map-actions {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+body.motrix-map-request-screen .motrix-cambiar-mapa {
+  background: #fff !important;
+  color: #246846 !important;
+  box-shadow: 0 4px 18px #1b3c2b29 !important;
+}
+
+body.motrix-map-request-screen .motrix-request-fields {
+  max-height: min(42dvh, 380px) !important;
+}
+
+
+/* Android Google Maps: eliminar fondos opacos en toda la cadena del WebView.
+   La vista nativa se inserta debajo del WebView por @capacitor/google-maps. */
+html:has(body.motrix-google-native-map),
+body.motrix-google-native-map,
+body.motrix-google-native-map #q-app,
+body.motrix-google-native-map .q-layout,
+body.motrix-google-native-map .q-page-container,
+body.motrix-google-native-map .motrix-page-container,
+body.motrix-google-native-map .motrix-solicitud-page,
+body.motrix-google-native-map .motrix-solicitud-page > .row,
+body.motrix-google-native-map .motrix-solicitud-page > .row > .col-12,
+body.motrix-google-native-map .motrix-solicitud-card,
+body.motrix-google-native-map .motrix-request-form,
+body.motrix-google-native-map .motrix-request-form-section,
+body.motrix-google-native-map .motrix-request-grid,
+body.motrix-google-native-map .motrix-request-map,
+body.motrix-google-native-map .motrix-request-map .map-wrapper,
+body.motrix-google-native-map .motrix-request-map .mapa-viaje {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+body.motrix-google-native-map .motrix-solicitud-header {
+  background: transparent !important;
+}
+
+body.motrix-google-native-map .motrix-request-map .mapa-viaje {
+  position: relative !important;
+  overflow: visible !important;
+}

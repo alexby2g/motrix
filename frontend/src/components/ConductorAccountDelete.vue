@@ -91,6 +91,7 @@ import { computed, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { api } from 'src/boot/axios.js'
+import { desvincularPushMotrix } from 'src/services/pushNotifications.js'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -138,6 +139,7 @@ async function eliminar() {
       }
     })
 
+    await desvincularPushMotrix()
     limpiarSesion()
     dialogo.value = false
 

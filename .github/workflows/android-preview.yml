@@ -1,0 +1,268 @@
+name: MOTRIX - APK firmada de pruebas independiente
+
+on:
+  pull_request:
+    branches:
+      - oficial-motrix-v1-20261105
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/android-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: motrix-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-preview:
+    name: Compilar MOTRIX APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Obtener codigo de la rama de pruebas
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Preparar Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Preparar Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Instalar SDK 36
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
+      - name: Instalar Quasar
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+
+      - name: Instalar Capacitor
+        working-directory: frontend/src-capacitor
+        run: npm install --no-audit --no-fund
+
+      - name: Activar evento nativo cuando Google Maps termina de cargar calles
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          ruta = Path('frontend/src-capacitor/node_modules/@capacitor/google-maps/android/src/main/java/com/capacitorjs/plugins/googlemaps/CapacitorGoogleMap.kt')
+          codigo = ruta.read_text(encoding='utf-8')
+          antes = '            googleMap = map\n'
+          despues = (
+              '            googleMap = map\n'
+              '            map.setOnMapLoadedCallback {\n'
+              '                val datos = JSObject()\n'
+              '                datos.put("mapId", this@CapacitorGoogleMap.id)\n'
+              '                delegate.notify("onMapLoaded", datos)\n'
+              '            }\n'
+          )
+          if codigo.count(antes) != 1:
+              raise SystemExit('No se encontro punto de instrumentacion de Google Maps')
+          ruta.write_text(codigo.replace(antes, despues, 1), encoding='utf-8')
+          print('Se habilito diagnostico de carga de calles en Android')
+          PY
+
+      - name: Preparar Firebase para paquete de pruebas sin modificar produccion
+        shell: bash
+        env:
+          FIREBASE_JSON_B64: ${{ secrets.MOTRIX_GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          python3 - <<'PY'
+          import base64
+          import copy
+          import json
+          import os
+          from pathlib import Path
+
+          encoded = os.environ.get('FIREBASE_JSON_B64', '')
+          if not encoded:
+              raise SystemExit('Falta el secreto MOTRIX_GOOGLE_SERVICES_JSON_B64 para compilar Android')
+
+          config = json.loads(base64.b64decode(encoded).decode('utf-8'))
+          original = 'bo.edu.josecastillo.motrix'
+          preview = original + '.preview'
+          clientes = config.get('client', [])
+          cliente_original = next(
+              (c for c in clientes if c.get('client_info', {}).get('android_client_info', {}).get('package_name') == original),
+              None,
+          )
+          if cliente_original is None:
+              raise SystemExit('El secreto Firebase no contiene el paquete oficial MOTRIX')
+
+          cliente_preview = copy.deepcopy(cliente_original)
+          cliente_preview['client_info']['android_client_info']['package_name'] = preview
+          # El archivo se crea solo en el runner y no se guarda en GitHub.
+          config['client'] = [cliente_preview]
+          destino = Path('frontend/src-capacitor/android/app/google-services.json')
+          destino.parent.mkdir(parents=True, exist_ok=True)
+          destino.write_text(json.dumps(config), encoding='utf-8')
+          print('Configuracion Android de prueba preparada; no se ha modificado Firebase remoto')
+          PY
+
+      - name: Verificar que Google Maps Android esta configurado
+        shell: bash
+        env:
+          MOTRIX_GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.MOTRIX_GOOGLE_MAPS_ANDROID_KEY }}
+        run: |
+          if [ -z "$MOTRIX_GOOGLE_MAPS_ANDROID_KEY" ]; then
+            echo "Falta el secreto MOTRIX_GOOGLE_MAPS_ANDROID_KEY en GitHub Actions."
+            exit 1
+          fi
+          echo "Clave restringida de Google Maps Android disponible (sin mostrarla)."
+
+      - name: Compilar interfaz movil y sincronizar Capacitor
+        working-directory: frontend
+        env:
+          VITE_API_URL: https://backend.motrixbolivia.com/api
+          VITE_REVERB_HOST: backend.motrixbolivia.com
+          VITE_MOTRIX_MAP_PROVIDER: native
+        run: npx quasar build -m capacitor -T android --skip-pkg
+
+      - name: Separar la APK de la version oficial
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          gradle = Path('frontend/src-capacitor/android/app/build.gradle')
+          texto = gradle.read_text(encoding='utf-8')
+          marcador = '    buildTypes {'
+          if texto.count(marcador) != 1:
+              raise SystemExit('No se encontro el bloque buildTypes esperado')
+          texto = texto.replace(
+              marcador,
+              marcador + '\n        release {\n            applicationIdSuffix ".preview"\n        }',
+              1,
+          )
+          gradle.write_text(texto, encoding='utf-8')
+
+          strings = Path('frontend/src-capacitor/android/app/src/main/res/values/strings.xml')
+          texto = strings.read_text(encoding='utf-8')
+          if '<string name="app_name">MOTRIX</string>' not in texto:
+              raise SystemExit('No se encontro el nombre de app esperado')
+          texto = texto.replace(
+              '<string name="app_name">MOTRIX</string>',
+              '<string name="app_name">MOTRIX</string>',
+              1,
+          )
+          texto = texto.replace(
+              '<string name="title_activity_main">MOTRIX</string>',
+              '<string name="title_activity_main">MOTRIX</string>',
+              1,
+          )
+          strings.write_text(texto, encoding='utf-8')
+          print('Paquete independiente: bo.edu.josecastillo.motrix.preview')
+          PY
+
+      - name: Verificar clave de firma de APK
+        shell: bash
+        env:
+          MOTRIX_KEYSTORE_B64: ${{ secrets.MOTRIX_KEYSTORE_B64 }}
+          MOTRIX_KEYSTORE_PASSWORD: ${{ secrets.MOTRIX_KEYSTORE_PASSWORD }}
+          MOTRIX_KEY_PASSWORD: ${{ secrets.MOTRIX_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "$MOTRIX_KEYSTORE_B64" ] || [ -z "$MOTRIX_KEYSTORE_PASSWORD" ] || [ -z "$MOTRIX_KEY_PASSWORD" ]; then
+            echo "Faltan secretos de firma de MOTRIX"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/motrix-signing"
+          printf '%s' "$MOTRIX_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/motrix-signing/motrix-release-key.jks"
+          keytool -list -keystore "$RUNNER_TEMP/motrix-signing/motrix-release-key.jks" -storepass "$MOTRIX_KEYSTORE_PASSWORD" -alias motrix >/dev/null
+          echo "Clave de firma verificada"
+
+      - name: Compilar APK release de pruebas
+        working-directory: frontend/src-capacitor/android
+        shell: bash
+        env:
+          MOTRIX_VERSION_CODE: '100074'
+          MOTRIX_VERSION_NAME: '1.1.74'
+          MOTRIX_GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.MOTRIX_GOOGLE_MAPS_ANDROID_KEY }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --stacktrace
+
+      - name: Firmar APK release de pruebas
+        shell: bash
+        env:
+          MOTRIX_KEYSTORE_PASSWORD: ${{ secrets.MOTRIX_KEYSTORE_PASSWORD }}
+          MOTRIX_KEY_PASSWORD: ${{ secrets.MOTRIX_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          APK=frontend/src-capacitor/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$APK"
+          TOOLS="$ANDROID_HOME/build-tools/36.0.0"
+          mkdir -p dist-preview
+          "$TOOLS/zipalign" -f -v 4 "$APK" dist-preview/MOTRIX-Pruebas-aligned.apk
+          "$TOOLS/apksigner" sign \
+            --ks "$RUNNER_TEMP/motrix-signing/motrix-release-key.jks" \
+            --ks-key-alias motrix \
+            --ks-pass env:MOTRIX_KEYSTORE_PASSWORD \
+            --key-pass env:MOTRIX_KEY_PASSWORD \
+            --out dist-preview/MOTRIX.apk \
+            dist-preview/MOTRIX-Pruebas-aligned.apk
+          rm dist-preview/MOTRIX-Pruebas-aligned.apk
+
+      - name: Verificar APK firmada e identificador independiente
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=dist-preview/MOTRIX.apk
+          TOOLS="$ANDROID_HOME/build-tools/36.0.0"
+          "$TOOLS/aapt" dump badging "$APK" | grep "^package:" | tee /tmp/motrix-preview-package.txt
+          grep -q "name='bo.edu.josecastillo.motrix.preview'" /tmp/motrix-preview-package.txt
+          "$TOOLS/apksigner" verify --verbose --print-certs "$APK"
+          "$TOOLS/zipalign" -c -v 4 "$APK"
+          sha256sum "$APK" > dist-preview/MOTRIX.apk.sha256
+
+      - name: Confirmar que la clave real de Google Maps esta dentro de la APK
+        shell: bash
+        env:
+          MOTRIX_GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.MOTRIX_GOOGLE_MAPS_ANDROID_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import subprocess
+
+          clave = os.environ.get('MOTRIX_GOOGLE_MAPS_ANDROID_KEY', '')
+          if len(clave) < 25:
+              raise SystemExit('Clave de Google Maps ausente o incompleta')
+          aapt = os.path.join(os.environ['ANDROID_HOME'], 'build-tools', '36.0.0', 'aapt')
+          apk = 'dist-preview/MOTRIX.apk'
+          # No imprimir la salida: contiene la clave privada del proyecto.
+          manifiesto = subprocess.check_output(
+              [aapt, 'dump', 'xmltree', apk, 'AndroidManifest.xml'],
+              text=True,
+          )
+          if clave not in manifiesto:
+              raise SystemExit('La APK no contiene la clave Google Maps esperada')
+          print('La APK contiene la clave Google Maps correcta (valor oculto).')
+          PY
+
+      - name: Publicar APK de pruebas para descargar
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOTRIX-Android-GoogleMaps-1.1.74
+          path: |
+            dist-preview/MOTRIX.apk
+            dist-preview/MOTRIX.apk.sha256
+          if-no-files-found: error
+          retention-days: 30

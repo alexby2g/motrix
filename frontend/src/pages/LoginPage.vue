@@ -115,11 +115,7 @@
 
                 <div class="form-links">
                   <span class="role-hint"><q-icon name="shield" /> Acceso automático según tu rol</span>
-                  <q-btn
-                    flat dense no-caps color="green-8"
-                    label="¿Olvidaste tu contraseña?"
-                    to="/recuperar-contrasena"
-                  />
+
                 </div>
 
                 <q-btn

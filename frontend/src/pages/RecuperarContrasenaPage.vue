@@ -35,7 +35,7 @@
           flat
           animated
           color="green-8"
-          header-nav
+          :header-nav="false"
         >
           <q-step
             :name="1"
@@ -44,9 +44,9 @@
             :done="paso > 1"
           >
             <div class="text-body2 text-grey-7 q-mb-md">
-              Ingresa el número de celular registrado en tu cuenta.
-              Si la cuenta dispone de un medio de recuperación configurado,
-              recibirás un código de 6 dígitos.
+              Ingresa el celular boliviano registrado en tu cuenta.
+              Si el servicio SMS está habilitado, recibirás un código de 6 dígitos válido por 10 minutos.
+              Solo quien tenga acceso al número registrado podrá cambiar la contraseña.
             </div>
 
             <q-banner
@@ -54,13 +54,12 @@
               class="bg-amber-1 text-brown-9 q-mb-md"
             >
               <div class="text-weight-medium">
-                ¿No tienes correo registrado o necesitas ayuda?
+                ¿Ya no tienes acceso a tu número?
               </div>
 
               <div class="text-body2">
-                Comunícate con soporte MOTRIX al
-                <strong>76926380 o 64616145</strong>
-                para recuperar tu cuenta.
+                Comunícate con soporte MOTRIX para verificar tu identidad.
+                Nunca compartas tu código SMS con otra persona.
               </div>
             </q-banner>
 
@@ -70,6 +69,7 @@
               label="Celular registrado"
               inputmode="tel"
               autocomplete="tel"
+              maxlength="18"
               :disable="cargando"
               @keyup.enter="solicitarCodigo"
             >
@@ -107,7 +107,7 @@
               {{
                 destino
                   ? `Código enviado a ${destino}.`
-                  : 'Si la cuenta dispone de un medio de recuperación, revisa el contacto registrado.'
+                  : 'Si el número está registrado, revisa el SMS en ese celular.'
               }}
             </q-banner>
 
@@ -145,7 +145,7 @@
               flat
               no-caps
               color="green-8"
-              label="Reenviar código"
+              label="Solicitar otro código"
               class="full-width q-mt-sm"
               :disable="cargando"
               @click="solicitarCodigo"
@@ -283,7 +283,7 @@ function celularValido(valor) {
     return false
   }
 
-  return /^[0-9]{7,15}$/.test(normalizarCelular(original))
+  return /^[67][0-9]{7}$/.test(normalizarCelular(original))
 }
 
 async function solicitarCodigo() {
@@ -292,7 +292,7 @@ async function solicitarCodigo() {
   if (!celularValido(login.value)) {
     $q.notify({
       type: 'warning',
-      message: 'Ingresa el número de celular registrado en tu cuenta.'
+      message: 'Ingresa un celular boliviano de 8 dígitos que comience por 6 o 7.'
     })
 
     return

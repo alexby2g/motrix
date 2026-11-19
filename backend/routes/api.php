@@ -17,6 +17,7 @@ use App\Http\Controllers\PagoSindicalController;
 use App\Http\Controllers\ImagenController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\IncidenciaViajeController;
+use App\Http\Controllers\MensajeViajeController;
 use App\Http\Controllers\FederacionController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\PasswordRecoveryController;
@@ -300,6 +301,23 @@ Route::middleware([
                 ]
             );
 
+            /*
+             * Chat privado entre pasajero y conductor mientras el viaje está activo.
+             * El controlador verifica que el usuario pertenezca a la solicitud.
+             */
+            Route::get(
+                '/solicitudes/{id}/mensajes',
+                [MensajeViajeController::class, 'index']
+            );
+            Route::post(
+                '/solicitudes/{id}/mensajes',
+                [MensajeViajeController::class, 'store']
+            )->middleware('throttle:20,1');
+            Route::post(
+                '/solicitudes/{id}/mensajes/leidos',
+                [MensajeViajeController::class, 'marcarLeidos']
+            )->middleware('throttle:30,1');
+
             Route::get(
                 '/solicitudes/{id}/incidencias',
                 [
@@ -403,6 +421,23 @@ Route::middleware([
                     'calificarViajePasajero',
                 ]
             );
+
+            /*
+             * Chat privado entre pasajero y conductor mientras el viaje está activo.
+             * El controlador verifica que el usuario pertenezca a la solicitud.
+             */
+            Route::get(
+                '/solicitudes/{id}/mensajes',
+                [MensajeViajeController::class, 'index']
+            );
+            Route::post(
+                '/solicitudes/{id}/mensajes',
+                [MensajeViajeController::class, 'store']
+            )->middleware('throttle:20,1');
+            Route::post(
+                '/solicitudes/{id}/mensajes/leidos',
+                [MensajeViajeController::class, 'marcarLeidos']
+            )->middleware('throttle:30,1');
 
             Route::post(
                 '/solicitudes/{id}/compartir',

@@ -1,10 +1,70 @@
 <template>
-  <q-page class="q-pa-sm q-pa-md-md bg-grey-2">
-    <div class="row justify-center">
+  <q-page class="q-pa-sm q-pa-md-md motrix-solicitud-page" :class="{ 'motrix-pasajero-viaje-activo': Boolean(viajeActivo), 'motrix-passenger-trip-page': mostrarMapaPasajero }">
+    <!-- Seguimiento inmersivo: la misma API y el mismo mapa que usa la ficha original. -->
+    <section v-if="mostrarMapaPasajero" class="motrix-passenger-live" aria-label="Seguimiento de tu viaje">
+      <div class="motrix-passenger-map-stage">
+        <div id="mapa-seguimiento-pasajero" class="motrix-passenger-map-canvas" />
+        <div class="motrix-passenger-map-status">
+          <q-icon name="two_wheeler" size="20px" color="positive" />
+          <div class="min-width-zero">
+            <div class="motrix-passenger-map-trip">Viaje #{{ viajeActivo.id }}</div>
+            <div class="motrix-passenger-map-state">{{ estadoSeguimientoTexto }}</div>
+          </div>
+          <q-btn flat round dense icon="refresh" aria-label="Actualizar viaje" :loading="cargandoViaje" @click="cargarViajeActivo(true)" />
+        </div>
+        <div class="motrix-passenger-map-controls">
+          <q-btn unelevated round icon="my_location" color="white" text-color="green-9" aria-label="Centrar mapa" @click="centrarMapaSeguimiento" />
+        </div>
+        <div v-if="!tieneUbicacionConductor" class="motrix-passenger-gps-warning">
+          <q-icon name="gps_off" size="19px" /> Esperando GPS del conductor. Recogida y destino señalados.
+        </div>
+        <div v-else-if="edadUbicacion !== null && edadUbicacion >= 60" class="motrix-passenger-gps-warning">
+          <q-icon name="gps_off" size="19px" /> Ubicación del conductor sin actualizar.
+        </div>
+        <div class="motrix-passenger-map-legend">
+          <span><i class="motrix-passenger-dot motrix-passenger-dot--blue" /> Conductor</span>
+          <span><i class="motrix-passenger-dot motrix-passenger-dot--green" /> Recogida</span>
+          <span><i class="motrix-passenger-dot motrix-passenger-dot--red" /> Destino</span>
+        </div>
+      </div>
+      <div class="motrix-passenger-sheet">
+        <div class="motrix-passenger-handle" />
+        <div class="motrix-passenger-sheet-scroll">
+          <div class="motrix-passenger-sheet-title">
+            <div class="min-width-zero">
+              <div class="motrix-passenger-eyebrow">{{ estadoNormalizado === 'aceptado' ? 'Tu conductor está en camino' : estadoNormalizado === 'llegó' ? 'Tu conductor llegó' : 'En camino al destino' }}</div>
+              <div class="motrix-passenger-driver-name">{{ nombreConductor || 'Mototaxista MOTRIX' }}</div>
+            </div>
+            <div class="motrix-passenger-fare">{{ formatearPrecio(viajeActivo.precio) }}</div>
+          </div>
+          <div class="motrix-passenger-places">
+            <div class="motrix-passenger-place"><q-icon name="radio_button_checked" color="positive" size="19px" /><span>{{ viajeActivo.origen || 'Punto de recogida' }}</span></div>
+            <div class="motrix-passenger-place"><q-icon name="location_on" color="negative" size="19px" /><span>{{ viajeActivo.destino || 'Destino' }}</span></div>
+          </div>
+          <div class="motrix-passenger-metrics">
+            <div><q-icon name="route" color="positive" size="18px" /> {{ distanciaSeguimientoTexto }}</div>
+            <div><q-icon name="schedule" color="orange-8" size="18px" /> {{ tiempoSeguimientoTexto }}</div>
+            <div><q-icon name="gps_fixed" :color="edadUbicacion === null || edadUbicacion >= 60 ? 'warning' : 'positive'" size="18px" /> {{ ultimaActualizacionTexto }}</div>
+          </div>
+          <div v-if="incidenciaActiva" class="motrix-passenger-incident"><q-icon name="warning" /> Incidente {{ incidenciaActiva.codigo || '' }}: {{ incidenciaActiva.estado }}</div>
+        </div>
+        <!-- Sólo las tres acciones solicitadas. Las demás funciones
+             permanecen implementadas sin ocupar el mapa del viaje. -->
+        <div class="motrix-passenger-contact-row motrix-passenger-three-actions">
+          <LlamadaPrivadaPrueba :viaje-id="viajeActivo.id" :estado="viajeActivo.estado" class="motrix-passenger-contact" />
+          <ViajeChat :viaje-id="viajeActivo.id" :estado="viajeActivo.estado" rol="pasajero" class="motrix-passenger-contact" />
+          <q-btn unelevated no-caps color="positive" icon="share_location"
+            label="Compartir viaje" :loading="compartiendoViaje" @click="compartirViaje" />
+        </div>
+      </div>
+    </section>
+
+    <div v-show="!mostrarMapaPasajero" class="row justify-center">
       <div class="col-12 col-xl-10">
-        <q-card class="solicitud-card shadow-2">
+        <q-card class="solicitud-card shadow-2 motrix-solicitud-card"
+          :class="{ 'motrix-modo-solicitud': !cargandoInicial && !viajeActivo && !viajeFinalizado }">
           <!-- ENCABEZADO -->
-          <q-card-section class="bg-positive text-white">
+          <q-card-section class="bg-positive text-white motrix-solicitud-header">
             <div class="row items-center no-wrap">
               <q-btn
                 flat
@@ -25,14 +85,23 @@
 
               <div class="col">
                 <div class="text-h5 text-weight-bold">
-                  Solicitar mototaxi
+                  {{ viajeActivo ? 'Mi viaje' : 'Solicitar mototaxi' }}
                 </div>
 
                 <div class="text-caption text-green-1">
-                  Marca tu origen y destino en el mapa
+                  {{ viajeActivo ? 'Consulta el estado y seguimiento de tu viaje' : 'Marca tu origen y destino en el mapa' }}
                 </div>
               </div>
 
+              <q-btn
+                flat
+                round
+                icon="map"
+                color="white"
+                v-if="mostrarDetallesPasajero && puedeMostrarSeguimiento && vistaSeguimientoMovil"
+                aria-label="Volver al seguimiento en mapa"
+                @click="mostrarDetallesPasajero = false"
+              />
               <q-btn
                 flat
                 round
@@ -65,7 +134,7 @@
 
           <!-- VIAJE ACTIVO -->
           <template v-else-if="viajeActivo">
-            <q-card-section class="q-pa-md q-pa-lg-md">
+            <q-card-section class="q-pa-md q-pa-lg-md motrix-active-content">
               <q-banner
                 rounded
                 :class="bannerEstadoClase"
@@ -94,7 +163,7 @@
                 </div>
               </q-banner>
 
-              <div class="row q-col-gutter-md q-mt-sm">
+              <div class="row q-col-gutter-md q-mt-sm motrix-active-grid">
                 <!-- DATOS DEL VIAJE -->
                 <div class="col-12 col-md-7">
                   <q-card
@@ -216,7 +285,12 @@
                             v-if="qrPagoConductorUrl"
                             :src="qrPagoConductorUrl"
                             alt="QR de cobro del mototaxista"
-                            class="qr-pago-image"
+                            class="qr-pago-image cursor-pointer"
+                            role="button"
+                            tabindex="0"
+                            aria-label="Ampliar QR de cobro"
+                            @click="visorQrPago = true"
+                            @keydown.enter="visorQrPago = true"
                           >
 
                           <q-banner
@@ -228,6 +302,9 @@
                             Coordina el pago directamente con el conductor.
                           </q-banner>
 
+                          <q-btn v-if="qrPagoConductorUrl" flat no-caps color="indigo-8"
+                            icon="zoom_in" label="Ampliar QR" class="full-width q-mt-sm"
+                            @click="visorQrPago = true" />
                           <div
                             v-if="qrPagoConductorUrl"
                             class="q-mt-md"
@@ -428,10 +505,17 @@
                       </q-banner>
 
                       <LlamadaPrivadaPrueba
-                      v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
-                      :viaje-id="viajeActivo.id"
-                      :estado="viajeActivo.estado"
-                      class="q-pa-md"
+                        v-if="viajeActivo && ['Aceptado', 'Llegó', 'En Curso'].includes(viajeActivo.estado)"
+                        :viaje-id="viajeActivo.id"
+                        :estado="viajeActivo.estado"
+                        class="q-pa-md"
+                      />
+                      <ViajeChat
+                        v-if="puedeMostrarSeguimiento"
+                        :viaje-id="viajeActivo.id"
+                        :estado="viajeActivo.estado"
+                        rol="pasajero"
+                        class="q-mt-sm"
                       />
 
                       <q-btn
@@ -485,9 +569,9 @@
                 v-if="puedeMostrarSeguimiento"
                 flat
                 bordered
-                class="seguimiento-card q-mt-md"
+                class="seguimiento-card q-mt-md motrix-seguimiento-card"
               >
-                <q-card-section class="row items-center q-col-gutter-sm">
+                <q-card-section class="row items-center q-col-gutter-sm motrix-seguimiento-cabecera">
                   <div class="col">
                     <div class="row items-center no-wrap">
                       <q-avatar
@@ -499,11 +583,11 @@
                       />
 
                       <div class="min-width-zero">
-                        <div class="text-h6 text-weight-bold text-grey-9">
-                          {{ estadoNormalizado === 'aceptado' ? `${nombreConductor || 'Tu mototaxista'} está en camino` : 'Seguimiento de tu viaje' }}
+                        <div class="text-h6 text-weight-bold text-grey-9 motrix-seguimiento-titulo">
+                          {{ estadoNormalizado === 'aceptado' ? 'Conductor acercándose' : 'Seguimiento de tu viaje' }}
                         </div>
 
-                        <div class="text-caption text-grey-6">
+                        <div class="text-caption text-grey-6 motrix-seguimiento-subtitulo">
                           {{ tituloSeguimiento }}
                         </div>
                       </div>
@@ -515,7 +599,7 @@
                       :color="estadoColor"
                       text-color="white"
                       icon="two_wheeler"
-                      class="text-weight-bold"
+                      class="text-weight-bold motrix-seguimiento-estado"
                     >
                       {{ estadoSeguimientoTexto }}
                     </q-chip>
@@ -590,7 +674,7 @@
                   </q-banner>
 
                   <template v-else>
-                    <div class="map-wrapper seguimiento-map-wrapper">
+                    <div v-if="!mostrarMapaPasajero" class="map-wrapper seguimiento-map-wrapper">
                       <div
                         id="mapa-seguimiento-pasajero"
                         class="mapa-viaje"
@@ -866,11 +950,11 @@
 
           <!-- FORMULARIO NUEVA SOLICITUD -->
           <template v-else>
-            <q-form @submit.prevent="enviarSolicitud">
-              <q-card-section class="q-pa-md q-pa-lg-md">
+            <q-form class="motrix-request-form" @submit.prevent="enviarSolicitud">
+              <q-card-section class="q-pa-md q-pa-lg-md motrix-request-form-section">
                 <q-banner
                   rounded
-                  class="bg-blue-1 text-primary q-mb-md"
+                  class="bg-blue-1 text-primary q-mb-md motrix-request-intro"
                 >
                   <template #avatar>
                     <q-icon
@@ -886,43 +970,59 @@
                   destino directamente en el mapa.
                 </q-banner>
 
-                <div class="row q-col-gutter-lg">
+                <div class="row q-col-gutter-lg motrix-request-grid">
                   <!-- FORMULARIO -->
-                  <div class="col-12 col-md-5">
+                  <div class="col-12 col-md-5 motrix-request-fields">
                     <div class="q-gutter-y-md">
-                      <q-input
-                        v-model="form.origen"
-                        outlined
-                        label="Punto de origen"
-                        readonly
-                        :rules="[
-                          valor => Boolean(valor) ||
-                            'Marca el punto de origen en el mapa'
-                        ]"
-                      >
-                        <template #prepend>
-                          <q-icon
-                            name="radio_button_checked"
-                            color="positive"
-                          />
-                        </template>
-                      </q-input>
-
-                      <q-btn
-                        outline
-                        color="positive"
-                        icon="my_location"
-                        label="Usar mi ubicación como origen"
-                        class="full-width"
-                        :loading="obteniendoUbicacion"
-                        @click="usarUbicacionActual"
-                      />
-
+                      <div class="motrix-hoja-servicio row items-center no-wrap">
+                        <q-avatar icon="two_wheeler" color="green-1" text-color="positive" size="42px" class="q-mr-sm" />
+                        <div class="col min-width-zero">
+                          <div class="text-subtitle1 text-weight-bold motrix-ruta-titulo">¿A dónde vamos?</div>
+                        </div>
+                        <q-badge rounded color="green-1" text-color="green-9" class="motrix-servicio-distintivo">Trinidad</q-badge>
+                      </div>
+                      <div class="motrix-origen-grupo row items-center no-wrap">
+                        <q-input
+                          v-model="form.origen"
+                          outlined
+                          dense
+                          readonly
+                          hide-bottom-space
+                          lazy-rules="ondemand"
+                          label="Tu punto de partida"
+                          @click="usarUbicacionActual"
+                          class="col motrix-origen-input"
+                          :rules="[
+                            valor => Boolean(valor) ||
+                              'Marca el punto de origen en el mapa'
+                          ]"
+                        >
+                          <template #prepend>
+                            <q-icon name="radio_button_checked" color="positive" />
+                          </template>
+                        </q-input>
+                        <q-btn
+                          round
+                          unelevated
+                          color="green-1"
+                          text-color="positive"
+                          icon="my_location"
+                          :loading="obteniendoUbicacion"
+                          aria-label="Usar mi ubicación actual"
+                          @click="usarUbicacionActual"
+                        >
+                          <q-tooltip>Usar mi ubicación actual</q-tooltip>
+                        </q-btn>
+                      </div>
 
                       <q-input
                         v-model="busquedaDestino"
                         outlined
+                        dense
                         clearable
+                        hide-bottom-space
+                        lazy-rules="ondemand"
+                        class="motrix-destino-input"
                         label="Punto de destino"
                         placeholder="Escribe una calle, barrio o lugar…"
                         :loading="buscandoDestino"
@@ -957,14 +1057,6 @@
                         </template>
                       </q-input>
 
-
-                      <div
-                        v-if="busquedaDestino && busquedaDestino.trim().length >= 3 && !form.destino"
-                        class="text-caption text-grey-6 q-mt-xs q-ml-sm"
-                      >
-                        <q-icon name="auto_awesome" size="15px" class="q-mr-xs" />
-                        Las sugerencias aparecen mientras escribes.
-                      </div>
 
                       <q-card
                         v-if="resultadosDestino.length"
@@ -1016,76 +1108,43 @@
                         con otra referencia o márcalo manualmente en el mapa.
                       </q-banner>
 
-                      <q-input
-                        v-model="form.fecha"
-                        outlined
-                        type="date"
-                        label="Fecha"
-                        stack-label
-                        readonly
+                      <q-btn
+                        outline
+                        no-caps
+                        icon="place"
+                        :label="seleccionandoDestinoMapa ? 'Toca el mapa para marcar el destino' : 'Marcar destino en el mapa'"
+                        class="motrix-elegir-destino full-width"
+                        color="primary"
+                        @click="activarSeleccionDestinoMapa"
                       />
+
+                      <div class="motrix-tarifa-resumen row items-center no-wrap">
+                        <q-icon name="payments" size="20px" color="positive" />
+                        <span class="col">Tarifa propuesta por el mototaxista</span>
+                        <strong>{{ distanciaKm > 0 ? `${distanciaKm} km` : '' }}</strong>
+                      </div>
 
                       <q-input
                         v-model="form.observacion_pasajero"
                         outlined
+                        dense
                         type="textarea"
                         autogrow
                         maxlength="200"
-                        counter
-                        label="Nota para el mototaxista (opcional)"
-                        hint="Ej.: Somos 2 personas, llevo una caja grande o equipaje pesado."
-                        class="q-mt-md"
+                        label="Comentario para el mototaxista (opcional)"
+                        placeholder="Ej.: Llevo equipaje o somos dos personas"
+                        class="motrix-comentario-viaje"
                       >
                         <template #prepend>
-                          <q-icon name="speaker_notes" />
+                          <q-icon name="speaker_notes" color="grey-6" />
                         </template>
                       </q-input>
-
-                      <q-card
-                        flat
-                        bordered
-                        class="tarifa-card"
-                      >
-                        <q-card-section>
-                          <div class="row items-center">
-                            <q-avatar
-                              color="green-1"
-                              text-color="positive"
-                              icon="request_quote"
-                              size="50px"
-                              class="q-mr-md"
-                            />
-
-                            <div class="col">
-                              <div class="text-subtitle1 text-weight-bold text-grey-9">
-                                El mototaxista propondrá la tarifa
-                              </div>
-                              <div class="text-caption text-grey-6">
-                                Solicita primero. El conductor revisará el recorrido y te enviará su precio para que tú decidas si aceptarlo.
-                              </div>
-                            </div>
-
-                            <div class="text-right q-ml-md">
-                              <div class="text-caption text-grey-6">
-                                Distancia
-                              </div>
-
-                              <div class="text-subtitle1 text-weight-bold">
-                                {{ distanciaKm > 0
-                                  ? `${distanciaKm} km`
-                                  : '—'
-                                }}
-                              </div>
-                            </div>
-                          </div>
-                        </q-card-section>
-                      </q-card>
 
                     </div>
                   </div>
 
                   <!-- MAPA -->
-                  <div class="col-12 col-md-7">
+                  <div class="col-12 col-md-7 motrix-request-map">
                     <div class="map-wrapper">
                       <div
                         id="mapa-viaje-pasajero"
@@ -1093,6 +1152,32 @@
                       />
 
                       <div class="map-actions">
+                        <q-btn
+                          v-if="mapaProveedor === 'Google Maps (Android)'"
+                          round
+                          flat
+                          icon="help_outline"
+                          color="primary"
+                          size="sm"
+                          aria-label="Comprobar Google Maps sin conectar el celular"
+                          @click="mostrarDiagnosticoMapa"
+                        >
+                          <q-tooltip>¿Google Maps está en blanco? Comprobar</q-tooltip>
+                        </q-btn>
+                        <q-btn
+                          round
+                          flat
+                          icon="layers"
+                          color="primary"
+                          size="sm"
+                          class="motrix-cambiar-mapa"
+                          :aria-label="mapaAlternativo ? 'Probar Google Maps' : 'Usar mapa alternativo'"
+                          @click="cambiarProveedorMapa"
+                        >
+                          <q-tooltip>
+                            {{ mapaAlternativo ? 'Probar Google Maps' : 'Si el mapa aparece en blanco, usa el mapa alternativo' }}
+                          </q-tooltip>
+                        </q-btn>
                         <q-btn
                           round
                           color="negative"
@@ -1105,6 +1190,22 @@
                           </q-tooltip>
                         </q-btn>
                       </div>
+                      <div class="motrix-mapa-cinta">
+                        <span class="motrix-mapa-punto" />
+                        MOTRIX · Trinidad
+                        <span class="motrix-mapa-proveedor">{{ mapaProveedor }}</span>
+                      </div>
+                      <q-btn
+                        round
+                        unelevated
+                        icon="my_location"
+                        color="white"
+                        text-color="positive"
+                        class="motrix-mapa-gps"
+                        :loading="obteniendoUbicacion"
+                        aria-label="Centrar en mi ubicación"
+                        @click="usarUbicacionActual"
+                      />
                     </div>
 
                     <div class="row items-center justify-center q-gutter-md q-mt-sm">
@@ -1129,7 +1230,7 @@
 
               <q-card-actions
                 align="right"
-                class="q-pa-md bg-grey-1"
+                class="q-pa-md bg-grey-1 motrix-request-actions"
               >
                 <q-btn
                   flat
@@ -1415,7 +1516,57 @@
       </q-card>
     </q-dialog>
 
-    <PhotoViewerDialog
+    <q-dialog v-model="dialogDiagnosticoMapa">
+      <q-card style="width: min(94vw, 410px)">
+        <q-card-section class="row items-center justify-between">
+          <div class="text-subtitle1 text-weight-bold">Comprobar Google Maps</div>
+          <q-btn flat round dense icon="close" v-close-popup />
+        </q-card-section>
+        <q-separator />
+        <q-card-section>
+          <div v-if="cargandoDiagnosticoMapa" class="row items-center q-gutter-sm">
+            <q-spinner color="primary" size="24px" />
+            <span>Comprobando Android...</span>
+          </div>
+          <template v-else-if="diagnosticoMapa">
+            <div class="q-mb-sm text-caption text-grey-7">
+              Haz una captura de esta ventana y envíamela. No muestra tu clave API.
+            </div>
+            <div class="q-mb-xs"><b>Paquete:</b> {{ diagnosticoMapa.paquete || 'No disponible' }}</div>
+            <div class="q-mb-xs"><b>Clave de Google Maps:</b> {{ diagnosticoMapa.claveConfigurada ? 'Configurada' : 'No detectada' }}</div>
+            <div class="q-mb-xs"><b>Servicios de Google:</b> {{ diagnosticoMapa.serviciosGoogle || 'No disponible' }}</div>
+            <div class="q-mb-xs"><b>Motor:</b> {{ diagnosticoMapa.motor || 'No disponible' }}</div>
+            <div class="q-mb-xs"><b>Calles de Google:</b> {{ diagnosticoMapa.cargaCalles || 'No disponible' }}</div>
+            <div class="q-mb-xs"><b>Tamaño del mapa:</b> {{ diagnosticoMapa.vista || 'No disponible' }}</div>
+            <div class="q-mb-xs"><b>Internet:</b> {{ diagnosticoMapa.conexion || 'No disponible' }}</div>
+            <div class="q-mb-xs" style="overflow-wrap:anywhere"><b>Firma SHA-1:</b> {{ diagnosticoMapa.firmaSha1 || 'No disponible' }}</div>
+            <div v-if="diagnosticoMapa.error" class="text-negative q-mt-sm">
+              {{ diagnosticoMapa.error }}
+            </div>
+          </template>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat color="primary" label="Cerrar" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="visorQrPago" :maximized="$q.screen.lt.sm">
+      <q-card class="motrix-qr-visor-pasajero">
+        <q-card-section class="row items-center justify-between">
+          <div class="text-h6 text-weight-bold">QR para pagar el viaje</div>
+          <q-btn round dense flat icon="close" v-close-popup aria-label="Cerrar QR" />
+        </q-card-section>
+        <q-card-section class="column items-center">
+          <img v-if="qrPagoConductorUrl" :src="qrPagoConductorUrl"
+            alt="Código QR de cobro ampliado" class="motrix-qr-pasajero-grande" />
+          <div class="text-weight-bold q-mt-md">{{ qrPagoMetodoConductor }}</div>
+          <div class="text-caption text-grey-7">Titular: {{ qrPagoTitularConductor }}</div>
+          <div class="text-caption text-grey-7 q-mt-sm">Verifica con el conductor antes de pagar.</div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+  <PhotoViewerDialog
       v-model="visorFotoConductor"
       :src="fotoConductorUrl"
       :title="nombreConductor || 'Mototaxista MOTRIX'"
@@ -1425,6 +1576,7 @@
 
 <script setup>
 import LlamadaPrivadaPrueba from 'src/components/LlamadaPrivadaPrueba.vue'
+import ViajeChat from 'src/components/ViajeChat.vue'
 import { fechaDDMMYYYY, fechaISOHoyBolivia } from 'src/utils/motrixDate.js'
 import catalogoTrinidad from 'src/data/trinidad/catalogoFinalTrinidad.json'
 import { direccionOrigenTrinidad } from 'src/utils/origenDireccion.js'
@@ -1441,10 +1593,15 @@ import {
 
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
+import { registerPlugin } from '@capacitor/core'
 import axios from 'axios'
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
-import L from 'leaflet'
+import L, { prepararGoogleMaps, proveedorMapa, crearMapaMotrix, mapaAlternativoActivo, alternarMapaAlternativo } from 'src/utils/mapaMotrix.js'
+import { estadoCargaGoogleMapsNativo } from 'src/utils/mapaNativoCapacitor.js'
+// Hostinger usa la API REST; no abrir WebSocket Reverb desde la APK.
+const REVERB_HABILITADO = false
+import { obtenerRutaCallesMotrix } from 'src/utils/rutasViajeMotrix.js'
 import 'leaflet/dist/leaflet.css'
 
 import { api } from '../../boot/axios.js'
@@ -1467,6 +1624,11 @@ const RADIO_BUSQUEDA_TRINIDAD_KM = 35
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search'
 
 const cargandoInicial = ref(true)
+const mostrarDetallesPasajero = ref(false)
+const vistaSeguimientoMovil = computed(() => $q.screen.lt.md || Boolean(window.__MOTRIX_NATIVE_APP__))
+const mostrarMapaPasajero = computed(() =>
+  vistaSeguimientoMovil.value && puedeMostrarSeguimiento.value && !mostrarDetallesPasajero.value
+)
 const cargandoViaje = ref(false)
 const enviando = ref(false)
 const aceptandoOferta = ref(false)
@@ -1487,9 +1649,17 @@ const calificacion = ref(0)
 const comentarioCalificacion = ref('')
 const enviandoCalificacion = ref(false)
 const distanciaKm = ref(0)
+const mapaProveedor = ref('OpenStreetMap')
+const dialogDiagnosticoMapa = ref(false)
+const cargandoDiagnosticoMapa = ref(false)
+const diagnosticoMapa = ref(null)
+const motrixMapsDiagnostico = registerPlugin('MotrixMapsDiagnostico')
+const mapaAlternativo = ref(mapaAlternativoActivo())
+const seleccionandoDestinoMapa = ref(false)
 
 const dialogNotificacion = ref(false)
 const websocketConectado = ref(false)
+const visorQrPago = ref(false)
 const visorFotoConductor = ref(false)
 const compartiendoViaje = ref(false)
 
@@ -1536,6 +1706,8 @@ const notificacionFotoError = ref(false)
 
 const distanciaSeguimientoKm = ref(null)
 const tiempoSeguimientoMin = ref(null)
+const rutaSeguimientoAproximada = ref(false)
+const rutaSeguimientoBuscando = ref(false)
 const actualizandoSeguimiento = ref(false)
 
 const origenCoords = ref(null)
@@ -1549,12 +1721,18 @@ let marcadorDestino = null
 let lineaRuta = null
 
 let mapaSeguimiento = null
+// Primer encuadre solamente. Después el usuario puede explorar libremente
+// sin que la actualización del GPS o de OSRM le robe la cámara.
+let vistaSeguimientoCentrada = false
 let inicializandoMapaSeguimiento = false
 let marcadorConductorSeguimiento = null
 let marcadorOrigenSeguimiento = null
 let marcadorDestinoSeguimiento = null
 let lineaRutaSeguimiento = null
 let ultimaClaveRutaSeguimiento = null
+let ultimaRutaSeguimientoEn = 0
+let rutaSeguimientoEnCurso = false
+let generacionRutaSeguimiento = 0
 let animacionMarcadorConductor = null
 let intervaloActualizacion = null
 let intervaloIncidencias = null
@@ -1988,19 +2166,23 @@ const estadoSeguimientoTexto = computed(() => {
 })
 
 const distanciaSeguimientoTexto = computed(() => {
-  const distancia = Number.parseFloat(distanciaSeguimientoKm.value)
-
-  return Number.isFinite(distancia)
-    ? `${distancia.toFixed(2)} km`
-    : 'Calculando...'
+  if (!tieneUbicacionConductor.value) return 'Esperando GPS'
+  const distancia = distanciaSeguimientoKm.value
+  if (distancia === null || !Number.isFinite(Number(distancia))) {
+    return rutaSeguimientoBuscando.value ? 'Calculando ruta...' : 'Ruta pendiente'
+  }
+  return rutaSeguimientoAproximada.value
+    ? `${Number(distancia).toFixed(2)} km en línea recta`
+    : `${Number(distancia).toFixed(2)} km por calles`
 })
 
 const tiempoSeguimientoTexto = computed(() => {
-  const minutos = Number.parseInt(tiempoSeguimientoMin.value, 10)
-
-  return Number.isFinite(minutos)
-    ? `${Math.max(1, minutos)} min`
-    : 'Calculando...'
+  if (!tieneUbicacionConductor.value) return 'Esperando GPS'
+  if (rutaSeguimientoAproximada.value) return 'Tiempo no disponible'
+  const minutos = tiempoSeguimientoMin.value
+  return minutos !== null && Number.isFinite(Number(minutos))
+    ? `${Math.max(1, Number(minutos))} min aprox.`
+    : 'Sin estimación'
 })
 
 const relojSeguimiento = ref(Date.now())
@@ -2178,6 +2360,7 @@ function calcularDistanciaRecta(origen, destino) {
 }
 
 function destruirMapaSeguimiento() {
+  generacionRutaSeguimiento += 1
   if (animacionMarcadorConductor) {
     window.cancelAnimationFrame(animacionMarcadorConductor)
     animacionMarcadorConductor = null
@@ -2188,18 +2371,23 @@ function destruirMapaSeguimiento() {
   }
 
   mapaSeguimiento = null
+  vistaSeguimientoCentrada = false
   inicializandoMapaSeguimiento = false
   marcadorConductorSeguimiento = null
   marcadorOrigenSeguimiento = null
   marcadorDestinoSeguimiento = null
   lineaRutaSeguimiento = null
   ultimaClaveRutaSeguimiento = null
+  ultimaRutaSeguimientoEn = 0
+  rutaSeguimientoEnCurso = false
 
   distanciaSeguimientoKm.value = null
   tiempoSeguimientoMin.value = null
+  rutaSeguimientoAproximada.value = false
+  rutaSeguimientoBuscando.value = false
 }
 
-function inicializarMapaSeguimiento() {
+async function inicializarMapaSeguimiento() {
   if (
     mapaSeguimiento
     || inicializandoMapaSeguimiento
@@ -2221,11 +2409,24 @@ function inicializarMapaSeguimiento() {
       contenedor._leaflet_id = null
     }
 
-    mapaSeguimiento = L.map(
+    await prepararGoogleMaps()
+    if (!contenedor.isConnected || !puedeMostrarSeguimiento.value) return
+    mapaProveedor.value = proveedorMapa()
+
+    const creado = await crearMapaMotrix(
       contenedor,
       { zoomControl: true }
-    ).setView(
-      [LAT_TRINIDAD, LNG_TRINIDAD],
+    )
+    // Si la pantalla cambió durante la carga de Android, no dejar
+    // una segunda instancia nativa invisible detrás del viaje.
+    if (!contenedor.isConnected || !puedeMostrarSeguimiento.value) {
+      creado.remove()
+      return
+    }
+    mapaSeguimiento = creado.setView(
+      coordenadasConductor.value
+        || obtenerCoordenadasViaje('origen')
+        || [LAT_TRINIDAD, LNG_TRINIDAD],
       14
     )
 
@@ -2244,6 +2445,12 @@ function inicializarMapaSeguimiento() {
 
 function animarMarcadorConductorHasta(marcador, coordenadas) {
   if (!marcador || !coordenadas) return
+
+  if (marcador.isNative) {
+    // No recrear un marcador Android 60 veces por segundo durante la animacion.
+    marcador.setLatLng(coordenadas)
+    return
+  }
 
   const actual = marcador.getLatLng()
   const origen = [actual.lat, actual.lng]
@@ -2356,103 +2563,83 @@ function centrarMapaSeguimiento() {
 }
 
 async function dibujarRutaSeguimiento(conductor, objetivo) {
-  if (!mapaSeguimiento || !conductor || !objetivo) {
-    return
-  }
+  if (!mapaSeguimiento || !conductor || !objetivo || rutaSeguimientoEnCurso) return
 
-  const claveRuta = [
-    estadoNormalizado.value,
+  const fase = estadoNormalizado.value
+  const viajeId = viajeActivo.value?.id
+  const clave = [
+    viajeId,
+    fase,
     conductor[0].toFixed(4),
     conductor[1].toFixed(4),
     objetivo[0].toFixed(5),
     objetivo[1].toFixed(5)
   ].join('|')
 
-  if (claveRuta === ultimaClaveRutaSeguimiento && lineaRutaSeguimiento) {
+  // No inundar los servidores comunitarios. Un trazado por calles válido
+  // se conserva mientras el conductor no haya avanzado ~11 m.
+  const ahora = Date.now()
+  if (clave === ultimaClaveRutaSeguimiento && lineaRutaSeguimiento
+    && (!rutaSeguimientoAproximada.value || ahora - ultimaRutaSeguimientoEn < 30000)) {
     return
   }
 
-  ultimaClaveRutaSeguimiento = claveRuta
+  rutaSeguimientoEnCurso = true
+  rutaSeguimientoBuscando.value = true
+  const version = generacionRutaSeguimiento
+  const mapaAlIniciar = mapaSeguimiento
 
   try {
-    const origenTexto = `${conductor[1]},${conductor[0]}`
-    const destinoTexto = `${objetivo[1]},${objetivo[0]}`
-
-    const respuesta = await axios.get(
-      'https://router.project-osrm.org/route/v1/driving/'
-        + `${origenTexto};${destinoTexto}`,
-      {
-        params: {
-          overview: 'full',
-          geometries: 'geojson',
-          steps: false
-        }
-      }
-    )
-
-    const ruta = respuesta.data?.routes?.[0]
-
-    if (!ruta) {
-      throw new Error('No se encontró una ruta de seguimiento.')
-    }
-
-    distanciaSeguimientoKm.value = Number.parseFloat(
-      (ruta.distance / 1000).toFixed(2)
-    )
-
-    tiempoSeguimientoMin.value = Math.max(
-      1,
-      Math.round(ruta.duration / 60)
-    )
+    // Esta consulta tiene timeout y un proveedor alternativo. No se espera
+    // desde la actualización de los marcadores, que siguen mostrando GPS.
+    const ruta = await obtenerRutaCallesMotrix(conductor, objetivo)
+    if (version !== generacionRutaSeguimiento
+      || mapaAlIniciar !== mapaSeguimiento
+      || viajeId !== viajeActivo.value?.id
+      || fase !== estadoNormalizado.value) return
 
     if (lineaRutaSeguimiento) {
       mapaSeguimiento.removeLayer(lineaRutaSeguimiento)
+      lineaRutaSeguimiento = null
     }
 
-    lineaRutaSeguimiento = L.geoJSON(
-      ruta.geometry,
-      {
+    if (ruta.disponible) {
+      lineaRutaSeguimiento = L.geoJSON(ruta.geometria, {
         style: {
-          color: '#1976d2',
+          color: fase === 'en curso' ? '#303f9f' : '#1976d2',
           weight: 7,
-          opacity: 0.88
+          opacity: 0.92
         }
-      }
-    ).addTo(mapaSeguimiento)
-
-    centrarMapaSeguimiento()
-  } catch (error) {
-    console.error('Error calculando seguimiento:', error)
-
-    const distanciaRecta = calcularDistanciaRecta(
-      conductor,
-      objetivo
-    )
-
-    distanciaSeguimientoKm.value = Number.parseFloat(
-      distanciaRecta.toFixed(2)
-    )
-
-    tiempoSeguimientoMin.value = Math.max(
-      1,
-      Math.round((distanciaRecta / 25) * 60)
-    )
-
-    if (lineaRutaSeguimiento) {
-      mapaSeguimiento.removeLayer(lineaRutaSeguimiento)
-    }
-
-    lineaRutaSeguimiento = L.polyline(
-      [conductor, objetivo],
-      {
+      }).addTo(mapaSeguimiento)
+      distanciaSeguimientoKm.value = ruta.distanciaKm
+      tiempoSeguimientoMin.value = ruta.duracionMin
+      rutaSeguimientoAproximada.value = false
+    } else {
+      // Línea punteada explícitamente provisional: nunca afirmar que
+      // es una ruta vial o estimar minutos de recorrido ficticios.
+      lineaRutaSeguimiento = L.polyline([conductor, objetivo], {
         color: '#1976d2',
         weight: 5,
-        opacity: 0.65,
-        dashArray: '8 8'
-      }
-    ).addTo(mapaSeguimiento)
+        opacity: 0.75,
+        dashArray: '10 9'
+      }).addTo(mapaSeguimiento)
+      distanciaSeguimientoKm.value = Number(
+        calcularDistanciaRecta(conductor, objetivo).toFixed(2)
+      )
+      tiempoSeguimientoMin.value = null
+      rutaSeguimientoAproximada.value = true
+    }
 
-    centrarMapaSeguimiento()
+    ultimaClaveRutaSeguimiento = clave
+    ultimaRutaSeguimientoEn = Date.now()
+    // No utilizar fitBounds aquí: se respetan los gestos del usuario.
+  } catch (error) {
+    console.warn('No se pudo dibujar la ruta del viaje:', error)
+  } finally {
+    if (version === generacionRutaSeguimiento) {
+      rutaSeguimientoEnCurso = false
+      rutaSeguimientoBuscando.value = false
+    }
   }
 }
 
@@ -2462,11 +2649,7 @@ async function actualizarMapaSeguimiento() {
     return
   }
 
-  if (!tieneUbicacionConductor.value) {
-    destruirMapaSeguimiento()
-    return
-  }
-
+  // Mostrar recogida y destino incluso cuando el GPS aun no esta disponible.
   if (actualizandoSeguimiento.value) {
     return
   }
@@ -2475,7 +2658,7 @@ async function actualizarMapaSeguimiento() {
 
   try {
     await nextTick()
-    inicializarMapaSeguimiento()
+    await inicializarMapaSeguimiento()
 
     if (!mapaSeguimiento) {
       return
@@ -2512,10 +2695,15 @@ async function actualizarMapaSeguimiento() {
       ? destino
       : origen
 
-    if (conductor && objetivo) {
-      await dibujarRutaSeguimiento(conductor, objetivo)
-    } else {
+    // Hacer el encuadre inicial ANTES de solicitar la ruta por red,
+    // nunca varios segundos después cuando el usuario ya está navegando.
+    if (!vistaSeguimientoCentrada && (conductor || objetivo)) {
+      vistaSeguimientoCentrada = true
       centrarMapaSeguimiento()
+    }
+    if (conductor && objetivo) {
+      // La red nunca bloquea la actualización del GPS cada dos segundos.
+      void dibujarRutaSeguimiento(conductor, objetivo)
     }
 
     mapaSeguimiento.invalidateSize()
@@ -2819,10 +3007,7 @@ function limpiarDestinoSeleccionado(limpiarBusqueda = true) {
 }
 
 function alEditarBusquedaDestino(valor) {
-  resultadosDestino.value = []
-  busquedaDestinoRealizada.value = false
   secuenciaBusquedaDestino += 1
-
   if (temporizadorBusquedaDestino) {
     window.clearTimeout(temporizadorBusquedaDestino)
     temporizadorBusquedaDestino = null
@@ -2830,28 +3015,22 @@ function alEditarBusquedaDestino(valor) {
 
   const texto = String(valor || '').trim()
   const destinoActual = String(form.destino || '').trim()
-
-  if (
-    destinoActual
-    && texto !== destinoActual
-  ) {
+  if (destinoActual && texto === destinoActual) {
+    resultadosDestino.value = []
+    busquedaDestinoRealizada.value = false
+    return
+  }
+  if (destinoActual && texto !== destinoActual) {
     limpiarDestinoSeleccionado(false)
   }
 
-  if (texto.length < 3) {
-    buscandoDestino.value = false
-    return
-  }
-
-  // Sugerencias inmediatas desde el catalogo local, sin solicitudes
-  // al servidor publico de Nominatim por cada tecla.
-  temporizadorBusquedaDestino = window.setTimeout(() => {
-    buscarDestino({
-      consulta: texto,
-      silencioso: true,
-      soloLocal: true
-    }).catch(() => {})
-  }, 200)
+  // La lista local aparece al escribir, sin depender de internet.
+  // Ejemplo: "villa" ofrece Villa Magdalena, Villa Marin, etc.
+  resultadosDestino.value = texto.length >= 2
+    ? buscarLugaresLocalesTrinidad(texto)
+    : []
+  busquedaDestinoRealizada.value = false
+  buscandoDestino.value = false
 }
 
 function normalizarTextoBusqueda(texto) {
@@ -3040,7 +3219,8 @@ async function buscarDestino(opciones = {}) {
 
   const secuencia = ++secuenciaBusquedaDestino
   buscandoDestino.value = true
-  resultadosDestino.value = []
+  // No ocultar las coincidencias locales mientras consulta Nominatim.
+  resultadosDestino.value = resultadosLocales
   busquedaDestinoRealizada.value = false
 
   try {
@@ -3451,7 +3631,56 @@ async function colocarDestino(lat, lng, direccionConocida = null) {
   }
 }
 
-function inicializarMapa() {
+async function mostrarDiagnosticoMapa() {
+  dialogDiagnosticoMapa.value = true
+  cargandoDiagnosticoMapa.value = true
+  diagnosticoMapa.value = null
+  try {
+    const estado = window.__MOTRIX_NATIVE_APP__
+      ? await motrixMapsDiagnostico.estado()
+      : { paquete: 'Navegador web', claveConfigurada: false, serviciosGoogle: 'No aplica', firmaSha1: 'No aplica' }
+    const elemento = document.querySelector('.motrix-google-map-element')
+    const dimensiones = elemento?.getBoundingClientRect()
+    diagnosticoMapa.value = {
+      ...estado,
+      motor: mapa?.isNative ? 'Google Maps Android' : proveedorMapa(),
+      cargaCalles: estadoCargaGoogleMapsNativo(),
+      vista: dimensiones
+        ? Math.round(dimensiones.width) + ' × ' + Math.round(dimensiones.height) + ' px'
+        : 'No se encontró el mapa nativo',
+      conexion: navigator.onLine ? 'Conectado' : 'Sin conexión'
+    }
+  } catch (error) {
+    diagnosticoMapa.value = { error: String(error?.message || error) }
+  } finally {
+    cargandoDiagnosticoMapa.value = false
+  }
+}
+
+function cambiarProveedorMapa() {
+  alternarMapaAlternativo()
+  window.location.reload()
+}
+
+function activarSeleccionDestinoMapa() {
+  seleccionandoDestinoMapa.value = !seleccionandoDestinoMapa.value
+  if (seleccionandoDestinoMapa.value) {
+    $q.notify({ type: 'info', message: 'Toca el punto de destino directamente en el mapa.', timeout: 2800 })
+  }
+}
+
+function destruirMapaSolicitud() {
+  if (mapa) {
+    mapa.remove()
+    mapa = null
+  }
+  inicializandoMapa = false
+  marcadorOrigen = null
+  marcadorDestino = null
+  lineaRuta = null
+}
+
+async function inicializarMapa() {
   if (
     mapa
     || inicializandoMapa
@@ -3473,10 +3702,20 @@ function inicializarMapa() {
       contenedor._leaflet_id = null
     }
 
-    mapa = L.map(contenedor).setView(
+    await prepararGoogleMaps()
+    if (!contenedor.isConnected || viajeActivo.value) return
+    const creado = await crearMapaMotrix(contenedor)
+    // No reactivar el mapa de búsqueda si se aceptó el viaje
+    // mientras Google Maps estaba terminando de inicializar.
+    if (!contenedor.isConnected || viajeActivo.value) {
+      creado.remove()
+      return
+    }
+    mapa = creado.setView(
       [LAT_TRINIDAD, LNG_TRINIDAD],
       14
     )
+    mapaProveedor.value = proveedorMapa()
 
     L.tileLayer(
       'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -3486,6 +3725,13 @@ function inicializarMapa() {
     mapa.on('click', async (evento) => {
       const { lat, lng } = evento.latlng
 
+      if (seleccionandoDestinoMapa.value) {
+        seleccionandoDestinoMapa.value = false
+        await colocarDestino(lat, lng, destinoLocalSeleccionado.value?.nombre || null)
+        destinoLocalSeleccionado.value = null
+        return
+      }
+
       if (!origenCoords.value) {
         await colocarOrigen(lat, lng)
         return
@@ -3494,6 +3740,7 @@ function inicializarMapa() {
       if (!destinoCoords.value) {
         await colocarDestino(lat, lng, destinoLocalSeleccionado.value?.nombre || null)
         destinoLocalSeleccionado.value = null
+        return
       }
 
       $q.notify({
@@ -3586,6 +3833,7 @@ async function obtenerRuta() {
 }
 
 function limpiarMapa() {
+  seleccionandoDestinoMapa.value = false
   eliminarMarcador(marcadorOrigen)
   eliminarMarcador(marcadorDestino)
 
@@ -3616,6 +3864,7 @@ function limpiarMapa() {
 }
 
 async function usarUbicacionActual() {
+  if (obteniendoUbicacion.value) return
   obteniendoUbicacion.value = true
 
   try {
@@ -4410,10 +4659,15 @@ function salirCanalIncidencias() {
 async function sincronizarCanalIncidencias() {
   const solicitudId = Number(viajeActivo.value?.id || 0)
 
-  if (!echoInstance || !solicitudId) {
+  if (!solicitudId) {
     salirCanalIncidencias()
     incidenciasViaje.value = []
     incidenciaActiva.value = null
+    return
+  }
+  if (!REVERB_HABILITADO || !echoInstance) {
+    // Continuar recibiendo las novedades SOS mediante REST.
+    await cargarIncidenciasViaje(true)
     return
   }
 
@@ -4438,7 +4692,7 @@ async function sincronizarCanalIncidencias() {
 }
 
 function inicializarWebsocketPasajero() {
-  if (echoInstance) {
+  if (!REVERB_HABILITADO || echoInstance) {
     return
   }
 
@@ -4673,8 +4927,11 @@ async function cargarViajeActivo(
   const solicitudAnterior = viajeActivo.value
 
   try {
+    // Evitar respuestas de seguimiento cacheadas: la posicion del
+    // conductor cambia durante todo el trayecto.
     const respuesta = await api.get(
-      '/pasajero/viaje-activo'
+      '/pasajero/viaje-activo',
+      { params: { _t: Date.now() } }
     )
 
     const solicitudActual = (
@@ -4984,18 +5241,29 @@ async function compartirViaje() {
       }
     }
 
-    await navigator.clipboard?.writeText?.(url)
+    let enlaceCopiado = false
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+        enlaceCopiado = true
+      }
+    } catch (error) {
+      // Algunos WebView bloquean el portapapeles, pero el enlace sigue disponible.
+      console.warn('No se pudo copiar el enlace de seguimiento:', error)
+    }
 
     $q.dialog({
-      title: 'Seguimiento compartido',
-      message: `Enlace temporal: ${url}`,
+      title: 'Compartir seguimiento',
+      message: `Enlace temporal de tu viaje (mantén pulsado para copiar): ${url}`,
       ok: { label: 'Entendido', color: 'green-8' }
     })
 
     $q.notify({
       type: 'positive',
       icon: 'link',
-      message: 'Enlace de seguimiento creado. También se copió cuando el dispositivo lo permitió.'
+      message: enlaceCopiado
+        ? 'Enlace de seguimiento creado y copiado.'
+        : 'Enlace de seguimiento creado. Puedes copiarlo desde la ventana.'
     })
   } catch (error) {
     $q.notify({
@@ -5012,6 +5280,22 @@ function volver() {
 }
 
 
+watch(() => viajeActivo.value?.id || null, (nuevoId, anteriorId) => {
+  if (nuevoId !== anteriorId) mostrarDetallesPasajero.value = false
+  if (nuevoId) {
+    // Debe existir un único Google Maps nativo en el flujo activo.
+    // El mapa de buscar/solicitar permanece oculto con v-show,
+    // pero su capa Android seguiría visible si no se destruye.
+    destruirMapaSolicitud()
+  }
+}, { flush: 'sync' })
+
+watch(mostrarMapaPasajero, async () => {
+  destruirMapaSeguimiento()
+  await nextTick()
+  if (puedeMostrarSeguimiento.value) await actualizarMapaSeguimiento()
+})
+
 watch(
   () => [
     viajeActivo.value?.id || null,
@@ -5024,6 +5308,42 @@ watch(
       dialogSos.value = false
     }
   }
+)
+
+// En pantallas pequenas, mostrar al menos los primeros resultados
+// cuando el teclado o el panel compacto reduzcan el espacio disponible.
+watch(resultadosDestino, async (resultados) => {
+  if (!resultados.length || typeof document === 'undefined') return
+  await nextTick()
+  const panel = document.querySelector(
+    'body.motrix-map-request-screen .motrix-request-fields'
+  )
+  const lista = panel?.querySelector('.destino-resultados')
+  if (!panel || !lista) return
+
+  const limite = panel.getBoundingClientRect().bottom - 10
+  const primeraFila = Math.min(
+    lista.getBoundingClientRect().top + 100,
+    lista.getBoundingClientRect().bottom
+  )
+  if (primeraFila > limite) {
+    panel.scrollTop += primeraFila - limite
+  }
+})
+
+watch(mostrarMapaPasajero, (activo) => {
+  document.body.classList.toggle('motrix-passenger-trip-screen', activo)
+}, { immediate: true, flush: 'sync' })
+
+watch(
+  [cargandoInicial, viajeActivo, viajeFinalizado],
+  () => {
+    if (typeof document === 'undefined') return
+    const enSolicitud = !cargandoInicial.value && !viajeActivo.value && !viajeFinalizado.value
+    const esMovil = window.__MOTRIX_NATIVE_APP__ || window.innerWidth <= 900
+    document.body.classList.toggle('motrix-map-request-screen', Boolean(enSolicitud && esMovil))
+  },
+  { immediate: true }
 )
 
 onMounted(async () => {
@@ -5077,6 +5397,8 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  document.body.classList.remove('motrix-passenger-trip-screen')
+  document.body.classList.remove('motrix-map-request-screen')
   desconectarWebsocketPasajero()
   dialogNotificacion.value = false
 
@@ -5426,4 +5748,366 @@ onBeforeUnmount(() => {
   padding: 10px;
 }
 
+
+/* Rediseño MOTRIX: mapa primero en móviles, sin alterar la lógica de viajes. */
+.motrix-solicitud-card { border: 1px solid #e2ebe5; box-shadow: 0 10px 28px rgba(12,64,38,.07); }
+.motrix-solicitud-header { background: #116738 !important; }
+.motrix-request-fields :deep(.q-field__control) { border-radius: 14px; }
+.motrix-request-fields .tarifa-card, .motrix-seguimiento-card { border-radius: 18px; }
+.motrix-seguimiento-titulo, .motrix-seguimiento-subtitulo {
+  line-height: 1.4;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+.motrix-seguimiento-cabecera > .col { min-width: 0; }
+.motrix-seguimiento-estado { max-width: 100%; }
+@media (max-width: 599px) {
+  .motrix-solicitud-page { padding: 0 !important; background: #f3f7f4 !important; }
+  .motrix-solicitud-card { border: 0; border-radius: 0 !important; box-shadow: none !important; overflow: visible !important; }
+  .motrix-solicitud-header {
+    position: relative; z-index: 3; padding: 10px 12px;
+    background: #fff !important; color: #163d2a !important;
+    border-bottom: 1px solid #e5eee8;
+  }
+  .motrix-solicitud-header :deep(.q-btn) { color: #126338 !important; }
+  .motrix-solicitud-header :deep(.q-avatar) {
+    width: 42px !important; height: 42px !important;
+    background: #e7f6eb !important; color: #126338 !important;
+  }
+  .motrix-solicitud-header .text-h5 { font-size: 18px; line-height: 1.25; }
+  .motrix-solicitud-header .text-caption { color: #657c6c !important; }
+  .motrix-request-form-section { padding: 0 !important; }
+  .motrix-request-intro { display: none; }
+  .motrix-request-grid { display: flex; flex-direction: column-reverse; margin: 0 !important; }
+  .motrix-request-grid > .col-12 { width: 100%; max-width: 100%; flex: 0 0 auto; }
+  .motrix-request-map { padding: 0 !important; }
+  .motrix-request-map .map-wrapper {
+    height: clamp(290px, 51dvh, 510px); border: 0; border-radius: 0;
+  }
+  .motrix-request-map .row.items-center.justify-center {
+    padding: 7px 12px 23px; margin: 0 !important;
+    background: #f5f8f6; gap: 12px;
+  }
+  .motrix-request-fields {
+    position: relative; z-index: 2; padding: 25px 16px 16px !important;
+    margin-top: -19px; background: #fff; border-radius: 25px 25px 0 0;
+    box-shadow: 0 -7px 20px rgba(18,54,34,.09);
+  }
+  .motrix-request-fields::before {
+    position: absolute; top: 9px; left: calc(50% - 19px);
+    width: 38px; height: 4px; border-radius: 5px;
+    background: #d9e1dc; content: '';
+  }
+  .motrix-request-fields .q-gutter-y-md > * { margin-top: 13px; }
+  .motrix-request-actions {
+    position: sticky; bottom: 0; z-index: 5; display: flex;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom)) !important;
+    background: #fff !important; box-shadow: 0 -6px 22px rgba(14,50,31,.08);
+  }
+  .motrix-request-actions :deep(.q-btn) { min-height: 50px; border-radius: 14px; }
+  .motrix-request-actions :deep(.q-btn:last-child) { flex: 1 1 auto; }
+  .motrix-active-content { display: flex; flex-direction: column; padding: 12px !important; gap: 12px; }
+  .motrix-active-grid { order: 2; margin-top: 0 !important; }
+  .motrix-seguimiento-card {
+    order: 1; margin-top: 0 !important; border-left: 0; border-top: 4px solid #16854a;
+  }
+  .motrix-seguimiento-cabecera { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px !important; }
+  .motrix-seguimiento-cabecera > .col { flex: 1 1 100%; width: 100%; min-width: 0; }
+  .motrix-seguimiento-cabecera > .col-auto { flex: 0 0 auto; width: auto; max-width: 100%; }
+  .motrix-seguimiento-titulo { font-size: 18px; line-height: 1.3; white-space: normal; }
+  .motrix-seguimiento-subtitulo { font-size: 13px; white-space: normal; }
+  .motrix-seguimiento-estado { height: auto; min-height: 30px; margin: 0; white-space: normal; }
+  .motrix-seguimiento-estado :deep(.q-chip__content) { white-space: normal; line-height: 1.35; }
+  .conductor-resumen-card { padding: 14px; }
+  .conductor-resumen-card .ellipsis {
+    white-space: normal !important; overflow: visible;
+    overflow-wrap: break-word; line-height: 1.35;
+  }
+  .conductor-avatar-destacado { width: 64px !important; height: 64px !important; }
+  .conductor-avatar-destacado :deep(.q-icon) { font-size: 32px !important; }
+  .tracking-info-box { align-items: flex-start; min-width: 0; }
+  .tracking-info-box > div { min-width: 0; overflow-wrap: break-word; }
+  .seguimiento-map-wrapper { height: clamp(300px, 44dvh, 440px); }
+}
+
+/* MOTRIX 2026 · solicitud inmersiva, adaptada al flujo de tarifa negociada.
+   La capa de mapa conserva el selector de origen/destino y el seguimiento. */
+.motrix-mapa-cinta,
+.motrix-mapa-gps { display: none; }
+
+@media (max-width: 599px) {
+  .motrix-solicitud-page {
+    padding: 0 !important;
+    overflow-x: hidden;
+  }
+  .motrix-solicitud-card {
+    position: relative;
+    width: 100%;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  .motrix-modo-solicitud .motrix-solicitud-header {
+    position: absolute !important;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 850;
+    padding: 10px 14px !important;
+    border: 0 !important;
+    background: transparent !important;
+    pointer-events: none;
+  }
+  .motrix-modo-solicitud .motrix-solicitud-header .row {
+    justify-content: space-between;
+  }
+  .motrix-modo-solicitud .motrix-solicitud-header .row > .col,
+  .motrix-modo-solicitud .motrix-solicitud-header :deep(.q-avatar) {
+    display: none !important;
+  }
+  .motrix-modo-solicitud .motrix-solicitud-header :deep(.q-btn) {
+    width: 46px;
+    height: 46px;
+    margin: 0 !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    color: #135e3a !important;
+    box-shadow: 0 4px 16px rgba(17, 50, 33, .17);
+    pointer-events: auto;
+  }
+  .motrix-request-form {
+    position: relative;
+    height: calc(100dvh - 135px);
+    min-height: 520px;
+    overflow: hidden;
+    background: #e7f1eb;
+  }
+  .motrix-request-form-section {
+    height: 100%;
+    padding: 0 !important;
+  }
+  .motrix-request-grid {
+    position: relative;
+    display: block !important;
+    width: 100%;
+    height: 100%;
+    margin: 0 !important;
+  }
+  .motrix-request-grid > .col-12 {
+    flex: none !important;
+    max-width: none !important;
+  }
+  .motrix-request-map {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+  .motrix-request-map .map-wrapper {
+    width: 100%;
+    height: 100% !important;
+    border: 0;
+    border-radius: 0;
+  }
+  .motrix-request-map > .row.items-center.justify-center {
+    display: none !important;
+  }
+  .motrix-mapa-cinta {
+    position: absolute;
+    top: 19px;
+    left: 50%;
+    z-index: 800;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: calc(100% - 160px);
+    padding: 10px 12px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 4px 16px rgba(17, 50, 33, .14);
+    color: #263a2e;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .motrix-mapa-punto {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: #1bb785;
+  }
+  .motrix-mapa-proveedor {
+    display: none;
+  }
+  .motrix-mapa-gps {
+    position: absolute;
+    top: 74px;
+    right: 13px;
+    z-index: 800;
+    display: inline-flex;
+    box-shadow: 0 5px 18px rgba(17, 50, 33, .17);
+  }
+  .motrix-request-map .map-actions {
+    top: 18px;
+    right: 14px;
+    z-index: 800;
+  }
+  .motrix-request-map .map-actions :deep(.q-btn) {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #fff !important;
+    color: #135e3a !important;
+    box-shadow: 0 4px 16px rgba(17, 50, 33, .17);
+  }
+  .motrix-request-fields {
+    position: absolute !important;
+    right: 12px;
+    bottom: 73px;
+    left: 12px;
+    z-index: 600;
+    width: auto !important;
+    max-width: none !important;
+    max-height: min(54dvh, 470px);
+    margin: 0 !important;
+    padding: 27px 16px 16px !important;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid #e3eae5;
+    border-radius: 25px 25px 17px 17px !important;
+    background: #fff;
+    box-shadow: 0 9px 34px rgba(17, 50, 33, .18);
+  }
+  .motrix-request-fields::before {
+    position: absolute;
+    top: 10px;
+    left: calc(50% - 22px);
+    width: 44px;
+    height: 5px;
+    border-radius: 999px;
+    background: #d5ddd7;
+    content: '';
+  }
+  .motrix-request-fields .q-gutter-y-md > * {
+    margin-top: 10px;
+  }
+  .motrix-request-fields :deep(.q-field__control) {
+    min-height: 47px;
+    border-radius: 13px !important;
+  }
+  .motrix-request-fields .tarifa-card {
+    border-left: 0;
+    background: #f5f9f6;
+  }
+  .motrix-request-fields .tarifa-card :deep(.q-card__section) {
+    padding: 12px;
+  }
+  .motrix-request-fields .tarifa-card .text-subtitle1 {
+    font-size: 14px;
+    line-height: 1.3;
+  }
+  .motrix-request-actions {
+    position: absolute !important;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 700;
+    display: flex;
+    align-items: center;
+    height: 73px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom)) !important;
+    border-top: 1px solid #e5ece7;
+    background: #fff !important;
+    box-shadow: 0 -5px 18px rgba(17, 50, 33, .09);
+  }
+  .motrix-request-actions :deep(.q-btn:first-child) {
+    display: none;
+  }
+  .motrix-request-actions :deep(.q-btn:last-child) {
+    flex: 1 1 auto;
+    min-height: 50px;
+    border-radius: 14px !important;
+    background: #116738 !important;
+    font-weight: 750;
+  }
+  /* Estado activo: el nombre nunca ocupa una columna de una palabra. */
+  .motrix-active-content {
+    padding: 10px !important;
+    gap: 10px;
+  }
+  .motrix-active-content :deep(.q-card) {
+    max-width: 100%;
+  }
+  .conductor-resumen-card {
+    padding: 13px !important;
+  }
+  .conductor-resumen-card .row.items-center.no-wrap {
+    gap: 12px;
+  }
+  .conductor-resumen-card .row.items-center.no-wrap > .col {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+  }
+  .conductor-resumen-card .text-h6 {
+    display: -webkit-box;
+    overflow: hidden !important;
+    font-size: 16px !important;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .conductor-avatar-destacado {
+    width: 60px !important;
+    height: 60px !important;
+  }
+  .motrix-seguimiento-cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    padding: 12px !important;
+  }
+  .motrix-seguimiento-cabecera > .col {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .motrix-seguimiento-titulo {
+    font-size: 17px;
+    line-height: 1.25;
+  }
+  .motrix-seguimiento-subtitulo {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .motrix-seguimiento-estado {
+    max-width: 100%;
+    white-space: normal;
+  }
+  .motrix-seguimiento-estado :deep(.q-chip__content) {
+    white-space: normal;
+  }
+  .tracking-info-box {
+    min-width: 0;
+    padding: 9px;
+  }
+  .tracking-info-box > div {
+    min-width: 0;
+  }
+  .tracking-info-box .text-subtitle1 {
+    font-size: 15px;
+  }
+  .seguimiento-map-wrapper {
+    height: min(44dvh, 400px) !important;
+    border-radius: 17px;
+  }
+}
+</style>
+
+<style>
+.motrix-qr-visor-pasajero { width: min(94vw, 520px); border-radius: 18px; background: #fff; }
+.motrix-qr-pasajero-grande { width: 100%; max-width: 440px; max-height: 70dvh; object-fit: contain; background: #fff; }
 </style>

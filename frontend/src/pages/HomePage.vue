@@ -19,23 +19,6 @@
         </div>
 
         <div class="dashboard-actions">
-          <q-chip
-            :class="[
-              'dashboard-live-chip',
-              wsConnected
-                ? 'dashboard-live-chip--ok'
-                : 'dashboard-live-chip--off'
-            ]"
-            :icon="wsConnected ? 'sensors' : 'sync'"
-            dense
-          >
-            {{
-              wsConnected
-                ? 'EN VIVO'
-                : 'CONECTANDO'
-            }}
-          </q-chip>
-
           <q-btn
             outline
             color="primary"

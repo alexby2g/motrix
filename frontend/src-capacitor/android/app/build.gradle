@@ -8,6 +8,7 @@ android {
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "bo.edu.josecastillo.motrix"
+        manifestPlaceholders = [motrixGoogleMapsApiKey: (System.getenv('MOTRIX_GOOGLE_MAPS_ANDROID_KEY') ?: '')]
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode motrixVersionCode
@@ -38,6 +39,8 @@ dependencies {
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    // Diagnostico Google Play Services disponible sin USB.
+    implementation "com.google.android.gms:play-services-base:18.5.0"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
