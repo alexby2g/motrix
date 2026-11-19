@@ -191,8 +191,6 @@
               v-if="['Aceptado','Llegó','En Curso'].includes(viajeActivo.estado)"
               :viaje-id="viajeActivo.id" :estado="viajeActivo.estado" rol="conductor"
               class="motrix-driver-contact" />
-            <q-btn v-if="sosDisponible" flat dense no-caps icon="sos" color="negative"
-              label="SOS" @click="abrirDialogoSos" />
           </div>
         </div>
 
@@ -201,8 +199,6 @@
             <q-btn outline no-caps color="negative" icon="close" label="Cancelar"
               :loading="accionando === `cancelar-${viajeActivo.id}`"
               @click="confirmarCancelacion(viajeActivo)" />
-            <q-btn outline no-caps color="green-9" icon="near_me" label="Navegar"
-              @click="abrirNavegacion(viajeActivo, 'origen')" />
             <q-btn unelevated no-caps color="positive" icon="done_all" label="Llegué"
               :loading="accionando === `llegue-${viajeActivo.id}`"
               @click="marcarLlegada(viajeActivo)" />
