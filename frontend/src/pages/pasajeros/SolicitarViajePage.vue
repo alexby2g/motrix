@@ -1599,6 +1599,8 @@ import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 import L, { prepararGoogleMaps, proveedorMapa, crearMapaMotrix, mapaAlternativoActivo, alternarMapaAlternativo } from 'src/utils/mapaMotrix.js'
 import { estadoCargaGoogleMapsNativo } from 'src/utils/mapaNativoCapacitor.js'
+// Hostinger usa la API REST; no abrir WebSocket Reverb desde la APK.
+const REVERB_HABILITADO = false
 import { obtenerRutaCallesMotrix } from 'src/utils/rutasViajeMotrix.js'
 import 'leaflet/dist/leaflet.css'
 
@@ -4657,10 +4659,15 @@ function salirCanalIncidencias() {
 async function sincronizarCanalIncidencias() {
   const solicitudId = Number(viajeActivo.value?.id || 0)
 
-  if (!echoInstance || !solicitudId) {
+  if (!solicitudId) {
     salirCanalIncidencias()
     incidenciasViaje.value = []
     incidenciaActiva.value = null
+    return
+  }
+  if (!REVERB_HABILITADO || !echoInstance) {
+    // Continuar recibiendo las novedades SOS mediante REST.
+    await cargarIncidenciasViaje(true)
     return
   }
 
@@ -4685,7 +4692,7 @@ async function sincronizarCanalIncidencias() {
 }
 
 function inicializarWebsocketPasajero() {
-  if (echoInstance) {
+  if (!REVERB_HABILITADO || echoInstance) {
     return
   }
 
